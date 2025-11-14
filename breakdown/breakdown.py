@@ -17,7 +17,7 @@ from netCDF4 import Dataset
 # Import new modular components
 from breakdown_config import parse_config_file
 from breakdown_io import load_netcdf_files, OutputWriter
-from breakdown_processor import process_variables, process_average_variables_special
+from breakdown_processor import process_variables, process_average_variables_special, precompute_region_masks
 from breakdown_functions import surfaceData, volumeData, intergrateData, volumeDataAverage, observationData, levelData
 from breakdown_functions import bloom, trophic, regrid
 from breakdown_observations import observationDatasets
@@ -232,11 +232,15 @@ for region in regions:
 
 log.info(f"Data read from: {config.region_mask}")
 
-# ---------- 6 LOAD MODEL OUTPUT NETCDF FILES ----------
+# ---------- 6 PRE-COMPUTE REGION MASKS ----------
+log.info("Pre-computing region masks for all regions...")
+region_mask_cache = precompute_region_masks(landMask, volMask, regions)
+
+# ---------- 7 LOAD MODEL OUTPUT NETCDF FILES ----------
 log.info("Loading model output files...")
 nc_run_ids, nc_runFileNames, years = load_netcdf_files(year_from, year_to)
 
-# ---------- 7 PROCESS VARIABLES (USING UNIFIED PROCESSOR) ----------
+# ---------- 8 PROCESS VARIABLES (USING UNIFIED PROCESSOR) ----------
 log.info("Processing variables...")
 
 # Process surface variables
@@ -245,7 +249,7 @@ process_variables(
     varSurface, nc_run_ids, nc_runFileNames,
     list_of_units, regions, landMask, volMask,
     mask_area, mask_vol, missing_val,
-    surfaceData, 'surface'
+    surfaceData, 'surface', region_mask_cache
 )
 
 # Process level variables
@@ -254,7 +258,7 @@ process_variables(
     varLevel, nc_run_ids, nc_runFileNames,
     list_of_units, regions, landMask, volMask,
     mask_area, mask_vol, missing_val,
-    levelData, 'level'
+    levelData, 'level', region_mask_cache
 )
 
 # Process volume variables
@@ -263,7 +267,7 @@ process_variables(
     varVolume, nc_run_ids, nc_runFileNames,
     list_of_units, regions, landMask, volMask,
     mask_area, mask_vol, missing_val,
-    volumeData, 'volume'
+    volumeData, 'volume', region_mask_cache
 )
 
 # Process integration variables
@@ -272,7 +276,7 @@ process_variables(
     varInt, nc_run_ids, nc_runFileNames,
     list_of_units, regions, landMask, volMask,
     mask_area, mask_vol, missing_val,
-    intergrateData, 'integration'
+    intergrateData, 'integration', region_mask_cache
 )
 
 # Process average variables (special handling for multi-variable sums)
@@ -280,7 +284,7 @@ log.info("Processing average variables...")
 process_average_variables_special(
     varTotalAve, nc_run_ids, nc_runFileNames,
     list_of_units, regions, landMask, volMask,
-    mask_vol, missing_val
+    mask_vol, missing_val, region_mask_cache
 )
 
 # NOTE: Observation and property processing retained from original code
@@ -310,10 +314,8 @@ for obs in obsComparisons:
             sourceObs = l
     nc_obs_id = Dataset(sourceObs['path'], 'r')
 
-    regionVolMask = np.copy(volMask)
-    if reg != -1:
-        for z in range(regionVolMask.shape[0]):
-            regionVolMask[z, :, :] = regionVolMask[z, :, :] * regions[reg]
+    # Use pre-computed region mask from cache
+    regionVolMask = region_mask_cache[f'vol_{reg}']
 
     found_var = False
     for n in range(len(nc_run_ids)):

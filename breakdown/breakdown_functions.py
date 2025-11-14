@@ -132,24 +132,26 @@ def surfaceData(var, var_lons, var_lats, units, area, landMask, volMask, missing
 
 	var = subDomainORCA(lonLim, latLim, var_lons, var_lats, var, landMask, volMask, missingVal)
 
-	# filter data for missingVal 
-	varNan = np.copy(var)
+	# filter data for missingVal (in-place to avoid copy)
+	varNan = var
 	varNan[ varNan > missingVal/10. ] = np.nan
 	varNan[ varNan < -missingVal/10. ] = np.nan
 
-	total = 0
-	monthly = []
-	for t in range(0,tDim):
-		total = total + np.nansum(varNan[t,:,:] * area[:,:] * units / tDim)
-		# min = np.nanmin(varNan[t,:,:] * area[:,:] * units)
-		# max = np.nanmax(varNan[t,:,:] * area[:,:] * units)
-		min = np.nanpercentile(varNan[t,:,:] * units, 5)
-		max = np.nanpercentile(varNan[t,:,:] * units, 95)
-		median = np.nanmedian(varNan[t,:,:] * units)
-		first = np.nanpercentile(varNan[t,:,:] * units, 25)
-		third = np.nanpercentile(varNan[t,:,:] * units, 75)
+	# Vectorized calculation: compute total across all time steps at once
+	total = np.nansum(varNan * area * units / tDim)
 
-		monthly.append([ np.nansum(varNan[t,:,:] * area[:,:] * units / tDim), min, first, median, third, max ])
+	# Vectorized monthly statistics computation
+	varScaled = varNan * units
+	monthly_sums = np.nansum(varNan * area * units / tDim, axis=(1, 2))
+	monthly_min = np.nanpercentile(varScaled, 5, axis=(1, 2))
+	monthly_first = np.nanpercentile(varScaled, 25, axis=(1, 2))
+	monthly_median = np.nanmedian(varScaled, axis=(1, 2))
+	monthly_third = np.nanpercentile(varScaled, 75, axis=(1, 2))
+	monthly_max = np.nanpercentile(varScaled, 95, axis=(1, 2))
+
+	# Build monthly list from vectorized arrays
+	monthly = [[monthly_sums[t], monthly_min[t], monthly_first[t], monthly_median[t], monthly_third[t], monthly_max[t]]
+	           for t in range(tDim)]
 
 	return total, monthly
 
@@ -160,23 +162,26 @@ def volumeData(var, var_lons, var_lats, units, vol, landMask, volMask, missingVa
 
 	tDim = var.shape[0]
 
-	# filter data for missingVal
-	varNan = np.copy(var)
+	# filter data for missingVal (in-place to avoid copy)
+	varNan = var
 	varNan[ varNan > missingVal/10. ] = np.nan
 	varNan[ varNan < -missingVal/10. ] = np.nan
 	
-	total = 0
-	monthly = []
-	for t in range(0,tDim):
-		total = total + np.nansum(varNan[t,:,:,:] * vol[:,:,:] * units / tDim)
+	# Vectorized calculation: compute total across all time steps at once
+	total = np.nansum(varNan * vol * units / tDim)
 
-		min = np.nanpercentile(varNan[t,:,:,:] * units, 5)
-		max = np.nanpercentile(varNan[t,:,:,:] * units, 95)
-		median = np.nanmedian(varNan[t,:,:,:] * units)
-		first = np.nanpercentile(varNan[t,:,:,:] * units, 25)
-		third = np.nanpercentile(varNan[t,:,:,:] * units, 75)
+	# Vectorized monthly statistics computation
+	varScaled = varNan * units
+	monthly_sums = np.nansum(varNan * vol * units / tDim, axis=(1, 2, 3))
+	monthly_min = np.nanpercentile(varScaled, 5, axis=(1, 2, 3))
+	monthly_first = np.nanpercentile(varScaled, 25, axis=(1, 2, 3))
+	monthly_median = np.nanmedian(varScaled, axis=(1, 2, 3))
+	monthly_third = np.nanpercentile(varScaled, 75, axis=(1, 2, 3))
+	monthly_max = np.nanpercentile(varScaled, 95, axis=(1, 2, 3))
 
-		monthly.append([ np.nansum(varNan[t,:,:,:] * vol[:,:,:] * units / tDim), min, first, median, third, max ]) 
+	# Build monthly list from vectorized arrays
+	monthly = [[monthly_sums[t], monthly_min[t], monthly_first[t], monthly_median[t], monthly_third[t], monthly_max[t]]
+	           for t in range(tDim)]
 
 	return total, monthly
 
@@ -187,23 +192,26 @@ def levelData(var, var_lons, var_lats, units, area, landMask, volMask, missingVa
 
 	tDim = var.shape[0]
 
-	# filter data for missingVal
-	varNan = np.copy(var)
+	# filter data for missingVal (in-place to avoid copy)
+	varNan = var
 	varNan[ varNan > missingVal/10. ] = np.nan
 	varNan[ varNan < -missingVal/10. ] = np.nan
 
-	total = 0
-	monthly = []
-	for t in range(0,tDim):
-		total = total + np.nansum(varNan[t,level,:,:] * area[:,:] * units / tDim)
+	# Vectorized calculation: compute total across all time steps at once
+	total = np.nansum(varNan[:, level, :, :] * area * units / tDim)
 
-		min = np.nanpercentile(varNan[t,level:,:] * units, 5)
-		max = np.nanpercentile(varNan[t,level,:,:] * units, 95)
-		median = np.nanmedian(varNan[t,level,:,:] * units)
-		first = np.nanpercentile(varNan[t,level,:,:] * units, 25)
-		third = np.nanpercentile(varNan[t,level,:,:] * units, 75)
+	# Vectorized monthly statistics computation
+	varScaled = varNan[:, level, :, :] * units
+	monthly_sums = np.nansum(varNan[:, level, :, :] * area * units / tDim, axis=(1, 2))
+	monthly_min = np.nanpercentile(varScaled, 5, axis=(1, 2))
+	monthly_first = np.nanpercentile(varScaled, 25, axis=(1, 2))
+	monthly_median = np.nanmedian(varScaled, axis=(1, 2))
+	monthly_third = np.nanpercentile(varScaled, 75, axis=(1, 2))
+	monthly_max = np.nanpercentile(varScaled, 95, axis=(1, 2))
 
-		monthly.append([ np.nansum(varNan[t,level,:,:] * area[:,:] * units / tDim), min, first, median, third, max ]) 
+	# Build monthly list from vectorized arrays
+	monthly = [[monthly_sums[t], monthly_min[t], monthly_first[t], monthly_median[t], monthly_third[t], monthly_max[t]]
+	           for t in range(tDim)]
 
 	return total, monthly
 
@@ -214,23 +222,26 @@ def intergrateData(var, var_lons, var_lats, depthFrom, depthTo, units, vol, land
 
 	tDim = var.shape[0]
 
-	# filter data for missingVal
-	varNan = np.copy(var)
+	# filter data for missingVal (in-place to avoid copy)
+	varNan = var
 	varNan[ varNan > missingVal/10. ] = np.nan
 	varNan[ varNan < -missingVal/10. ] = np.nan
 
-	total = 0
-	monthly = []
-	for t in range(0,tDim):
-		total = total + np.nansum(varNan[t,depthFrom:depthTo+1,:,:] * vol[depthFrom:depthTo+1,:,:] * units / tDim)
+	# Vectorized calculation: compute total across all time steps at once
+	total = np.nansum(varNan[:, depthFrom:depthTo+1, :, :] * vol[depthFrom:depthTo+1, :, :] * units / tDim)
 
-		min = np.nanpercentile(varNan[t,depthFrom:depthTo+1,:,:] * units, 5)
-		max = np.nanpercentile(varNan[t,depthFrom:depthTo+1,:,:] * units, 95)
-		median = np.nanmedian(varNan[t,depthFrom:depthTo+1,:,:] * units)
-		first = np.nanpercentile(varNan[t,depthFrom:depthTo+1,:,:] * units, 25)
-		third = np.nanpercentile(varNan[t,depthFrom:depthTo+1,:,:] * units, 75)
+	# Vectorized monthly statistics computation
+	varScaled = varNan[:, depthFrom:depthTo+1, :, :] * units
+	monthly_sums = np.nansum(varNan[:, depthFrom:depthTo+1, :, :] * vol[depthFrom:depthTo+1, :, :] * units / tDim, axis=(1, 2, 3))
+	monthly_min = np.nanpercentile(varScaled, 5, axis=(1, 2, 3))
+	monthly_first = np.nanpercentile(varScaled, 25, axis=(1, 2, 3))
+	monthly_median = np.nanmedian(varScaled, axis=(1, 2, 3))
+	monthly_third = np.nanpercentile(varScaled, 75, axis=(1, 2, 3))
+	monthly_max = np.nanpercentile(varScaled, 95, axis=(1, 2, 3))
 
-		monthly.append([ np.nansum(varNan[t,depthFrom:depthTo+1,:,:] * vol[depthFrom:depthTo+1,:,:] * units / tDim), min, first, median, third, max ]) 
+	# Build monthly list from vectorized arrays
+	monthly = [[monthly_sums[t], monthly_min[t], monthly_first[t], monthly_median[t], monthly_third[t], monthly_max[t]]
+	           for t in range(tDim)]
 
 	return total, monthly
 
@@ -241,35 +252,35 @@ def volumeDataAverage(var, var_lons, var_lats, depthFrom, depthTo, units, vol, l
 
 	tDim = var.shape[0]
 
-	# filter data for missingVal
-	varNan = np.copy(var)
+	# filter data for missingVal (in-place to avoid copy)
+	varNan = var
 	varNan[ varNan > missingVal/10. ] = np.nan
 	varNan[ varNan < -missingVal/10. ] = np.nan
 
 	if vol.shape[0] == varNan.shape[1]:
-		vol_masked = np.copy(vol)
+		vol_masked = vol.copy()  # Need copy here as we modify it
 	if varNan.shape[1] == 1:
-		vol_masked = np.reshape( np.copy( vol[0,:,:] ), (1,varNan.shape[2], varNan.shape[3]) )
+		vol_masked = np.reshape( vol[0,:,:].copy(), (1,varNan.shape[2], varNan.shape[3]) )  # Need copy for reshape
 	ind_masked = np.isnan(varNan[0,:,:,:])
-    
+
 	vol_masked[ ind_masked ] = np.nan
 	volNorm = np.nansum(vol_masked[depthFrom:depthTo+1,:,:])
 
-	total = 0
-	monthly = []
-	for t in range(0,tDim):
-		total = total + np.nansum(varNan[t,depthFrom:depthTo+1,:,:] * vol_masked[depthFrom:depthTo+1,:,:]/volNorm * units / tDim)
+	# Vectorized calculation: compute total across all time steps at once
+	total = np.nansum(varNan[:, depthFrom:depthTo+1, :, :] * vol_masked[depthFrom:depthTo+1, :, :] / volNorm * units / tDim)
 
-		# the following are not properly scaled
-		min = np.nanpercentile(varNan[t,depthFrom:depthTo+1,:,:] * units, 5)
-		max = np.nanpercentile(varNan[t,depthFrom:depthTo+1,:,:] * units, 95)
-		# median = np.nansum(varNan[t,depthFrom:depthTo+1,:,:] * vol_masked[depthFrom:depthTo+1,:,:]/volNorm * units )
-		median = np.nanmedian(varNan[t,depthFrom:depthTo+1,:,:] * units)
-		first = np.nanpercentile(varNan[t,depthFrom:depthTo+1,:,:] * units, 25)
-		third = np.nanpercentile(varNan[t,depthFrom:depthTo+1,:,:] * units, 75)
+	# Vectorized monthly statistics computation
+	varScaled = varNan[:, depthFrom:depthTo+1, :, :] * units
+	monthly_sums = np.nansum(varNan[:, depthFrom:depthTo+1, :, :] * vol_masked[depthFrom:depthTo+1, :, :] / volNorm * units, axis=(1, 2, 3))
+	monthly_min = np.nanpercentile(varScaled, 5, axis=(1, 2, 3))
+	monthly_first = np.nanpercentile(varScaled, 25, axis=(1, 2, 3))
+	monthly_median = np.nanmedian(varScaled, axis=(1, 2, 3))
+	monthly_third = np.nanpercentile(varScaled, 75, axis=(1, 2, 3))
+	monthly_max = np.nanpercentile(varScaled, 95, axis=(1, 2, 3))
 
-		# monthly.append([ np.nansum(varNan[t,depthFrom:depthTo+1,:,:] * vol_masked[depthFrom:depthTo+1,:,:]/volNorm * units / tDim), min, first, median, third, max ]) 
-		monthly.append([ np.nansum(varNan[t,depthFrom:depthTo+1,:,:] * vol_masked[depthFrom:depthTo+1,:,:]/volNorm * units), min, first, median, third, max ]) 
+	# Build monthly list from vectorized arrays
+	monthly = [[monthly_sums[t], monthly_min[t], monthly_first[t], monthly_median[t], monthly_third[t], monthly_max[t]]
+	           for t in range(tDim)]
 
 	return total, monthly
 

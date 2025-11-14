@@ -15,6 +15,47 @@ from breakdown_functions import surfaceData, volumeData, intergrateData, volumeD
 log = logging.getLogger("Processor")
 
 
+# ---------- REGION MASK CACHE ----------
+
+def precompute_region_masks(landMask: np.ndarray, volMask: np.ndarray, regions: List) -> dict:
+    """
+    Pre-compute all region mask combinations to avoid repeated calculations.
+
+    This computes 2D land masks and 3D volume masks for all 54 regions once,
+    then stores them in a dictionary for instant lookup during processing.
+
+    Args:
+        landMask: 2D land mask array
+        volMask: 3D volume mask array
+        regions: List of region masks
+
+    Returns:
+        Dictionary with keys like 'land_-1', 'land_0', 'vol_-1', 'vol_0', etc.
+    """
+    cache = {}
+
+    # Pre-compute for global (-1) and all defined regions
+    region_indices = [-1] + list(range(len(regions)))
+
+    for reg in region_indices:
+        if reg == -1:
+            # Global: no regional masking
+            cache[f'land_{reg}'] = landMask.copy()
+            cache[f'vol_{reg}'] = volMask.copy()
+        else:
+            # Regional: apply region mask
+            cache[f'land_{reg}'] = landMask * regions[reg]
+
+            # For 3D volume mask, broadcast region mask to all depth levels
+            region_vol = volMask.copy()
+            for z in range(region_vol.shape[0]):
+                region_vol[z, :, :] = region_vol[z, :, :] * regions[reg]
+            cache[f'vol_{reg}'] = region_vol
+
+    log.info(f"Pre-computed {len(cache)} region masks ({len(region_indices)} regions × 2 mask types)")
+    return cache
+
+
 # ---------- UNIFIED PROCESSING ----------
 
 def process_variables(
@@ -29,7 +70,8 @@ def process_variables(
     mask_vol: np.ndarray,
     missingVal: float,
     processor_func: Callable,
-    processor_type: str
+    processor_type: str,
+    region_mask_cache: dict = None
 ):
     """
     Unified function to process any type of variable.
@@ -49,6 +91,7 @@ def process_variables(
         missingVal: Missing value indicator
         processor_func: Function to call for processing (surfaceData, volumeData, etc.)
         processor_type: Type of processing ('surface', 'level', 'volume', 'integration', 'average')
+        region_mask_cache: Pre-computed region masks (recommended for performance)
     """
     null_annual = -1
     null_monthly = np.array([np.zeros((6)) - 1 for r in range(12)])
@@ -102,10 +145,14 @@ def process_variables(
                 log.info(f"Unit: {units} not found, using raw data")
                 units_to_use = 1
 
-            # Prepare region masks
-            region_land_mask, region_vol_mask = _prepare_region_masks(
-                landMask, volMask, regions, reg, processor_type
-            )
+            # Prepare region masks (use cache if available)
+            if region_mask_cache is not None:
+                region_land_mask = region_mask_cache[f'land_{reg}']
+                region_vol_mask = region_mask_cache[f'vol_{reg}']
+            else:
+                region_land_mask, region_vol_mask = _prepare_region_masks(
+                    landMask, volMask, regions, reg, processor_type
+                )
 
             # Call appropriate processing function
             output_total = _call_processor(
@@ -299,7 +346,8 @@ def process_average_variables_special(
     landMask: np.ndarray,
     volMask: np.ndarray,
     mask_vol: np.ndarray,
-    missingVal: float
+    missingVal: float,
+    region_mask_cache: dict = None
 ):
     """
     Special processing for average variables that can sum multiple variables.
@@ -376,11 +424,14 @@ def process_average_variables_special(
                 log.info(f"Unit: {units} not found, using raw data")
                 units_to_use = 1
 
-            # Prepare region masks
-            region_vol_mask = np.copy(volMask)
-            if reg != -1:
-                for z in range(region_vol_mask.shape[0]):
-                    region_vol_mask[z, :, :] = region_vol_mask[z, :, :] * regions[reg]
+            # Prepare region masks (use cache if available)
+            if region_mask_cache is not None:
+                region_vol_mask = region_mask_cache[f'vol_{reg}']
+            else:
+                region_vol_mask = np.copy(volMask)
+                if reg != -1:
+                    for z in range(region_vol_mask.shape[0]):
+                        region_vol_mask[z, :, :] = region_vol_mask[z, :, :] * regions[reg]
 
             # Process each variable and sum results
             output_all_total = 0
