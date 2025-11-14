@@ -99,6 +99,73 @@ class OutputWriter:
     """Unified output file writer for all breakdown output types."""
 
     @staticmethod
+    def write_annual_csv(
+        filename: Union[str, Path],
+        variables: List,
+        year_from: int,
+        year_to: int,
+        var_index: int = 0,
+        include_units: bool = False,
+        include_keys: bool = False
+    ):
+        """
+        Write annual output file in clean CSV format.
+
+        Args:
+            filename: Output filename
+            variables: List of variable configuration objects
+            year_from: Starting year
+            year_to: Ending year
+            var_index: Index of variable name in config
+            include_units: Whether to include units in column names
+            include_keys: Whether to include keys in column names
+        """
+        filename = Path(filename)
+        write_headers = not filename.exists()
+
+        if write_headers:
+            with filename.open('w') as f:
+                # Write single header row with variable names (optionally with units/keys)
+                f.write("year,")
+                headers = []
+                for var in variables:
+                    if hasattr(var, 'name'):
+                        name = var.name
+                        units = var.units if include_units else None
+                        key = var.key if include_keys else None
+                    else:
+                        name = var[var_index]
+                        units = var[1] if include_units and len(var) > 1 else None
+                        key = var[-3] if include_keys else None
+
+                    # Build column name
+                    col_name = name
+                    if include_units and units:
+                        col_name += f" ({units})"
+                    if include_keys and key:
+                        col_name += f" [{key}]"
+
+                    headers.append(col_name)
+
+                f.write(",".join(headers))
+                f.write("\n")
+
+        # Write or append data
+        with filename.open('a') as f:
+            for year in range(year_from, year_to + 1):
+                y = year - year_from
+                f.write(f"{year},")
+                values = []
+                for var in variables:
+                    if hasattr(var, 'results'):
+                        value = var.results[y][0]
+                    else:
+                        value = var[-1][y][0]
+                    values.append(f"{value:.4e}")
+                f.write(",".join(values))
+                f.write("\n")
+
+    @staticmethod
     def write_annual_file(
         filename: str,
         variables: List,

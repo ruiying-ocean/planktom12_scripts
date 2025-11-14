@@ -589,24 +589,44 @@ log.info("Writing output files...")
 
 writer = OutputWriter()
 
-# Annual outputs
-writer.write_annual_file("breakdown.sur.annual.dat", varSurface, year_from, year_to, 0, 1, -3)
-writer.write_annual_file("breakdown.lev.annual.dat", varLevel, year_from, year_to, 0, 2, -3)
-writer.write_annual_file("breakdown.vol.annual.dat", varVolume, year_from, year_to, 0, 1, -3)
-writer.write_annual_file("breakdown.int.annual.dat", varInt, year_from, year_to, 0, 3, -3)
-writer.write_annual_file("breakdown.ave.annual.dat", varTotalAve, year_from, year_to, 0, 3, -3)
-writer.write_observation_file("breakdown.obs.annual.dat", obsComparisons, year_from, year_to)
+# Configuration: Choose output format and what to include
+# Options: 'csv' or 'tsv' (tab-separated)
+OUTPUT_FORMAT = 'csv'
+INCLUDE_UNITS_IN_HEADERS = False  # Set to True to include units like "BAC (Conc->PgCarbon)"
+INCLUDE_KEYS_IN_HEADERS = False   # Set to True to include keys like "BAC [global]"
 
-# Spread outputs
-writer.write_spread_file("breakdown.sur.spread.dat", varSurface, year_from, year_to, 0, 1, -3)
-writer.write_spread_file("breakdown.lev.spread.dat", varLevel, year_from, year_to, 0, 2, -3)
-writer.write_spread_file("breakdown.vol.spread.dat", varVolume, year_from, year_to, 0, 1, -3)
-writer.write_spread_file("breakdown.int.spread.dat", varInt, year_from, year_to, 0, 3, -3)
-writer.write_spread_file("breakdown.ave.spread.dat", varTotalAve, year_from, year_to, 0, 3, -3)
+# Annual outputs - CSV format (clean, single header row)
+if OUTPUT_FORMAT == 'csv':
+    log.info("Writing CSV format outputs...")
+    writer.write_annual_csv("breakdown.sur.annual.csv", varSurface, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+    writer.write_annual_csv("breakdown.vol.annual.csv", varVolume, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+    # Only write the outputs you actually use
+    # Commented out ones you don't need:
+    # writer.write_annual_csv("breakdown.lev.annual.csv", varLevel, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+    # writer.write_annual_csv("breakdown.int.annual.csv", varInt, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+    # writer.write_annual_csv("breakdown.ave.annual.csv", varTotalAve, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+else:
+    # Original TSV format (backward compatible - 3 header rows)
+    log.info("Writing TSV format outputs...")
+    writer.write_annual_file("breakdown.sur.annual.dat", varSurface, year_from, year_to, 0, 1, -3)
+    writer.write_annual_file("breakdown.lev.annual.dat", varLevel, year_from, year_to, 0, 2, -3)
+    writer.write_annual_file("breakdown.vol.annual.dat", varVolume, year_from, year_to, 0, 1, -3)
+    writer.write_annual_file("breakdown.int.annual.dat", varInt, year_from, year_to, 0, 3, -3)
+    writer.write_annual_file("breakdown.ave.annual.dat", varTotalAve, year_from, year_to, 0, 3, -3)
 
-# Monthly outputs
-writer.write_monthly_file("breakdown.sur.monthly.dat", varSurface, year_from, year_to, 0, 1, -3)
-writer.write_monthly_file("breakdown.ave.monthly.dat", varTotalAve, year_from, year_to, 0, 3, -3)
+# Observations (commented out - uncomment if needed)
+# writer.write_observation_file("breakdown.obs.annual.dat", obsComparisons, year_from, year_to)
+
+# Spread outputs (commented out - uncomment if needed)
+# writer.write_spread_file("breakdown.sur.spread.dat", varSurface, year_from, year_to, 0, 1, -3)
+# writer.write_spread_file("breakdown.lev.spread.dat", varLevel, year_from, year_to, 0, 2, -3)
+# writer.write_spread_file("breakdown.vol.spread.dat", varVolume, year_from, year_to, 0, 1, -3)
+# writer.write_spread_file("breakdown.int.spread.dat", varInt, year_from, year_to, 0, 3, -3)
+# writer.write_spread_file("breakdown.ave.spread.dat", varTotalAve, year_from, year_to, 0, 3, -3)
+
+# Monthly outputs (commented out - uncomment if needed)
+# writer.write_monthly_file("breakdown.sur.monthly.dat", varSurface, year_from, year_to, 0, 1, -3)
+# writer.write_monthly_file("breakdown.ave.monthly.dat", varTotalAve, year_from, year_to, 0, 3, -3)
 
 # Property outputs
 for prop in properties:
