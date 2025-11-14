@@ -238,7 +238,7 @@ region_mask_cache = precompute_region_masks(landMask, volMask, regions)
 
 # ---------- 7 LOAD MODEL OUTPUT NETCDF FILES ----------
 log.info("Loading model output files...")
-nc_run_ids, nc_runFileNames, years = load_netcdf_files(year_from, year_to)
+nc_run_ids, nc_runFileNames, years, failed_files = load_netcdf_files(year_from, year_to)
 
 # ---------- 8 PROCESS VARIABLES (USING UNIFIED PROCESSOR) ----------
 log.info("Processing variables...")
@@ -636,4 +636,14 @@ for prop in properties:
         filename = f"breakdown.{prop[0]}.{prop[-2]}.dat"
     writer.write_property_file(filename, prop, year_from, year_to)
 
-log.info("Processing complete!")
+# Report any files that failed to load
+if len(failed_files) > 0:
+    log.warning("=" * 60)
+    log.warning(f"WARNING: {len(failed_files)} file(s) failed to load due to corruption/errors:")
+    for file_path, error_msg in failed_files:
+        log.warning(f"  - {file_path}")
+        log.warning(f"    {error_msg}")
+    log.warning("=" * 60)
+    log.warning("Processing completed with errors. Output files contain data from successfully loaded files only.")
+else:
+    log.info("Processing complete!")

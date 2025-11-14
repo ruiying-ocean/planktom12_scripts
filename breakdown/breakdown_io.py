@@ -20,7 +20,7 @@ log = logging.getLogger("IO")
 
 # ---------- NETCDF LOADING ----------
 
-def load_netcdf_files(year_from: int, year_to: int) -> Tuple[List, List, List]:
+def load_netcdf_files(year_from: int, year_to: int) -> Tuple[List, List, List, List]:
     """
     Load NetCDF files for the specified year range.
 
@@ -29,14 +29,16 @@ def load_netcdf_files(year_from: int, year_to: int) -> Tuple[List, List, List]:
         year_to: Ending year
 
     Returns:
-        Tuple of (nc_run_ids, nc_runFileNames, years)
+        Tuple of (nc_run_ids, nc_runFileNames, years, failed_files)
         - nc_run_ids: List of lists of NetCDF Dataset objects per year
         - nc_runFileNames: List of lists of file names per year
         - years: List of years processed
+        - failed_files: List of tuples (file_path, error_message) for files that failed to load
     """
     nc_run_ids = []
     nc_runFileNames = []
     years = []
+    failed_files = []
 
     for year in range(year_from, year_to + 1):
         # Try to find all possible output files for this year
@@ -55,10 +57,17 @@ def load_netcdf_files(year_from: int, year_to: int) -> Tuple[List, List, List]:
             files = glob.glob(pattern)
             if len(files) > 0:
                 file_path = files[0]
-                nc_id = Dataset(file_path, 'r')
-                nc_avail.append(nc_id)
-                nc_names_avail.append(file_path)
-                log.info(f"Loaded: {file_path}")
+                try:
+                    nc_id = Dataset(file_path, 'r')
+                    nc_avail.append(nc_id)
+                    nc_names_avail.append(file_path)
+                    log.info(f"Loaded: {file_path}")
+                except (OSError, RuntimeError, Exception) as e:
+                    # File exists but is corrupted or unreadable
+                    error_msg = f"{type(e).__name__}: {str(e)}"
+                    failed_files.append((file_path, error_msg))
+                    log.warning(f"SKIPPED corrupted file: {file_path}")
+                    log.warning(f"  Error: {error_msg}")
 
         if len(nc_avail) > 0:
             nc_run_ids.append(nc_avail)
@@ -66,7 +75,7 @@ def load_netcdf_files(year_from: int, year_to: int) -> Tuple[List, List, List]:
             years.append(year)
             log.info(f"Run data for year {year}: {len(nc_avail)} files loaded")
 
-    return nc_run_ids, nc_runFileNames, years
+    return nc_run_ids, nc_runFileNames, years, failed_files
 
 
 def find_variable_in_files(nc_files: List, nc_filenames: List, var_name: str) -> Tuple[bool, Any, Any, Any, str]:
@@ -89,6 +98,11 @@ def find_variable_in_files(nc_files: List, nc_filenames: List, var_name: str) ->
             log.info(f"{var_name} found in {nc_filenames[i]}")
             return True, data, lats, lons, nc_filenames[i]
         except KeyError:
+            # Variable not in this file, try next one
+            continue
+        except (OSError, RuntimeError, ValueError, Exception) as e:
+            # File corruption or data read error during variable access
+            log.warning(f"Error reading variable '{var_name}' from {nc_filenames[i]}: {type(e).__name__}: {str(e)}")
             continue
 
     return False, None, None, None, None
