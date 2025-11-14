@@ -7,12 +7,11 @@ This module handles:
 - Output file writing with unified formatting
 """
 
-import glob
 import logging
-import os.path
+from pathlib import Path
 from netCDF4 import Dataset
 import numpy as np
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Union, Optional
 
 log = logging.getLogger("IO")
 

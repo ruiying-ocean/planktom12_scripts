@@ -27,10 +27,24 @@ class ModelDataLoader:
         self.model_name = model_name
         
     def _read_breakdown_file(self, file_type):
-        file_path = f"/{self.base_dir}/{self.model_name}/breakdown.{file_type}.annual.dat"
-        return pd.read_csv(file_path, sep="\t")
-        
-    def _extract_arrays(self, df, columns, skip_rows=2):
+        # Try CSV format first (new format), fall back to TSV if not found
+        csv_path = f"/{self.base_dir}/{self.model_name}/breakdown.{file_type}.annual.csv"
+        dat_path = f"/{self.base_dir}/{self.model_name}/breakdown.{file_type}.annual.dat"
+
+        try:
+            # New CSV format - single header row, comma-separated
+            return pd.read_csv(csv_path)
+        except FileNotFoundError:
+            # Legacy TSV format - 3 header rows, tab-separated
+            # Read with header=2 to skip first 2 rows (units and keys)
+            return pd.read_csv(dat_path, sep="\t", header=2)
+
+    def _extract_arrays(self, df, columns, skip_rows=0):
+        """Extract columns as numpy arrays.
+
+        Note: skip_rows is now 0 by default since CSV format has clean headers.
+        Legacy TSV files are handled in _read_breakdown_file by using header=2.
+        """
         data = {}
         for col in columns:
             if col in df.columns:

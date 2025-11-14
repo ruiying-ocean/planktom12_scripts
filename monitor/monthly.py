@@ -15,6 +15,19 @@ import calendar
 tModel = sys.argv[1]
 baseDir = sys.argv[2]
 
+
+def read_breakdown_monthly(file_path):
+    """Read monthly breakdown file, supporting both CSV and TSV formats."""
+    # Try CSV format first
+    csv_path = file_path.replace('.dat', '.csv')
+    try:
+        return pd.read_csv(csv_path)
+    except FileNotFoundError:
+        # Fall back to TSV with 3-header format
+        # header=2 skips the units and keys rows
+        return pd.read_csv(file_path, sep='\t', header=2)
+
+
 def makeSummaryFromBreakdowns(tmod, modBaseDir):
     
 	saveDir = f'/{modBaseDir}/monitor/{tmod}/'
@@ -22,9 +35,9 @@ def makeSummaryFromBreakdowns(tmod, modBaseDir):
     
 	try:
 		### Surface monthly
-		w = pd.read_csv(f'/{modBaseDir}/{tmod}/breakdown.sur.monthly.dat', sep='\t')
+		w = read_breakdown_monthly(f'/{modBaseDir}/{tmod}/breakdown.sur.monthly.dat')
 		print('Read surface monthly')
-        
+
 		mnth = w.month[-12:].to_numpy().astype(int)
 		Cflx_total = w.Cflx[-12:].to_numpy().astype(float)
 		Cflx_reg1 = w['Cflx.1'][-12:].to_numpy().astype(float)
@@ -34,7 +47,7 @@ def makeSummaryFromBreakdowns(tmod, modBaseDir):
 		Cflx_reg5 = w['Cflx.5'][-12:].to_numpy().astype(float)
 
 		### Average monthly
-		w = pd.read_csv(f'/{modBaseDir}/{tmod}/breakdown.ave.monthly.dat', sep='\t')
+		w = read_breakdown_monthly(f'/{modBaseDir}/{tmod}/breakdown.ave.monthly.dat')
 		print('Read average monthly')
         
 		mnth = w.month[-12:].to_numpy().astype(int)
