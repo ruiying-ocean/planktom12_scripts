@@ -75,7 +75,7 @@ if [ -f ORCA2_${timestep}_restart_0000.nc ]; then
 		sbatch -J s${simulation}${yearToRun}< submit.$yearToRun
 	else
 		if [ $yearPrevious -lt $yearEnd ]; then
-			sbatch -J ${simulation}$yearToRun < dgom
+			sbatch -J ${simulation}$yearToRun < nemo.job
 		fi
 	fi
 fi

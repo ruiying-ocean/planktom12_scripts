@@ -17,7 +17,7 @@ baseDir = sys.argv[2]
 year    = sys.argv[3]
 
 # basedir: ~/scratch/ModelRuns
-saveDir = f'/{baseDir}/monitor/{tmod}/'
+saveDir = f'/{baseDir}/visualise/{tmod}/'
 pathlib.Path(saveDir).mkdir(parents=True, exist_ok=True)
 
 ## Define functions

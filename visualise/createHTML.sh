@@ -26,8 +26,8 @@ fi
 
 # Set up save directory
 baseDir=$1
-monitor="monitor/"
-saveDir="${baseDir}${monitor}${run}/"
+visualise="visualise/"
+saveDir="${baseDir}${visualise}${run}/"
 
 # Move template to match run and replace parameters
 mv template.html ${run}.html

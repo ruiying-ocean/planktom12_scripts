@@ -63,8 +63,8 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
          echo "Python version: $(which python)"
 	python3 breakdown.py breakdown_config.toml ${y} ${y}
 
-	# Run monitor script
-	./monitor.py $model $homeDir
+	# Run visualise script
+	python3 visualise.py $model $homeDir
 
 	# Process output files
 	if [[ $y < $spinupEnd ]]; then
@@ -164,9 +164,9 @@ if [[ $yearTo -eq $yearEnd ]]; then
 	cp breakdown* $baseDir$model
 
 	# run script to generate monthly regional plots
-	./monthly.py $model $homeDir
+	python3 monthly.py $model $homeDir
 
-	./verticalDepth.py $model $homeDir $yearTo
+	python3 verticalDepth.py $model $homeDir $yearTo
 	
 	./annualMaps.sh $model $yearTo $homeDir
 

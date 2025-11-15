@@ -30,7 +30,7 @@ def read_breakdown_monthly(file_path):
 
 def makeSummaryFromBreakdowns(tmod, modBaseDir):
     
-	saveDir = f'/{modBaseDir}/monitor/{tmod}/'
+	saveDir = f'/{modBaseDir}/visualise/{tmod}/'
 	pathlib.Path(saveDir).mkdir(parents=True, exist_ok=True)
     
 	try:

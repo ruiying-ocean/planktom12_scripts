@@ -285,8 +285,8 @@ if [ ! -f breakdown_config.toml ]; then
 	cp /gpfs/data/greenocean/software/source/analyseRun/analyse-run/breakdown_config.toml breakdown_config.toml
 fi
 
-# Get monitor scripts and files
-cp /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/monitor/* .
+# Get visualise scripts and files
+cp /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/visualise/* .
 
 # Save parameters needed for creating html file
 echo $id $codeVersion $(date '+%d-%b-%Y') $yearStart $yearEnd ${CO2,,} $forcing ${type,,} $TR $SR > html_parms

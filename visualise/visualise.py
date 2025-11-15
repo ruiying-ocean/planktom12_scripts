@@ -300,7 +300,7 @@ class FigureCreator:
 
 def main():
     if len(sys.argv) != 3:
-        print("Usage: monitor.py <model_name> <model_dir>")
+        print("Usage: visualize.py <model_name> <model_dir>")
         sys.exit(1)
         
     model_name = sys.argv[1]

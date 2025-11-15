@@ -8,8 +8,8 @@ run=$1
 year=$2
 baseDir=$3
 
-monitor="monitor/"
-saveDir="${baseDir}${monitor}${run}/"
+visualise="visualise/"
+saveDir="${baseDir}${visualise}${run}/"
 
 # Create FERRET maps
 echo "ferret -gif -script maps.jnl" $baseDir $run $year | bash
