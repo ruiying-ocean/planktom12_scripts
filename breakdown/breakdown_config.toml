@@ -1,3 +1,107 @@
+# ============================================================================
+# BREAKDOWN CONFIGURATION FILE
+# ============================================================================
+#
+# This file configures spatial and temporal breakdown of ocean model output.
+# Variables can be filtered by:
+#   1. Latitude/longitude ranges (rectangular boxes)
+#   2. Region masks (predefined ocean basins and biogeochemical provinces)
+#
+# ----------------------------------------------------------------------------
+# USING REGION MASKS
+# ----------------------------------------------------------------------------
+#
+# To use predefined ocean basin masks instead of lat/lon ranges, add the
+# 'region' parameter to any variable definition:
+#
+#   [[surface]]
+#   variable = "Cflx"
+#   units = "PgCarbonPerYr"
+#   region = 37                    # Use Atlantic basin mask
+#   column_name = "Cflx_atlantic"
+#
+# When 'region' is specified, lon_range and lat_range are ignored.
+# The spatial extent is determined entirely by the region mask.
+#
+# ----------------------------------------------------------------------------
+# AVAILABLE REGIONS
+# ----------------------------------------------------------------------------
+#
+# Basic Ocean Basins (0-8):
+#   0  = Arctic Ocean
+#   1  = North Atlantic (A1)
+#   2  = North Pacific (P1)
+#   3  = North Equatorial - Atlantic + Pacific (A2+P2)
+#   4  = Equatorial - Atlantic + Pacific + Indian (A3+P3+I3)
+#   5  = South Equatorial - Atlantic + Pacific + Indian (A4+P4+I4)
+#   6  = Southern Ocean - Atlantic sector (A5)
+#   7  = Southern Ocean - Pacific sector (P5)
+#   8  = Southern Ocean - Indian sector (I5)
+#
+# Major Basin Totals (37-40):
+#   37 = Entire Atlantic Basin
+#   38 = Entire Pacific Basin
+#   39 = Entire Indian Ocean
+#   40 = Entire Southern Ocean
+#
+# RECCAP2 Biogeochemical Provinces (9-36):
+#   Open Ocean:  9-13  (open_ocean_0 through open_ocean_4)
+#   Atlantic:    14-19 (atlantic_0 through atlantic_5)
+#   Pacific:     20-25 (pacific_0 through pacific_5)
+#   Indian:      26-27 (indian_0 through indian_1)
+#   Arctic:      28-31 (arctic_0 through arctic_3)
+#   Southern:    32-34 (southern_0 through southern_2)
+#   Special:     35-36 (seamask, coast)
+#
+# Individual Sub-basins (41-54):
+#   41-46 = Individual Pacific sectors (P1-P5, ARCTIC)
+#   47-51 = Individual Atlantic sectors (A1-A5)
+#   52-54 = Individual Indian sectors (I3-I5)
+#
+# ----------------------------------------------------------------------------
+# EXAMPLE: Carbon Flux by Major Basin
+# ----------------------------------------------------------------------------
+#
+# [[surface]]
+# variable = "Cflx"
+# units = "PgCarbonPerYr"
+# region = 37
+# column_name = "Cflx_atlantic"
+#
+# [[surface]]
+# variable = "Cflx"
+# units = "PgCarbonPerYr"
+# region = 38
+# column_name = "Cflx_pacific"
+#
+# [[surface]]
+# variable = "Cflx"
+# units = "PgCarbonPerYr"
+# region = 0
+# column_name = "Cflx_arctic"
+#
+# ----------------------------------------------------------------------------
+# EXAMPLE: Integrated Bacteria by RECCAP Region
+# ----------------------------------------------------------------------------
+#
+# [[integration]]
+# variable = "BAC"
+# depth_from = 0
+# depth_to = 15
+# units = "Conc->PgCarbon"
+# region = 14                        # Atlantic RECCAP province 0
+# column_name = "BAC_0_15m_atlantic_reccap_0"
+#
+# [[integration]]
+# variable = "BAC"
+# depth_from = 0
+# depth_to = 15
+# units = "Conc->PgCarbon"
+# region = 20                        # Pacific RECCAP province 0
+# column_name = "BAC_0_15m_pacific_reccap_0"
+#
+# ============================================================================
+
 [files]
 basin_mask = "/gpfs/data/greenocean/software/resources/breakdown/basin_mask.nc"
 woa_mask = "/gpfs/data/greenocean/software/resources/breakdown/WOAmask.nc"
@@ -11,48 +115,36 @@ variable = "Cflx"
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "Cflx_global"
 
-[[surface]]
-variable = "Cflx"
-units = "PgCarbonPerYr"
-lon_range = [ -180, 180 ]
-lat_range = [ 45, 90 ]
-key = "subpolar_north"
-column_name = "Cflx_subpolar_north"
+# [[surface]]
+# variable = "Cflx"
+# units = "PgCarbonPerYr"
+# lon_range = [ -180, 180 ]
+# lat_range = [ 45, 90 ]
 
-[[surface]]
-variable = "Cflx"
-units = "PgCarbonPerYr"
-lon_range = [ -180, 180 ]
-lat_range = [ 15, 45 ]
-key = "subtrop_north"
-column_name = "Cflx_subtrop_north"
+# [[surface]]
+# variable = "Cflx"
+# units = "PgCarbonPerYr"
+# lon_range = [ -180, 180 ]
+# lat_range = [ 15, 45 ]
 
-[[surface]]
-variable = "Cflx"
-units = "PgCarbonPerYr"
-lon_range = [ -180, 180 ]
-lat_range = [ -15, 15 ]
-key = "tropical"
-column_name = "Cflx_tropical"
+# [[surface]]
+# variable = "Cflx"
+# units = "PgCarbonPerYr"
+# lon_range = [ -180, 180 ]
+# lat_range = [ -15, 15 ]
 
-[[surface]]
-variable = "Cflx"
-units = "PgCarbonPerYr"
-lon_range = [ -180, 180 ]
-lat_range = [ -45, -15 ]
-key = "subtrop_south"
-column_name = "Cflx_subtrop_south"
+# [[surface]]
+# variable = "Cflx"
+# units = "PgCarbonPerYr"
+# lon_range = [ -180, 180 ]
+# lat_range = [ -45, -15 ]
 
-[[surface]]
-variable = "Cflx"
-units = "PgCarbonPerYr"
-lon_range = [ -180, 180 ]
-lat_range = [ -90, -45 ]
-key = "subpolar_south"
-column_name = "Cflx_subpolar_south"
+# [[surface]]
+# variable = "Cflx"
+# units = "PgCarbonPerYr"
+# lon_range = [ -180, 180 ]
+# lat_range = [ -90, -45 ]
 
 [[level]]
 variable = "EXP"
@@ -60,8 +152,6 @@ level = 10
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "EXP_100m"
 
 [[level]]
 variable = "ExpARA"
@@ -69,8 +159,6 @@ level = 10
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "ExpARA_100m"
 
 [[level]]
 variable = "ExpCO3"
@@ -78,8 +166,6 @@ level = 10
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "ExpCO3_100m"
 
 [[level]]
 variable = "sinksil"
@@ -87,8 +173,6 @@ level = 10
 units = "TmolPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "sinksil_100m"
 
 [[level]]
 variable = "EXP"
@@ -97,79 +181,61 @@ units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 key = "exp_1000m_global"
-column_name = "EXP_210m"
+column_name = "EXP1000"
 
 [[volume]]
 variable = "PPT"
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "PPT_global"
 
 [[volume]]
 variable = "proara"
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "proara_global"
 
 [[volume]]
 variable = "prococ"
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "prococ_global"
 
 [[volume]]
 variable = "probsi"
 units = "TmolPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "probsi_global"
 
 [[volume]]
 variable = "GRAGEL"
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "GRAGEL_global"
 
 [[volume]]
 variable = "GRACRU"
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "GRACRU_global"
 
 [[volume]]
 variable = "GRAMES"
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "GRAMES_global"
 
 [[volume]]
 variable = "GRAPRO"
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "GRAPRO_global"
 
 [[volume]]
 variable = "GRAPTE"
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "GRAPTE_global"
 
 [[integration]]
 variable = "BAC"
@@ -178,8 +244,6 @@ depth_to = 15
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "global"
-column_name = "BAC_0_15m"
 
 [[integration]]
 variable = "COC"
@@ -188,8 +252,6 @@ depth_to = 15
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "global"
-column_name = "COC_0_15m"
 
 [[integration]]
 variable = "DIA"
@@ -198,8 +260,6 @@ depth_to = 15
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "global"
-column_name = "DIA_0_15m"
 
 [[integration]]
 variable = "FIX"
@@ -208,8 +268,6 @@ depth_to = 15
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "global"
-column_name = "FIX_0_15m"
 
 [[integration]]
 variable = "GEL"
@@ -218,8 +276,6 @@ depth_to = 15
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "global"
-column_name = "GEL_0_15m"
 
 [[integration]]
 variable = "CRU"
@@ -228,8 +284,6 @@ depth_to = 15
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "global"
-column_name = "CRU_0_15m"
 
 [[integration]]
 variable = "MES"
@@ -238,8 +292,6 @@ depth_to = 15
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "global"
-column_name = "MES_0_15m"
 
 [[integration]]
 variable = "MIX"
@@ -248,8 +300,6 @@ depth_to = 15
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "global"
-column_name = "MIX_0_15m"
 
 [[integration]]
 variable = "PHA"
@@ -258,8 +308,6 @@ depth_to = 15
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "global"
-column_name = "PHA_0_15m"
 
 [[integration]]
 variable = "PIC"
@@ -268,8 +316,6 @@ depth_to = 15
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "global"
-column_name = "PIC_0_15m"
 
 [[integration]]
 variable = "PRO"
@@ -278,8 +324,6 @@ depth_to = 15
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "global"
-column_name = "PRO_0_15m"
 
 [[integration]]
 variable = "PTE"
@@ -288,8 +332,6 @@ depth_to = 15
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "global"
-column_name = "PTE_0_15m"
 
 [[average]]
 variable = "TChl"
@@ -298,58 +340,46 @@ depth_to = 0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "TChl_0_0m"
 
-[[average]]
-variable = "TChl"
-depth_from = 0
-depth_to = 0
-units = "u/L"
-lon_range = [ -180, 180 ]
-lat_range = [ 45, 90 ]
-key = "subpolar_north"
-column_name = "TChl_0_0m_subpolar_north"
+# [[average]]
+# variable = "TChl"
+# depth_from = 0
+# depth_to = 0
+# units = "u/L"
+# lon_range = [ -180, 180 ]
+# lat_range = [ 45, 90 ]
 
-[[average]]
-variable = "TChl"
-depth_from = 0
-depth_to = 0
-units = "u/L"
-lon_range = [ -180, 180 ]
-lat_range = [ 15, 45 ]
-key = "subtrop_north"
-column_name = "TChl_0_0m_subtrop_north"
+# [[average]]
+# variable = "TChl"
+# depth_from = 0
+# depth_to = 0
+# units = "u/L"
+# lon_range = [ -180, 180 ]
+# lat_range = [ 15, 45 ]
 
-[[average]]
-variable = "TChl"
-depth_from = 0
-depth_to = 0
-units = "u/L"
-lon_range = [ -180, 180 ]
-lat_range = [ -15, 15 ]
-key = "tropical"
-column_name = "TChl_0_0m_tropical"
+# [[average]]
+# variable = "TChl"
+# depth_from = 0
+# depth_to = 0
+# units = "u/L"
+# lon_range = [ -180, 180 ]
+# lat_range = [ -15, 15 ]
 
-[[average]]
-variable = "TChl"
-depth_from = 0
-depth_to = 0
-units = "u/L"
-lon_range = [ -180, 180 ]
-lat_range = [ -45, -15 ]
-key = "subtrop_south"
-column_name = "TChl_0_0m_subtrop_south"
+# [[average]]
+# variable = "TChl"
+# depth_from = 0
+# depth_to = 0
+# units = "u/L"
+# lon_range = [ -180, 180 ]
+# lat_range = [ -45, -15 ]
 
-[[average]]
-variable = "TChl"
-depth_from = 0
-depth_to = 0
-units = "u/L"
-lon_range = [ -180, 180 ]
-lat_range = [ -90, -45 ]
-key = "subpolar_south"
-column_name = "TChl_0_0m_subpolar_south"
+# [[average]]
+# variable = "TChl"
+# depth_from = 0
+# depth_to = 0
+# units = "u/L"
+# lon_range = [ -180, 180 ]
+# lat_range = [ -90, -45 ]
 
 [[average]]
 variable = "PO4"
@@ -358,8 +388,6 @@ depth_to = 0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "PO4_0_0m"
 
 [[average]]
 variable = "NO3"
@@ -368,8 +396,6 @@ depth_to = 0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "NO3_0_0m"
 
 [[average]]
 variable = "Fer"
@@ -378,8 +404,6 @@ depth_to = 0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "Fer_0_0m"
 
 [[average]]
 variable = "Si"
@@ -388,8 +412,6 @@ depth_to = 0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "Si_0_0m"
 
 [[average]]
 variable = "O2"
@@ -398,8 +420,6 @@ depth_to = 0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "O2_0_0m"
 
 [[average]]
 variable = "tos"
@@ -408,8 +428,6 @@ depth_to = 0
 units = "1"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "tos_0_0m"
 
 [[average]]
 variable = "sos"
@@ -418,8 +436,6 @@ depth_to = 0
 units = "1"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "sos_0_0m"
 
 [[average]]
 variable = "mldr10_1"
@@ -428,8 +444,6 @@ depth_to = 0
 units = "1"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "mldr10_1_0_0m"
 
 [[average]]
 variable = "pCO2"
@@ -438,58 +452,46 @@ depth_to = 0
 units = "1"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "total"
-column_name = "pCO2_0_0m"
 
-[[average]]
-variable = "pCO2"
-depth_from = 0
-depth_to = 0
-units = "1"
-lon_range = [ -180, 180 ]
-lat_range = [ 45, 90 ]
-key = "subpolar_north"
-column_name = "pCO2_0_0m_subpolar_north"
+# [[average]]
+# variable = "pCO2"
+# depth_from = 0
+# depth_to = 0
+# units = "1"
+# lon_range = [ -180, 180 ]
+# lat_range = [ 45, 90 ]
 
-[[average]]
-variable = "pCO2"
-depth_from = 0
-depth_to = 0
-units = "1"
-lon_range = [ -180, 180 ]
-lat_range = [ 15, 45 ]
-key = "subtrop_north"
-column_name = "pCO2_0_0m_subtrop_north"
+# [[average]]
+# variable = "pCO2"
+# depth_from = 0
+# depth_to = 0
+# units = "1"
+# lon_range = [ -180, 180 ]
+# lat_range = [ 15, 45 ]
 
-[[average]]
-variable = "pCO2"
-depth_from = 0
-depth_to = 0
-units = "1"
-lon_range = [ -180, 180 ]
-lat_range = [ -15, 15 ]
-key = "tropical"
-column_name = "pCO2_0_0m_tropical"
+# [[average]]
+# variable = "pCO2"
+# depth_from = 0
+# depth_to = 0
+# units = "1"
+# lon_range = [ -180, 180 ]
+# lat_range = [ -15, 15 ]
 
-[[average]]
-variable = "pCO2"
-depth_from = 0
-depth_to = 0
-units = "1"
-lon_range = [ -180, 180 ]
-lat_range = [ -45, -15 ]
-key = "subtrop_south"
-column_name = "pCO2_0_0m_subtrop_south"
+# [[average]]
+# variable = "pCO2"
+# depth_from = 0
+# depth_to = 0
+# units = "1"
+# lon_range = [ -180, 180 ]
+# lat_range = [ -45, -15 ]
 
-[[average]]
-variable = "pCO2"
-depth_from = 0
-depth_to = 0
-units = "1"
-lon_range = [ -180, 180 ]
-lat_range = [ -90, -45 ]
-key = "subpolar_south"
-column_name = "pCO2_0_0m_subpolar_south"
+# [[average]]
+# variable = "pCO2"
+# depth_from = 0
+# depth_to = 0
+# units = "1"
+# lon_range = [ -180, 180 ]
+# lat_range = [ -90, -45 ]
 
 [[average]]
 variable = "Alkalini"
@@ -498,5 +500,3 @@ depth_to = 0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
-key = "surface_alk_global"
-column_name = "Alkalini_0_0m"
