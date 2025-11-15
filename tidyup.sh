@@ -61,7 +61,7 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 
          # Python based totalling
          echo "Python version: $(which python)"
-	./breakdown.py breakdown_config.toml ${y} ${y}
+	python3 breakdown.py breakdown_config.toml ${y} ${y}
 
 	# Run monitor script
 	./monitor.py $model $homeDir
