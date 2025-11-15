@@ -10,6 +10,11 @@ from dataclasses import dataclass
 from typing import List, Tuple, Optional
 import logging
 
+try:
+    import tomli
+except ImportError:
+    tomli = None
+
 log = logging.getLogger("Config")
 
 
@@ -25,6 +30,7 @@ class VariableConfig:
     lon_limit: Tuple[str, str]
     lat_limit: Tuple[str, str]
     results: List  # Will store processing results
+    column_name: str = ""  # Custom column name for CSV output
 
 
 @dataclass
@@ -136,9 +142,162 @@ class BreakdownConfig:
 
 # ---------- PARSING FUNCTIONS ----------
 
-def parse_config_file(file_path: str) -> BreakdownConfig:
+def parse_toml_config(file_path: str) -> BreakdownConfig:
     """
-    Parse breakdown_parms configuration file.
+    Parse TOML configuration file.
+
+    Args:
+        file_path: Path to the .toml configuration file
+
+    Returns:
+        BreakdownConfig object with all parsed configuration
+    """
+    if tomli is None:
+        raise ImportError("tomli library is required for TOML configuration. Install with: pip install tomli")
+
+    config = BreakdownConfig()
+
+    with open(file_path, 'rb') as f:
+        data = tomli.load(f)
+
+    # Parse file paths
+    if 'files' in data:
+        config.basin_mask = data['files'].get('basin_mask', '')
+        config.woa_mask = data['files'].get('woa_mask', '')
+        config.region_mask = data['files'].get('region_mask', '')
+        config.reccap_mask = data['files'].get('reccap_mask', '')
+        config.mesh_mask = data['files'].get('mesh_mask', '')
+        config.ancillary_data = data['files'].get('ancillary_data', '')
+
+    # Parse surface variables
+    for surf in data.get('surface', []):
+        config.surface_vars.append(SurfaceVariable(
+            name=surf['variable'],
+            units=surf['units'],
+            key=surf.get('key', ''),
+            region=surf.get('region', -1),
+            lon_limit=tuple(map(str, surf.get('lon_range', ['-180', '180']))),
+            lat_limit=tuple(map(str, surf.get('lat_range', ['-90', '90']))),
+            results=[],
+            column_name=surf.get('column_name', '')
+        ))
+
+    # Parse level variables
+    for lev in data.get('level', []):
+        config.level_vars.append(LevelVariable(
+            name=lev['variable'],
+            units=lev['units'],
+            key=lev.get('key', ''),
+            region=lev.get('region', -1),
+            lon_limit=tuple(map(str, lev.get('lon_range', ['-180', '180']))),
+            lat_limit=tuple(map(str, lev.get('lat_range', ['-90', '90']))),
+            results=[],
+            column_name=lev.get('column_name', ''),
+            level=lev['level']
+        ))
+
+    # Parse volume variables
+    for vol in data.get('volume', []):
+        config.volume_vars.append(VolumeVariable(
+            name=vol['variable'],
+            units=vol['units'],
+            key=vol.get('key', ''),
+            region=vol.get('region', -1),
+            lon_limit=tuple(map(str, vol.get('lon_range', ['-180', '180']))),
+            lat_limit=tuple(map(str, vol.get('lat_range', ['-90', '90']))),
+            results=[],
+            column_name=vol.get('column_name', '')
+        ))
+
+    # Parse integration variables
+    for integ in data.get('integration', []):
+        config.integration_vars.append(IntegrationVariable(
+            name=integ['variable'],
+            units=integ['units'],
+            key=integ.get('key', ''),
+            region=integ.get('region', -1),
+            lon_limit=tuple(map(str, integ.get('lon_range', ['-180', '180']))),
+            lat_limit=tuple(map(str, integ.get('lat_range', ['-90', '90']))),
+            results=[],
+            column_name=integ.get('column_name', ''),
+            depth_from=integ['depth_from'],
+            depth_to=integ['depth_to']
+        ))
+
+    # Parse average variables
+    for avg in data.get('average', []):
+        config.average_vars.append(AverageVariable(
+            name=avg['variable'],
+            units=avg['units'],
+            key=avg.get('key', ''),
+            region=avg.get('region', -1),
+            lon_limit=tuple(map(str, avg.get('lon_range', ['-180', '180']))),
+            lat_limit=tuple(map(str, avg.get('lat_range', ['-90', '90']))),
+            results=[],
+            column_name=avg.get('column_name', ''),
+            depth_from=avg['depth_from'],
+            depth_to=avg['depth_to']
+        ))
+
+    # Parse observation comparisons (if any)
+    for obs in data.get('observations', []):
+        config.observations.append(ObservationComparison(
+            obs_dataset=obs['dataset'],
+            obs_var=obs['obs_variable'],
+            model_var=obs['model_variable'],
+            depth_obs=obs['depth_obs'],
+            depth_model=obs['depth_model'],
+            gam_flag=obs.get('gam_flag', False),
+            lon_limit=tuple(map(str, obs.get('lon_range', ['-180', '180']))),
+            lat_limit=tuple(map(str, obs.get('lat_range', ['-90', '90']))),
+            key=obs.get('key', ''),
+            region=obs.get('region', -1),
+            results=[]
+        ))
+
+    # Parse properties (if any)
+    for prop in data.get('properties', []):
+        prop_type = prop['type']
+        if prop_type == 'Bloom':
+            variables = prop['variable']
+        elif prop_type == 'Trophic':
+            variables = prop['variables']
+        else:
+            variables = prop.get('variable', '')
+
+        config.properties.append(Property(
+            prop_name=prop_type,
+            variables=variables,
+            depth_from=prop['depth_from'],
+            depth_to=prop['depth_to'],
+            lon_limit=tuple(map(str, prop.get('lon_range', ['-180', '180']))),
+            lat_limit=tuple(map(str, prop.get('lat_range', ['-90', '90']))),
+            key=prop.get('key', ''),
+            results=[]
+        ))
+
+    # Parse map variables (if any)
+    for m in data.get('maps', []):
+        config.map_vars.append(MapVariable(
+            name=m['variable'],
+            level=str(m.get('level', 'all'))
+        ))
+
+    log.info(f"Parsed {len(config.surface_vars)} surface variables from TOML")
+    log.info(f"Parsed {len(config.level_vars)} level variables from TOML")
+    log.info(f"Parsed {len(config.volume_vars)} volume variables from TOML")
+    log.info(f"Parsed {len(config.integration_vars)} integration variables from TOML")
+    log.info(f"Parsed {len(config.average_vars)} average variables from TOML")
+    log.info(f"Parsed {len(config.observations)} observation comparisons from TOML")
+    log.info(f"Parsed {len(config.properties)} properties from TOML")
+    log.info(f"Parsed {len(config.map_vars)} map variables from TOML")
+
+    return config
+
+
+def parse_text_config(file_path: str) -> BreakdownConfig:
+    """
+    Parse legacy text-based breakdown_parms configuration file.
 
     Args:
         file_path: Path to the breakdown_parms file
@@ -206,6 +365,20 @@ def parse_config_file(file_path: str) -> BreakdownConfig:
     log.info(f"Parsed {len(config.map_vars)} map variables")
 
     return config
+
+
+def parse_config_file(file_path: str) -> BreakdownConfig:
+    """
+    Parse configuration file (TOML format).
+
+    Args:
+        file_path: Path to the .toml configuration file
+
+    Returns:
+        BreakdownConfig object with all parsed configuration
+    """
+    # Since we're fully migrating to TOML, just call the TOML parser
+    return parse_toml_config(file_path)
 
 
 def _parse_surface(value: str) -> SurfaceVariable:

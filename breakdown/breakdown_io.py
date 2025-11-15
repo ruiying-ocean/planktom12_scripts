@@ -144,21 +144,27 @@ class OutputWriter:
                 f.write("year,")
                 headers = []
                 for var in variables:
-                    if hasattr(var, 'name'):
+                    # Use custom column name if available, otherwise build from variable name
+                    if hasattr(var, 'column_name') and var.column_name:
+                        col_name = var.column_name
+                    elif hasattr(var, 'name'):
                         name = var.name
                         units = var.units if include_units else None
                         key = var.key if include_keys else None
+                        col_name = name
+                        if include_units and units:
+                            col_name += f" ({units})"
+                        if include_keys and key:
+                            col_name += f" [{key}]"
                     else:
                         name = var[var_index]
                         units = var[1] if include_units and len(var) > 1 else None
                         key = var[-3] if include_keys else None
-
-                    # Build column name
-                    col_name = name
-                    if include_units and units:
-                        col_name += f" ({units})"
-                    if include_keys and key:
-                        col_name += f" [{key}]"
+                        col_name = name
+                        if include_units and units:
+                            col_name += f" ({units})"
+                        if include_keys and key:
+                            col_name += f" [{key}]"
 
                     headers.append(col_name)
 

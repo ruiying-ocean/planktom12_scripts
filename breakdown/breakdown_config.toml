@@ -1,0 +1,502 @@
+[files]
+basin_mask = "/gpfs/data/greenocean/software/resources/breakdown/basin_mask.nc"
+woa_mask = "/gpfs/data/greenocean/software/resources/breakdown/WOAmask.nc"
+region_mask = "/gpfs/data/greenocean/software/resources/breakdown/clq_basin_masks_ORCA.nc"
+reccap_mask = "/gpfs/data/greenocean/software/resources/breakdown/RECCAP2_region_masks_all_v20210412_ORCA.nc"
+mesh_mask = "/gpfs/data/greenocean/software/resources/breakdown/mesh_mask3_6_low_res.nc"
+ancillary_data = "/gpfs/data/greenocean/software/resources/breakdown/AncillaryData_v2.nc"
+
+[[surface]]
+variable = "Cflx"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "Cflx_global"
+
+[[surface]]
+variable = "Cflx"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ 45, 90 ]
+key = "subpolar_north"
+column_name = "Cflx_subpolar_north"
+
+[[surface]]
+variable = "Cflx"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ 15, 45 ]
+key = "subtrop_north"
+column_name = "Cflx_subtrop_north"
+
+[[surface]]
+variable = "Cflx"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -15, 15 ]
+key = "tropical"
+column_name = "Cflx_tropical"
+
+[[surface]]
+variable = "Cflx"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -45, -15 ]
+key = "subtrop_south"
+column_name = "Cflx_subtrop_south"
+
+[[surface]]
+variable = "Cflx"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, -45 ]
+key = "subpolar_south"
+column_name = "Cflx_subpolar_south"
+
+[[level]]
+variable = "EXP"
+level = 10
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "EXP_100m"
+
+[[level]]
+variable = "ExpARA"
+level = 10
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "ExpARA_100m"
+
+[[level]]
+variable = "ExpCO3"
+level = 10
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "ExpCO3_100m"
+
+[[level]]
+variable = "sinksil"
+level = 10
+units = "TmolPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "sinksil_100m"
+
+[[level]]
+variable = "EXP"
+level = 21
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "exp_1000m_global"
+column_name = "EXP_210m"
+
+[[volume]]
+variable = "PPT"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "PPT_global"
+
+[[volume]]
+variable = "proara"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "proara_global"
+
+[[volume]]
+variable = "prococ"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "prococ_global"
+
+[[volume]]
+variable = "probsi"
+units = "TmolPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "probsi_global"
+
+[[volume]]
+variable = "GRAGEL"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "GRAGEL_global"
+
+[[volume]]
+variable = "GRACRU"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "GRACRU_global"
+
+[[volume]]
+variable = "GRAMES"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "GRAMES_global"
+
+[[volume]]
+variable = "GRAPRO"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "GRAPRO_global"
+
+[[volume]]
+variable = "GRAPTE"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "GRAPTE_global"
+
+[[integration]]
+variable = "BAC"
+depth_from = 0
+depth_to = 15
+units = "Conc->PgCarbon"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "global"
+column_name = "BAC_0_15m"
+
+[[integration]]
+variable = "COC"
+depth_from = 0
+depth_to = 15
+units = "Conc->PgCarbon"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "global"
+column_name = "COC_0_15m"
+
+[[integration]]
+variable = "DIA"
+depth_from = 0
+depth_to = 15
+units = "Conc->PgCarbon"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "global"
+column_name = "DIA_0_15m"
+
+[[integration]]
+variable = "FIX"
+depth_from = 0
+depth_to = 15
+units = "Conc->PgCarbon"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "global"
+column_name = "FIX_0_15m"
+
+[[integration]]
+variable = "GEL"
+depth_from = 0
+depth_to = 15
+units = "Conc->PgCarbon"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "global"
+column_name = "GEL_0_15m"
+
+[[integration]]
+variable = "CRU"
+depth_from = 0
+depth_to = 15
+units = "Conc->PgCarbon"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "global"
+column_name = "CRU_0_15m"
+
+[[integration]]
+variable = "MES"
+depth_from = 0
+depth_to = 15
+units = "Conc->PgCarbon"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "global"
+column_name = "MES_0_15m"
+
+[[integration]]
+variable = "MIX"
+depth_from = 0
+depth_to = 15
+units = "Conc->PgCarbon"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "global"
+column_name = "MIX_0_15m"
+
+[[integration]]
+variable = "PHA"
+depth_from = 0
+depth_to = 15
+units = "Conc->PgCarbon"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "global"
+column_name = "PHA_0_15m"
+
+[[integration]]
+variable = "PIC"
+depth_from = 0
+depth_to = 15
+units = "Conc->PgCarbon"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "global"
+column_name = "PIC_0_15m"
+
+[[integration]]
+variable = "PRO"
+depth_from = 0
+depth_to = 15
+units = "Conc->PgCarbon"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "global"
+column_name = "PRO_0_15m"
+
+[[integration]]
+variable = "PTE"
+depth_from = 0
+depth_to = 15
+units = "Conc->PgCarbon"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "global"
+column_name = "PTE_0_15m"
+
+[[average]]
+variable = "TChl"
+depth_from = 0
+depth_to = 0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "TChl_0_0m"
+
+[[average]]
+variable = "TChl"
+depth_from = 0
+depth_to = 0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ 45, 90 ]
+key = "subpolar_north"
+column_name = "TChl_0_0m_subpolar_north"
+
+[[average]]
+variable = "TChl"
+depth_from = 0
+depth_to = 0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ 15, 45 ]
+key = "subtrop_north"
+column_name = "TChl_0_0m_subtrop_north"
+
+[[average]]
+variable = "TChl"
+depth_from = 0
+depth_to = 0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -15, 15 ]
+key = "tropical"
+column_name = "TChl_0_0m_tropical"
+
+[[average]]
+variable = "TChl"
+depth_from = 0
+depth_to = 0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -45, -15 ]
+key = "subtrop_south"
+column_name = "TChl_0_0m_subtrop_south"
+
+[[average]]
+variable = "TChl"
+depth_from = 0
+depth_to = 0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, -45 ]
+key = "subpolar_south"
+column_name = "TChl_0_0m_subpolar_south"
+
+[[average]]
+variable = "PO4"
+depth_from = 0
+depth_to = 0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "PO4_0_0m"
+
+[[average]]
+variable = "NO3"
+depth_from = 0
+depth_to = 0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "NO3_0_0m"
+
+[[average]]
+variable = "Fer"
+depth_from = 0
+depth_to = 0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "Fer_0_0m"
+
+[[average]]
+variable = "Si"
+depth_from = 0
+depth_to = 0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "Si_0_0m"
+
+[[average]]
+variable = "O2"
+depth_from = 0
+depth_to = 0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "O2_0_0m"
+
+[[average]]
+variable = "tos"
+depth_from = 0
+depth_to = 0
+units = "1"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "tos_0_0m"
+
+[[average]]
+variable = "sos"
+depth_from = 0
+depth_to = 0
+units = "1"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "sos_0_0m"
+
+[[average]]
+variable = "mldr10_1"
+depth_from = 0
+depth_to = 0
+units = "1"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "mldr10_1_0_0m"
+
+[[average]]
+variable = "pCO2"
+depth_from = 0
+depth_to = 0
+units = "1"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "total"
+column_name = "pCO2_0_0m"
+
+[[average]]
+variable = "pCO2"
+depth_from = 0
+depth_to = 0
+units = "1"
+lon_range = [ -180, 180 ]
+lat_range = [ 45, 90 ]
+key = "subpolar_north"
+column_name = "pCO2_0_0m_subpolar_north"
+
+[[average]]
+variable = "pCO2"
+depth_from = 0
+depth_to = 0
+units = "1"
+lon_range = [ -180, 180 ]
+lat_range = [ 15, 45 ]
+key = "subtrop_north"
+column_name = "pCO2_0_0m_subtrop_north"
+
+[[average]]
+variable = "pCO2"
+depth_from = 0
+depth_to = 0
+units = "1"
+lon_range = [ -180, 180 ]
+lat_range = [ -15, 15 ]
+key = "tropical"
+column_name = "pCO2_0_0m_tropical"
+
+[[average]]
+variable = "pCO2"
+depth_from = 0
+depth_to = 0
+units = "1"
+lon_range = [ -180, 180 ]
+lat_range = [ -45, -15 ]
+key = "subtrop_south"
+column_name = "pCO2_0_0m_subtrop_south"
+
+[[average]]
+variable = "pCO2"
+depth_from = 0
+depth_to = 0
+units = "1"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, -45 ]
+key = "subpolar_south"
+column_name = "pCO2_0_0m_subpolar_south"
+
+[[average]]
+variable = "Alkalini"
+depth_from = 0
+depth_to = 0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+key = "surface_alk_global"
+column_name = "Alkalini_0_0m"

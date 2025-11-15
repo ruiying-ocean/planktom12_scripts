@@ -600,11 +600,11 @@ INCLUDE_KEYS_IN_HEADERS = False   # Set to True to include keys like "BAC [globa
 # Annual outputs - CSV format (clean, single header row)
 if OUTPUT_FORMAT == 'csv':
     log.info("Writing CSV format outputs...")
-    writer.write_annual_csv("breakdown.sur.annual.csv", varSurface, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
-    writer.write_annual_csv("breakdown.lev.annual.csv", varLevel, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
-    writer.write_annual_csv("breakdown.vol.annual.csv", varVolume, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
-    writer.write_annual_csv("breakdown.int.annual.csv", varInt, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
-    writer.write_annual_csv("breakdown.ave.annual.csv", varTotalAve, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+    writer.write_annual_csv("breakdown.sur.annual.csv", config.surface_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+    writer.write_annual_csv("breakdown.lev.annual.csv", config.level_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+    writer.write_annual_csv("breakdown.vol.annual.csv", config.volume_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+    writer.write_annual_csv("breakdown.int.annual.csv", config.integration_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+    writer.write_annual_csv("breakdown.ave.annual.csv", config.average_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
 else:
     # Original TSV format (backward compatible - 3 header rows)
     log.info("Writing TSV format outputs...")
