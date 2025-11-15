@@ -66,14 +66,14 @@ class ModelDataLoader:
         data.update(volume_data)
         
         level_df = self._read_breakdown_file("lev")
-        level_cols = ["EXP", "ExpARA", "ExpCO3", "sinksil"]
+        level_cols = ["EXP", "ExpARA", "ExpCO3", "sinksil", "EXP1000"]
         level_data = self._extract_arrays(level_df, level_cols)
         level_data["EXPCACO3"] = level_data["ExpARA"] + level_data["ExpCO3"]
         level_data["SI_FLX"] = level_data["sinksil"]
         data.update(level_data)
         
         average_df = self._read_breakdown_file("ave")
-        avg_cols = ["TChl", "PO4", "NO3", "Fer", "Si", "O2", "tos", "sos", "mldr10_1"]
+        avg_cols = ["TChl", "PO4", "NO3", "Fer", "Si", "O2", "tos", "sos", "mldr10_1", "Alkalini"]
         avg_data = self._extract_arrays(average_df, avg_cols)
         avg_data["nFer"] = avg_data["Fer"] * 1000
         avg_data["nPO4"] = avg_data["PO4"] / 122
@@ -208,16 +208,17 @@ class FigureCreator:
             (data["Cflx"], self.colors['blue'], "Surface Carbon Flux [PgC/yr]"),
             (data["TChl"], self.colors['green'], "Surface Chlorophyll [μg Chl/L]", None, ObservationLine(0.2921)),
             (data["PPT"], self.colors['orange'], "Primary Production [PgC/yr]", ObservationRange(51, 65)),
-            (data["EXP"], self.colors['red'], "Export at 100m [PgC/yr]", ObservationRange(7.8, 12.2)),            
+            (data["EXP"], self.colors['red'], "Export at 100m [PgC/yr]", ObservationRange(7.8, 12.2)),
+            (data["EXP1000"], self.colors['purple'], "Export at 1000m [PgC/yr]"),
             (data["PROCACO3"], self.colors['cyan'], "CaCO₃ Production [PgC/yr]", ObservationRange(1.04, 3.34)),
             (data["EXPCACO3"], self.colors['blue'], "CaCO₃ Export at 100m [PgC/yr]", ObservationRange(0.68, 0.9)),
-            (data["probsi"], self.colors['pink'], "Silica Production [Tmol/yr]", ObservationRange(203, 307)),            
+            (data["probsi"], self.colors['pink'], "Silica Production [Tmol/yr]", ObservationRange(203, 307)),
             (data["SI_FLX"], self.colors['green'], "Silica Export at 100m [Tmol/yr]", ObservationRange(89, 135)),
         ]
-        
+
         self._create_subplot_grid(
             plot_configs, data, year_limits,
-            (13.5 * self.ratio, 6.5 * self.ratio), (2, 4),
+            (13.5 * self.ratio, 6.5 * self.ratio), (2, 5),
             f"{self.model_name}_summary_global.jpg"
         )
 
