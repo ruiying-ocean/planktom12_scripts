@@ -2,8 +2,8 @@
 """
 Configuration parsing module for breakdown system.
 
-This module handles parsing of the breakdown_parms text file and provides
-structured configuration objects.
+This module handles parsing of the breakdown_config.toml file and provides
+structured configuration objects. Also supports legacy text-based format.
 """
 
 from dataclasses import dataclass
@@ -297,10 +297,10 @@ def parse_toml_config(file_path: str) -> BreakdownConfig:
 
 def parse_text_config(file_path: str) -> BreakdownConfig:
     """
-    Parse legacy text-based breakdown_parms configuration file.
+    Parse legacy text-based configuration file (deprecated format).
 
     Args:
-        file_path: Path to the breakdown_parms file
+        file_path: Path to the legacy text configuration file
 
     Returns:
         BreakdownConfig object with all parsed configuration

@@ -64,7 +64,7 @@ keepIce:0
 keepLimPhy:0
 
 # Location of breakdown parameter file (if not specified, will use default)
-breakdown_parms:/gpfs/home/vhf24tbu/setUpRuns/HALI/breakdown/breakdown_parms
+breakdown_parms:/gpfs/home/vhf24tbu/setUpRuns/HALI/breakdown/breakdown_config.toml
 
 # Base directory for saving model run data (clean up scripts will copy data to central area [specified in tidyup.sh])
 basedir:/gpfs/home/vhf24tbu/scratch/ModelRuns/

@@ -276,13 +276,13 @@ cp -n /gpfs/home/vhf24tbu/setUpRuns/HALI/tidyupJob .
 
 # Get breakdown scripts
 cp /gpfs/home/vhf24tbu/setUpRuns/HALI/breakdown/breakdown*.py .
-cp /gpfs/home/vhf24tbu/setUpRuns/HALI/breakdown/breakdown_parms .
+cp /gpfs/home/vhf24tbu/setUpRuns/HALI/breakdown/breakdown_config.toml .
 cp /gpfs/home/vhf24tbu/EXP00/iodef_tom12piicc14.xml .
 
-# If breakdown_parms does not exist (as specified in setUpData file) copy in default
-if [ ! -f breakdown_parms ]; then
-	echo "Copying in default script for breakdown_parms"
-	cp /gpfs/data/greenocean/software/source/analyseRun/analyse-run/breakdown_dashboard breakdown_parms
+# If breakdown_config.toml does not exist (as specified in setUpData file) copy in default
+if [ ! -f breakdown_config.toml ]; then
+	echo "Copying in default script for breakdown_config.toml"
+	cp /gpfs/data/greenocean/software/source/analyseRun/analyse-run/breakdown_config.toml breakdown_config.toml
 fi
 
 # Get monitor scripts and files

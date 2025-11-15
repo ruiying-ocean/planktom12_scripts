@@ -1,5 +1,6 @@
-# Parameters for breaking down the run into outputs
-# If a breakdown_parms file exists (exact name used), it will be used; otherwise the default file in analyseRun will be copied in
+# DEPRECATED: This text-based format is deprecated
+# Please use breakdown_config.toml instead
+# To migrate this file, run: python breakdown_migration.py breakdown_parms breakdown_config.toml
 # Last edited: 31/01/2023
 
 # # The masks, containing volume and areas for each pixel 

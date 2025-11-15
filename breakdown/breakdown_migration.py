@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Migration tool to convert legacy breakdown_parms text format to TOML format.
+Migration tool to convert legacy text format to breakdown_config.toml format.
 
 Usage:
     python breakdown_migration.py <input_file> <output_file>
-    python breakdown_migration.py breakdown_parms breakdown_config.toml
+    python breakdown_migration.py old_config.txt breakdown_config.toml
 """
 
 import sys
@@ -399,7 +399,7 @@ def convert_to_toml(text_config_path: str, toml_config_path: str):
 if __name__ == '__main__':
     if len(sys.argv) != 3:
         print("Usage: python breakdown_migration.py <input_file> <output_file>")
-        print("Example: python breakdown_migration.py breakdown_parms breakdown_config.toml")
+        print("Example: python breakdown_migration.py old_config.txt breakdown_config.toml")
         sys.exit(1)
 
     convert_to_toml(sys.argv[1], sys.argv[2])
