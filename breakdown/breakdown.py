@@ -158,18 +158,15 @@ for map_var in config.map_vars:
 log.info("Loading mask and grid files...")
 
 # Ancillary data
-ancil_mask_file = list(Path('.').glob(config.ancillary_data))
-nc_ancil_id = Dataset(str(ancil_mask_file[0]), 'r')
+nc_ancil_id = Dataset(config.ancillary_data, 'r')
 vmasked = nc_ancil_id.variables["VOLUME_MASKED"][:, :, :].data
 
 # Mesh mask
-mesh_mask_file = list(Path('.').glob(config.mesh_mask))
-nc_mesh_id = Dataset(str(mesh_mask_file[0]), 'r')
+nc_mesh_id = Dataset(config.mesh_mask, 'r')
 tmeshmask = nc_mesh_id.variables["tmask"][0, :, :, :].data
 
 # Basin mask
-basin_file = list(Path('.').glob(config.basin_mask))
-nc_basin_id = Dataset(str(basin_file[0]), 'r')
+nc_basin_id = Dataset(config.basin_mask, 'r')
 mask_area = nc_basin_id.variables["AREA"][:].data
 mask_vol = nc_basin_id.variables["VOLUME"][:].data
 landMask = np.copy(mask_area)
@@ -180,8 +177,7 @@ volMask[volMask > 0] = 1
 volMask[volMask == 0] = np.nan
 
 # Region masks
-reg_file = list(Path('.').glob(config.region_mask))
-nc_reg_id = Dataset(str(reg_file[0]), 'r')
+nc_reg_id = Dataset(config.region_mask, 'r')
 regions = []
 regions.append(nc_reg_id.variables['ARCTIC'][:].data)
 regions.append(nc_reg_id.variables['A1'][:].data)
@@ -194,8 +190,7 @@ regions.append(nc_reg_id.variables['P5'][:].data)
 regions.append(nc_reg_id.variables['I5'][:].data)
 
 # RECCAP regions
-reccap_file = list(Path('.').glob(config.reccap_mask))
-nc_reccap_id = Dataset(str(reccap_file[0]), 'r')
+nc_reccap_id = Dataset(config.reccap_mask, 'r')
 regions.append(nc_reccap_id.variables['open_ocean_0'][:].data)  # 9
 regions.append(nc_reccap_id.variables['open_ocean_1'][:].data)  # 10
 regions.append(nc_reccap_id.variables['open_ocean_2'][:].data)  # 11
@@ -506,8 +501,7 @@ log.info("Processing map outputs...")
 
 if len(varMap) > 0:
     # Load WOA mask if needed
-    woa_file = list(Path('.').glob(config.woa_mask))
-    nc_woa_id = Dataset(str(woa_file[0]), 'r')
+    nc_woa_id = Dataset(config.woa_mask, 'r')
     woamask = nc_woa_id.variables["mask"][:]
 
 target_lon = np.arange(0.5, 360.5, 1)

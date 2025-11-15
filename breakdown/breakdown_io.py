@@ -177,9 +177,20 @@ class OutputWriter:
                 values = []
                 for var in variables:
                     if hasattr(var, 'results'):
-                        value = var.results[y][0]
+                        # Check if results array has data for this year
+                        if y < len(var.results) and len(var.results[y]) > 0:
+                            value = var.results[y][0]
+                        else:
+                            log.warning(f"Missing data for year {year} in variable {getattr(var, 'name', 'unknown')}")
+                            value = np.nan
                     else:
-                        value = var[-1][y][0]
+                        # Check if results array has data for this year
+                        if len(var) > 0 and y < len(var[-1]) and len(var[-1][y]) > 0:
+                            value = var[-1][y][0]
+                        else:
+                            var_name = var[0] if isinstance(var, (list, tuple)) and len(var) > 0 else 'unknown'
+                            log.warning(f"Missing data for year {year} in variable {var_name}")
+                            value = np.nan
                     values.append(f"{value:.4e}")
                 f.write(",".join(values))
                 f.write("\n")
@@ -243,9 +254,20 @@ class OutputWriter:
                 f.write(f"{year}\t")
                 for var in variables:
                     if hasattr(var, 'results'):
-                        value = var.results[y][0]
+                        # Check if results array has data for this year
+                        if y < len(var.results) and len(var.results[y]) > 0:
+                            value = var.results[y][0]
+                        else:
+                            log.warning(f"Missing data for year {year} in variable {getattr(var, 'name', 'unknown')}")
+                            value = np.nan
                     else:
-                        value = var[-1][y][0]
+                        # Check if results array has data for this year
+                        if len(var) > 0 and y < len(var[-1]) and len(var[-1][y]) > 0:
+                            value = var[-1][y][0]
+                        else:
+                            var_name = var[var_index] if isinstance(var, (list, tuple)) and len(var) > var_index else 'unknown'
+                            log.warning(f"Missing data for year {year} in variable {var_name}")
+                            value = np.nan
                     f.write(f"{format(value, '.4e')}\t")
                 f.write("\n")
 
@@ -325,9 +347,20 @@ class OutputWriter:
 
                     for var in variables:
                         if hasattr(var, 'results'):
-                            monthly_data = var.results[y][1][m]
+                            # Check if results array has data for this year and month
+                            if y < len(var.results) and len(var.results[y]) > 1 and m < len(var.results[y][1]):
+                                monthly_data = var.results[y][1][m]
+                            else:
+                                log.warning(f"Missing data for year {year}, month {m} in variable {getattr(var, 'name', 'unknown')}")
+                                monthly_data = [np.nan] * 6
                         else:
-                            monthly_data = var[-1][y][1][m]
+                            # Check if results array has data for this year and month
+                            if len(var) > 0 and y < len(var[-1]) and len(var[-1][y]) > 1 and m < len(var[-1][y][1]):
+                                monthly_data = var[-1][y][1][m]
+                            else:
+                                var_name = var[var_index] if isinstance(var, (list, tuple)) and len(var) > var_index else 'unknown'
+                                log.warning(f"Missing data for year {year}, month {m} in variable {var_name}")
+                                monthly_data = [np.nan] * 6
 
                         # Write min, 25%, median, 75%, max
                         f.write(f"{format(monthly_data[1], '.4e')}\t")  # min
@@ -407,9 +440,20 @@ class OutputWriter:
 
                     for var in variables:
                         if hasattr(var, 'results'):
-                            month_tot = var.results[y][1][m][0]
+                            # Check if results array has data for this year and month
+                            if y < len(var.results) and len(var.results[y]) > 1 and m < len(var.results[y][1]) and len(var.results[y][1][m]) > 0:
+                                month_tot = var.results[y][1][m][0]
+                            else:
+                                log.warning(f"Missing data for year {year}, month {m} in variable {getattr(var, 'name', 'unknown')}")
+                                month_tot = np.nan
                         else:
-                            month_tot = var[-1][y][1][m][0]
+                            # Check if results array has data for this year and month
+                            if len(var) > 0 and y < len(var[-1]) and len(var[-1][y]) > 1 and m < len(var[-1][y][1]) and len(var[-1][y][1][m]) > 0:
+                                month_tot = var[-1][y][1][m][0]
+                            else:
+                                var_name = var[var_index] if isinstance(var, (list, tuple)) and len(var) > var_index else 'unknown'
+                                log.warning(f"Missing data for year {year}, month {m} in variable {var_name}")
+                                month_tot = np.nan
                         f.write(f"{format(month_tot, '.4e')}\t")
 
                     f.write("\n")
@@ -460,9 +504,20 @@ class OutputWriter:
                 f.write(f"{year}\t")
                 for obs in observations:
                     if hasattr(obs, 'results'):
-                        value = obs.results[y][0]
+                        # Check if results array has data for this year
+                        if y < len(obs.results) and len(obs.results[y]) > 0:
+                            value = obs.results[y][0]
+                        else:
+                            log.warning(f"Missing data for year {year} in observation {getattr(obs, 'model_var', 'unknown')}")
+                            value = np.nan
                     else:
-                        value = obs[-1][y][0]
+                        # Check if results array has data for this year
+                        if len(obs) > 0 and y < len(obs[-1]) and len(obs[-1][y]) > 0:
+                            value = obs[-1][y][0]
+                        else:
+                            obs_name = obs[2] if isinstance(obs, (list, tuple)) and len(obs) > 2 else 'unknown'
+                            log.warning(f"Missing data for year {year} in observation {obs_name}")
+                            value = np.nan
                     f.write(f"{format(value, '.4e')}\t")
                 f.write("\n")
 
@@ -522,5 +577,10 @@ class OutputWriter:
                 f.write(f"{year}\t")
                 headings = results[0][-2]
                 for c in range(len(headings)):
-                    f.write(f"{format(results[y][c], '.4e')}\t")
+                    # Check if results array has data for this year
+                    if y < len(results) and c < len(results[y]):
+                        f.write(f"{format(results[y][c], '.4e')}\t")
+                    else:
+                        log.warning(f"Missing data for year {year}, column {c} in property {prop_name}")
+                        f.write(f"{format(np.nan, '.4e')}\t")
                 f.write("\n")
