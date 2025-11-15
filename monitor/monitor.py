@@ -28,8 +28,8 @@ class ModelDataLoader:
         
     def _read_breakdown_file(self, file_type):
         # Try CSV format first (new format), fall back to TSV if not found
-        csv_path = f"/{self.base_dir}/{self.model_name}/breakdown.{file_type}.annual.csv"
-        dat_path = f"/{self.base_dir}/{self.model_name}/breakdown.{file_type}.annual.dat"
+        csv_path = f"{self.base_dir}/{self.model_name}/breakdown.{file_type}.annual.csv"
+        dat_path = f"{self.base_dir}/{self.model_name}/breakdown.{file_type}.annual.dat"
 
         try:
             # New CSV format - single header row, comma-separated
@@ -311,7 +311,7 @@ def main():
     print(f"📁 Base directory: {base_dir}")
     print("="*50)
     
-    save_dir = f"/{base_dir}/monitor/{model_name}/"
+    save_dir = f"{base_dir}/monitor/{model_name}/"
     pathlib.Path(save_dir).mkdir(parents=True, exist_ok=True)
     print(f"✓ Output directory ready: {save_dir}")
     
