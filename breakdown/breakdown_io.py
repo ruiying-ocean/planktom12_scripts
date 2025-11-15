@@ -8,8 +8,6 @@ This module handles:
 """
 
 import logging
-import glob
-import os
 from pathlib import Path
 from netCDF4 import Dataset
 import numpy as np
@@ -54,18 +52,18 @@ def load_netcdf_files(year_from: int, year_to: int) -> Tuple[List, List, List, L
         nc_names_avail = []
 
         for pattern in file_patterns:
-            files = glob.glob(pattern)
+            files = list(Path('.').glob(pattern))
             if len(files) > 0:
                 file_path = files[0]
                 try:
-                    nc_id = Dataset(file_path, 'r')
+                    nc_id = Dataset(str(file_path), 'r')
                     nc_avail.append(nc_id)
-                    nc_names_avail.append(file_path)
+                    nc_names_avail.append(str(file_path))
                     log.info(f"Loaded: {file_path}")
                 except (OSError, RuntimeError, Exception) as e:
                     # File exists but is corrupted or unreadable
                     error_msg = f"{type(e).__name__}: {str(e)}"
-                    failed_files.append((file_path, error_msg))
+                    failed_files.append((str(file_path), error_msg))
                     log.warning(f"SKIPPED corrupted file: {file_path}")
                     log.warning(f"  Error: {error_msg}")
 
@@ -209,7 +207,7 @@ class OutputWriter:
             key_index: Index of key in config
         """
         # Check if file exists to determine if we need headers
-        write_headers = not os.path.exists(filename)
+        write_headers = not Path(filename).exists()
 
         if write_headers:
             with open(filename, 'w') as f:
@@ -275,7 +273,7 @@ class OutputWriter:
             key_index: Index of key in config
         """
         # Check if file exists to determine if we need headers
-        write_headers = not os.path.exists(filename)
+        write_headers = not Path(filename).exists()
 
         if write_headers:
             with open(filename, 'w') as f:
@@ -364,7 +362,7 @@ class OutputWriter:
             key_index: Index of key in config
         """
         # Check if file exists to determine if we need headers
-        write_headers = not os.path.exists(filename)
+        write_headers = not Path(filename).exists()
 
         if write_headers:
             with open(filename, 'w') as f:
@@ -434,7 +432,7 @@ class OutputWriter:
             year_to: Ending year
         """
         # Check if file exists to determine if we need headers
-        write_headers = not os.path.exists(filename)
+        write_headers = not Path(filename).exists()
 
         if write_headers:
             with open(filename, 'w') as f:
@@ -486,7 +484,7 @@ class OutputWriter:
             year_to: Ending year
         """
         # Check if file exists to determine if we need headers
-        write_headers = not os.path.exists(filename)
+        write_headers = not Path(filename).exists()
 
         if hasattr(prop_config, 'results'):
             results = prop_config.results

@@ -7,9 +7,9 @@ to improve maintainability while preserving all functionality.
 """
 
 import sys
-import os.path
+import argparse
 import logging
-import glob
+from pathlib import Path
 import numpy as np
 import math
 from netCDF4 import Dataset
@@ -26,13 +26,31 @@ import datetime
 
 # ---------- 1 SETUP AND INITIALIZATION ----------
 
-# Validate command line arguments
-if len(sys.argv) != 4:
-    sys.exit("Stopped - Incorrect arguments. Use: breakdown.py <parameter file> <year from> <year to>")
+# Parse command line arguments
+parser = argparse.ArgumentParser(
+    description='Breakdown - Ocean biogeochemical model output analysis tool',
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    epilog='''
+Examples:
+  %(prog)s breakdown_config.toml 2000 2010
+  %(prog)s my_config.toml 1990 2020
+    '''
+)
+parser.add_argument('parm_file', type=Path,
+                    help='Path to the parameter configuration file (TOML or legacy format)')
+parser.add_argument('year_from', type=int,
+                    help='Starting year for analysis (inclusive)')
+parser.add_argument('year_to', type=int,
+                    help='Ending year for analysis (inclusive)')
 
-parm_file = sys.argv[1]
-year_from = int(sys.argv[2])
-year_to = int(sys.argv[3])
+args = parser.parse_args()
+parm_file = args.parm_file
+year_from = args.year_from
+year_to = args.year_to
+
+# Validate the parameter file exists
+if not parm_file.exists():
+    parser.error(f"Parameter file not found: {parm_file}")
 
 # Set up logging
 logging.basicConfig(
@@ -98,7 +116,7 @@ for y in range(180):
 
 # ---------- 4 PARSE CONFIGURATION ----------
 log.info("Parsing configuration file...")
-config = parse_config_file(parm_file)
+config = parse_config_file(str(parm_file))
 
 # For backward compatibility, also create the legacy list structures
 # These will be used by observation/property processing which hasn't been fully refactored
@@ -140,18 +158,18 @@ for map_var in config.map_vars:
 log.info("Loading mask and grid files...")
 
 # Ancillary data
-ancil_mask_file = glob.glob(config.ancillary_data)
-nc_ancil_id = Dataset(ancil_mask_file[0], 'r')
+ancil_mask_file = list(Path('.').glob(config.ancillary_data))
+nc_ancil_id = Dataset(str(ancil_mask_file[0]), 'r')
 vmasked = nc_ancil_id.variables["VOLUME_MASKED"][:, :, :].data
 
 # Mesh mask
-mesh_mask_file = glob.glob(config.mesh_mask)
-nc_mesh_id = Dataset(mesh_mask_file[0], 'r')
+mesh_mask_file = list(Path('.').glob(config.mesh_mask))
+nc_mesh_id = Dataset(str(mesh_mask_file[0]), 'r')
 tmeshmask = nc_mesh_id.variables["tmask"][0, :, :, :].data
 
 # Basin mask
-basin_file = glob.glob(config.basin_mask)
-nc_basin_id = Dataset(basin_file[0], 'r')
+basin_file = list(Path('.').glob(config.basin_mask))
+nc_basin_id = Dataset(str(basin_file[0]), 'r')
 mask_area = nc_basin_id.variables["AREA"][:].data
 mask_vol = nc_basin_id.variables["VOLUME"][:].data
 landMask = np.copy(mask_area)
@@ -162,8 +180,8 @@ volMask[volMask > 0] = 1
 volMask[volMask == 0] = np.nan
 
 # Region masks
-reg_file = glob.glob(config.region_mask)
-nc_reg_id = Dataset(reg_file[0], 'r')
+reg_file = list(Path('.').glob(config.region_mask))
+nc_reg_id = Dataset(str(reg_file[0]), 'r')
 regions = []
 regions.append(nc_reg_id.variables['ARCTIC'][:].data)
 regions.append(nc_reg_id.variables['A1'][:].data)
@@ -176,8 +194,8 @@ regions.append(nc_reg_id.variables['P5'][:].data)
 regions.append(nc_reg_id.variables['I5'][:].data)
 
 # RECCAP regions
-reccap_file = glob.glob(config.reccap_mask)
-nc_reccap_id = Dataset(reccap_file[0], 'r')
+reccap_file = list(Path('.').glob(config.reccap_mask))
+nc_reccap_id = Dataset(str(reccap_file[0]), 'r')
 regions.append(nc_reccap_id.variables['open_ocean_0'][:].data)  # 9
 regions.append(nc_reccap_id.variables['open_ocean_1'][:].data)  # 10
 regions.append(nc_reccap_id.variables['open_ocean_2'][:].data)  # 11
@@ -488,8 +506,8 @@ log.info("Processing map outputs...")
 
 if len(varMap) > 0:
     # Load WOA mask if needed
-    woa_file = glob.glob(config.woa_mask)
-    nc_woa_id = Dataset(woa_file[0], 'r')
+    woa_file = list(Path('.').glob(config.woa_mask))
+    nc_woa_id = Dataset(str(woa_file[0]), 'r')
     woamask = nc_woa_id.variables["mask"][:]
 
 target_lon = np.arange(0.5, 360.5, 1)
