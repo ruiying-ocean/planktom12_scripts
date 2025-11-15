@@ -218,7 +218,7 @@ class FigureCreator:
 
         self._create_subplot_grid(
             plot_configs, data, year_limits,
-            (13.5 * self.ratio, 6.5 * self.ratio), (2, 5),
+            (8.5 * self.ratio, 8.5 * self.ratio), (3, 3),
             f"{self.model_name}_summary_global.jpg"
         )
 
@@ -268,15 +268,16 @@ class FigureCreator:
 
     def create_nutrient_summary(self, data):
         year_limits = self._get_global_year_limits(data)
-        
+
         nutrient_configs = [
             (data["nPO4"], self.colors['blue'], "Surface Phosphate [μmol/L]", None, ObservationLine(0.530)),
             (data["NO3"], self.colors['orange'], "Surface Nitrate [μmol/L]", None, ObservationLine(5.152)),
             (data["nFer"], self.colors['red'], "Surface Iron [nmol/L]"),
             (data["Si"], self.colors['purple'], "Surface Silica [μmol/L]", None, ObservationLine(7.485)),
             (data["O2"], self.colors['cyan'], "Surface Oxygen [μmol/L]", None, ObservationLine(251.1)),
+            (data["Alkalini"], self.colors['green'], "Surface Alkalinity [μmol/L]"),
         ]
-        
+
         self._create_subplot_grid(
             nutrient_configs, data, year_limits,
             (14 * self.ratio, 7.5 * self.ratio), (2, 3),
