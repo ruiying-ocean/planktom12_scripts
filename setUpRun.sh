@@ -265,18 +265,18 @@ fi
 codeVersion=$( grep "opa_*$Model" $setUpDatafile | awk -F'/' '{print$(NF-5)}' )
 
 # ----- Create copies of files used for run -----
-# Get dgom file
-if [ ! -f dgom ]; then
-	cp /gpfs/home/vhf24tbu/setUpRuns/HALI/dgom_v2 dgom
+# Get NEMO job file
+if [ ! -f nemo.job ]; then
+	cp /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/nemo.job nemo.job
 fi
 
 # Get tidying up scripts
-cp -n /gpfs/home/vhf24tbu/setUpRuns/HALI/tidyup.sh .
-cp -n /gpfs/home/vhf24tbu/setUpRuns/HALI/tidyupJob .
+cp -n /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/tidyup.sh .
+cp -n /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/tidyupJob .
 
 # Get breakdown scripts
-cp /gpfs/home/vhf24tbu/setUpRuns/HALI/breakdown/breakdown*.py .
-cp /gpfs/home/vhf24tbu/setUpRuns/HALI/breakdown/breakdown_config.toml .
+cp /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/breakdown/breakdown*.py .
+cp /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/breakdown/breakdown_config.toml .
 cp /gpfs/home/vhf24tbu/EXP00/iodef_tom12piicc14.xml .
 
 # If breakdown_config.toml does not exist (as specified in setUpData file) copy in default
@@ -286,15 +286,15 @@ if [ ! -f breakdown_config.toml ]; then
 fi
 
 # Get monitor scripts and files
-cp /gpfs/home/vhf24tbu/setUpRuns/HALI/monitor/* .
+cp /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/monitor/* .
 
 # Save parameters needed for creating html file
 echo $id $codeVersion $(date '+%d-%b-%Y') $yearStart $yearEnd ${CO2,,} $forcing ${type,,} $TR $SR > html_parms
 
 # Get setUpRun script
-cp /gpfs/home/vhf24tbu/setUpRuns/HALI/setUpRun.sh .
+cp /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/setUpRun.sh .
 
-# ----- Export parameters the dgom file will need -----
+# ----- Export parameters the nemo.job file will need -----
 yearToRun=$yearStart
 
 echo "Exporting " $yearToRun $yearEnd $basedir $modelDir $simulation $Model
@@ -302,7 +302,7 @@ export yearToRun yearStart yearEnd basedir modelDir simulation Model
 
 read -p "Press any key to run it? (cntr+c otherwise)"
 
-sbatch -J${simulation}${yearToRun} < dgom
+sbatch -J${simulation}${yearToRun} < nemo.job
 
 echo "To check status of job 'squeue | grep <you user name>' "
 

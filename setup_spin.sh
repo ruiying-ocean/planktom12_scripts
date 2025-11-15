@@ -26,7 +26,7 @@ echo "Calculated TIMESTEP: $TIMESTEP"
 echo "============================================"
 
 # Command
-bash /gpfs/home/vhf24tbu/setUpRuns/HALI/setup_restarts_RY.sh $SPIN_DIR $TIMESTEP ${MODEL_RUN_DIR}/${MODEL_ID}
+bash /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/setup_restarts_RY.sh $SPIN_DIR $TIMESTEP ${MODEL_RUN_DIR}/${MODEL_ID}
 
 echo "============================================"
 echo "Setup complete for model ID: $MODEL_ID"
