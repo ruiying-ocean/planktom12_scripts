@@ -1,0 +1,111 @@
+/*-- scss:rules --*/
+
+/* Title area */
+.quarto-title-block {
+    border-bottom: 3px solid #158CBA;
+    padding-bottom: 2rem;
+    margin-bottom: 3rem;
+}
+
+.title {
+    font-weight: 400;
+    color: #158CBA;
+}
+
+.subtitle {
+    font-weight: 300;
+    font-style: italic;
+    color: #666;
+    margin-top: 0.5rem;
+}
+
+/* Section headers */
+h1 {
+    margin-top: 3rem;
+    margin-bottom: 2rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #158CBA;
+    font-weight: 400;
+}
+
+h2 {
+    margin-top: 2.5rem;
+    margin-bottom: 1.5rem;
+    font-weight: 400;
+    color: #444;
+}
+
+/* Images with elegant shadows */
+img {
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin: 2rem auto;
+    display: block;
+    transition: all 0.3s ease;
+}
+
+img:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+}
+
+/* Figure captions */
+figcaption {
+    color: #666;
+    font-style: italic;
+    font-size: 0.9em;
+    text-align: center;
+    margin-top: 0.5rem;
+}
+
+/* Callout boxes */
+.callout {
+    margin: 2rem 0;
+    border-radius: 4px;
+}
+
+.callout-note {
+    border-left-color: #158CBA;
+}
+
+/* Table of contents */
+#TOC {
+    border-right: 1px solid #e0e0e0;
+}
+
+#TOC .active {
+    color: #158CBA;
+    font-weight: 500;
+}
+
+#TOC a:hover {
+    color: #158CBA;
+}
+
+/* Better text readability */
+p {
+    line-height: 1.8;
+    color: #333;
+}
+
+/* Horizontal rules */
+hr {
+    margin: 3rem 0;
+    border-top: 1px solid #e0e0e0;
+}
+
+/* Code blocks (if any) */
+pre {
+    border-radius: 4px;
+    border: 1px solid #e0e0e0;
+}
+
+/* Improve link styling */
+a {
+    transition: color 0.2s ease;
+}
+
+/* Smooth scrolling enhancements */
+html {
+    scroll-behavior: smooth;
+}

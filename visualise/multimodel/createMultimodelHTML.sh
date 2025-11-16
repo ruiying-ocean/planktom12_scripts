@@ -1,0 +1,112 @@
+#!/bin/sh
+
+# Script to generate Quarto-based HTML for multimodel comparison
+# Usage: ./createMultimodelHTML.sh <timestamp> [benchmark_flag]
+#
+# Arguments:
+#   timestamp: Directory timestamp (e.g., 151124-143022)
+#   benchmark_flag: Optional, 0 or 1 (default 0)
+
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <timestamp> [benchmark_flag]"
+    exit 1
+fi
+
+timestamp=$1
+benchmark=${2:-0}
+
+# Get the directory where this script is located
+scriptDir="$(cd "$(dirname "$0")" && pwd)"
+
+# Check if modelsToPlot.csv exists
+if [ ! -f "modelsToPlot.csv" ]; then
+    echo "Error: modelsToPlot.csv not found in current directory"
+    exit 1
+fi
+
+# Read model information from CSV
+runs=( $( cut -f 1 -d , modelsToPlot.csv | tail -n +2 ) )
+desc=( $( cut -f 2 -d , modelsToPlot.csv | tail -n +2 ) )
+to=( $( cut -f 5 -d , modelsToPlot.csv | tail -n +2 ) )
+
+length=${#runs[@]}
+
+echo "Creating Quarto HTML for $length models..."
+
+# Copy template and stylesheet to current directory
+cp "${scriptDir}/template_multimodel.qmd" ./temp_template.qmd
+cp "${scriptDir}/custom.scss" ./
+
+# Build the model maps section
+model_maps_section=""
+
+for i in ${!runs[@]}; do
+    run=${runs[$i]}
+    year=${to[$i]}
+
+    # Replace underscores with spaces for display
+    display_name=${desc[$i]//_/ }
+
+    # Add model heading
+    model_maps_section="${model_maps_section}## ${display_name} (${run}, ${year})\n\n"
+
+    # Add diagnostics map if exists
+    if [ -f "${run}_${year}_diagnostics.png" ]; then
+        model_maps_section="${model_maps_section}### Ecosystem Diagnostics\n\n"
+        model_maps_section="${model_maps_section}![](${run}_${year}_diagnostics.png)\n\n"
+    fi
+
+    # Add phytoplankton map if exists
+    if [ -f "${run}_${year}_phytos.png" ]; then
+        model_maps_section="${model_maps_section}### Phytoplankton\n\n"
+        model_maps_section="${model_maps_section}![](${run}_${year}_phytos.png)\n\n"
+    fi
+
+    # Add zooplankton map if exists
+    if [ -f "${run}_${year}_zoos.png" ]; then
+        model_maps_section="${model_maps_section}### Zooplankton\n\n"
+        model_maps_section="${model_maps_section}![](${run}_${year}_zoos.png)\n\n"
+    fi
+
+    # Add nutrients map if exists
+    if [ -f "${run}_${year}_nutrients.png" ]; then
+        model_maps_section="${model_maps_section}### Nutrients\n\n"
+        model_maps_section="${model_maps_section}![](${run}_${year}_nutrients.png)\n\n"
+    fi
+
+    model_maps_section="${model_maps_section}---\n\n"
+done
+
+# Substitute variables in the template
+# Use printf to handle newlines properly
+printf "%s" "$model_maps_section" > temp_model_maps.txt
+
+# Use sed to substitute the timestamp and model maps section
+sed -e "s/\${timestamp}/${timestamp}/g" \
+    temp_template.qmd > temp_with_timestamp.qmd
+
+# Replace the MODEL_MAPS placeholder with the actual content
+# Using a multi-line approach with awk for better handling
+awk '
+/\$\{MODEL_MAPS\}/ {
+    while ((getline line < "temp_model_maps.txt") > 0) {
+        print line
+    }
+    next
+}
+{print}
+' temp_with_timestamp.qmd > multimodel.qmd
+
+# Render Quarto document
+echo "Rendering Quarto document..."
+quarto render multimodel.qmd --output multimodel.html
+
+# Clean up temporary files
+rm temp_template.qmd temp_with_timestamp.qmd temp_model_maps.txt multimodel.qmd custom.scss
+
+if [ -f "multimodel.html" ]; then
+    echo "✓ Multi-model HTML report generated: $(pwd)/multimodel.html"
+else
+    echo "✗ Error: Failed to generate multimodel.html"
+    exit 1
+fi

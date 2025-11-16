@@ -64,8 +64,8 @@ done
 # Copy observation images to save directory
 cp ${srcDir}/*.png .
 
-# Generate HTML using Python + Jinja2 (replaces old template_N/benchmark_N system)
-python3 ${srcDir}/generate_multimodel_html.py ${now} 0
+# Generate HTML using Quarto (replaces Python + Jinja2 system)
+${srcDir}/createMultimodelHTML.sh ${now} 0
 
 # Save list of models
 cd ..
