@@ -21,41 +21,41 @@ format:
 
 ## Global Ecosystem Metrics
 
-![](${identifier}_summary_global.jpg)
+![](${identifier}_summary_global.${img_format})
 
 ## Plankton Functional Types
 
-![](${identifier}_summary_pfts.jpg)
+![](${identifier}_summary_pfts.${img_format})
 
 ## Nutrient Cycles
 
-![](${identifier}_summary_nutrients.jpg)
+![](${identifier}_summary_nutrients.${img_format})
 
 ## Physical Environment
 
-![](${identifier}_summary_physics.jpg)
+![](${identifier}_summary_physics.${img_format})
 
 ## Regional Monthly Patterns
 
 ### Carbon Flux
 
-![](${identifier}_summary_monthly_Cflx.jpg)
+![](${identifier}_summary_monthly_Cflx.${img_format})
 
 ### Chlorophyll
 
-![](${identifier}_summary_monthly_TChl.jpg)
+![](${identifier}_summary_monthly_TChl.${img_format})
 
 ### pCO₂
 
-![](${identifier}_summary_monthly_pCO2.jpg)
+![](${identifier}_summary_monthly_pCO2.${img_format})
 
 ### Sea Surface Temperature
 
-![](${identifier}_summary_monthly_SST.jpg)
+![](${identifier}_summary_monthly_SST.${img_format})
 
 ### Mixed Layer Depth
 
-![](${identifier}_summary_monthly_MLD.jpg)
+![](${identifier}_summary_monthly_MLD.${img_format})
 
 ---
 

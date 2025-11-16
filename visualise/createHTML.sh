@@ -33,6 +33,19 @@ mkdir -p "${saveDir}"
 # Get the directory where the script is located (visualise directory)
 scriptDir="$(cd "$(dirname "$0")" && pwd)"
 
+# Read image format from config file
+img_format=$(python3 -c "
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
+with open('${scriptDir}/visualise_config.toml', 'rb') as f:
+    config = tomllib.load(f)
+    print(config['figure']['format'])
+" 2>/dev/null || echo "png")
+
+echo "Using image format: $img_format"
+
 # Find the latest year from existing map files
 latest_year=$(find "${saveDir}" -name "${run}_[0-9]*_diagnostics.png" 2>/dev/null | \
               sed -n "s/.*${run}_\([0-9]\+\)_diagnostics.png/\1/p" | \
@@ -54,6 +67,7 @@ sed -e "s/IDENTIFIER_PLACEHOLDER/${run}/g" \
     -e "s/\${identifier}/${run}/g" \
     -e "s/\${start_year}/${start}/g" \
     -e "s/\${end_year}/${latest_year}/g" \
+    -e "s/\${img_format}/${img_format}/g" \
     "${saveDir}/temp_template.qmd" > "${saveDir}/${run}.qmd"
 
 # Change to save directory and render there

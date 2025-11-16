@@ -121,8 +121,8 @@ class FigureCreator:
             self.config = tomllib.load(f)
 
         # Extract commonly used config values
-        self.ratio = self.config['figure']['ratio']
         self.dpi = self.config['figure']['dpi']
+        self.format = self.config['figure']['format']
         color_palette = self.config['colors']['palette']
 
         # Use automatic color palette
@@ -159,11 +159,12 @@ class FigureCreator:
     def _get_global_year_limits(self, data):
         return data["year"].min(), data["year"].max()
 
-    def _setup_axis(self, ax, year, data, color, title, obs_range=None, obs_line=None, year_limits=None, add_xlabel=True):
+    def _setup_axis(self, ax, year, data, color, title, ylabel, obs_range=None, obs_line=None, year_limits=None, add_xlabel=True):
         obs_cfg = self.config['style']['observations']
 
         ax.plot(year, data, color=color, alpha=self.config['style']['alpha'])
-        ax.set_title(title, fontweight='bold', pad=20)
+        ax.set_title(title, fontweight='bold', pad=5)
+        ax.set_ylabel(ylabel)
 
         # Conditionally add the x-axis label
         if add_xlabel:
@@ -200,38 +201,48 @@ class FigureCreator:
         else:
             ax.set_xlim(year.min(), year.max())
 
-    def _save_figure(self, fig, filename):
+    def _save_figure(self, fig, filename_base):
+        # Replace extension with configured format
+        filename = pathlib.Path(filename_base).stem + f".{self.format}"
         path = pathlib.Path(self.save_dir) / filename
-        fig.savefig(path, dpi=self.dpi, bbox_inches='tight', facecolor='white')
+
+        # For SVG, don't use DPI (it's vector-based)
+        if self.format == 'svg':
+            fig.savefig(path, format='svg', bbox_inches='tight', facecolor='white')
+        else:
+            fig.savefig(path, dpi=self.dpi, bbox_inches='tight', facecolor='white')
+
         print(f"✓ Saved: {path}")
         plt.close(fig)
 
     def create_global_summary(self, data):
         year_limits = self._get_global_year_limits(data)
         layout = self.config['layout']['global_summary']
+        subplot_width = self.config['layout']['subplot_width']
+        subplot_height = self.config['layout']['subplot_height']
 
         plot_configs = [
-            (data["Cflx"], self.colors[0], "Surface Carbon Flux [PgC/yr]", None, None),
-            (data["TChl"], self.colors[1], "Surface Chlorophyll [μg Chl/L]", None, ObservationLine(0.2921)),
-            (data["PPT"], self.colors[2], "Primary Production [PgC/yr]", ObservationRange(51, 65), None),
-            (data["EXP"], self.colors[3], "Export at 100m [PgC/yr]", ObservationRange(7.8, 12.2), None),
-            (data["EXP1000"], self.colors[4], "Export at 1000m [PgC/yr]", None, None),
-            (data["PROCACO3"], self.colors[5], "CaCO₃ Production [PgC/yr]", ObservationRange(1.04, 3.34), None),
-            (data["EXPCACO3"], self.colors[6], "CaCO₃ Export at 100m [PgC/yr]", ObservationRange(0.68, 0.9), None),
-            (data["probsi"], self.colors[7], "Silica Production [Tmol/yr]", ObservationRange(203, 307), None),
-            (data["SI_FLX"], self.colors[8], "Silica Export at 100m [Tmol/yr]", ObservationRange(89, 135), None),
+            (data["Cflx"], self.colors[0], "Surface Carbon Flux", "PgC/yr", None, None),
+            (data["TChl"], self.colors[1], "Surface Chlorophyll", "μg Chl/L", None, ObservationLine(0.2921)),
+            (data["PPT"], self.colors[2], "Primary Production", "PgC/yr", ObservationRange(51, 65), None),
+            (data["EXP"], self.colors[3], "Export at 100m", "PgC/yr", ObservationRange(7.8, 12.2), None),
+            (data["EXP1000"], self.colors[4], "Export at 1000m", "PgC/yr", None, None),
+            (data["PROCACO3"], self.colors[5], "CaCO₃ Production", "PgC/yr", ObservationRange(1.04, 3.34), None),
+            (data["EXPCACO3"], self.colors[6], "CaCO₃ Export at 100m", "PgC/yr", ObservationRange(0.68, 0.9), None),
+            (data["probsi"], self.colors[7], "Silica Production", "Tmol/yr", ObservationRange(203, 307), None),
+            (data["SI_FLX"], self.colors[8], "Silica Export at 100m", "Tmol/yr", ObservationRange(89, 135), None),
         ]
 
         fig, axes = plt.subplots(
             layout['rows'], layout['cols'],
-            figsize=(layout['width_multiplier'] * self.ratio, layout['height_multiplier'] * self.ratio),
+            figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
             sharex=True, constrained_layout=self.config['layout']['use_constrained_layout']
         )
         axes = axes.flatten()
 
-        for i, (plot_data, color, title, obs_range, obs_line) in enumerate(plot_configs):
+        for i, (plot_data, color, title, ylabel, obs_range, obs_line) in enumerate(plot_configs):
             is_bottom_row = i >= (layout['rows'] - 1) * layout['cols']
-            self._setup_axis(axes[i], data["year"], plot_data, color, title,
+            self._setup_axis(axes[i], data["year"], plot_data, color, title, ylabel,
                            obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
 
         self._save_figure(fig, f"{self.model_name}_summary_global.jpg")
@@ -239,33 +250,35 @@ class FigureCreator:
     def create_pft_summary(self, data):
         year_limits = self._get_global_year_limits(data)
         layout = self.config['layout']['pft_summary']
+        subplot_width = self.config['layout']['subplot_width']
+        subplot_height = self.config['layout']['subplot_height']
 
         pft_configs = [
-            ("PIC", "Picophytoplankton", ObservationRange(0.28, 0.52)),
-            ("PHA", "Phaeocystis", ObservationRange(0.11, 0.69)),
-            ("MIX", "Mixotrophs", None),
-            ("DIA", "Diatoms", ObservationRange(0.013, 0.75)),
-            ("COC", "Coccolithophores", ObservationRange(0.001, 0.032)),
-            ("FIX", "Nitrogen Fixers", ObservationRange(0.008, 0.12)),
-            ("GEL", "Gelatinous Zooplankton", ObservationRange(0.10, 3.11)),
-            ("PRO", "Protozooplankton", ObservationRange(0.10, 0.37)),
-            ("BAC", "Bacteria", ObservationRange(0.25, 0.26)),
-            ("CRU", "Crustaceans", ObservationRange(0.01, 0.64)),
-            ("PTE", "Pteropods", ObservationRange(0.048, 0.057)),
-            ("MES", "Mesozooplankton", ObservationRange(0.21, 0.34))
+            ("PIC", "Picophytoplankton", "PgC", ObservationRange(0.28, 0.52)),
+            ("PHA", "Phaeocystis", "PgC", ObservationRange(0.11, 0.69)),
+            ("MIX", "Mixotrophs", "PgC", None),
+            ("DIA", "Diatoms", "PgC", ObservationRange(0.013, 0.75)),
+            ("COC", "Coccolithophores", "PgC", ObservationRange(0.001, 0.032)),
+            ("FIX", "Nitrogen Fixers", "PgC", ObservationRange(0.008, 0.12)),
+            ("GEL", "Gelatinous Zooplankton", "PgC", ObservationRange(0.10, 3.11)),
+            ("PRO", "Protozooplankton", "PgC", ObservationRange(0.10, 0.37)),
+            ("BAC", "Bacteria", "PgC", ObservationRange(0.25, 0.26)),
+            ("CRU", "Crustaceans", "PgC", ObservationRange(0.01, 0.64)),
+            ("PTE", "Pteropods", "PgC", ObservationRange(0.048, 0.057)),
+            ("MES", "Mesozooplankton", "PgC", ObservationRange(0.21, 0.34))
         ]
 
         fig, axes = plt.subplots(
             layout['rows'], layout['cols'],
-            figsize=(layout['width_multiplier'] * self.ratio, layout['height_multiplier'] * self.ratio),
+            figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
             sharex=True, constrained_layout=self.config['layout']['use_constrained_layout']
         )
         axes = axes.flatten()
 
-        for i, (var_name, title, obs_range) in enumerate(pft_configs):
+        for i, (var_name, title, ylabel, obs_range) in enumerate(pft_configs):
             color = self.colors[i % len(self.colors)]
             is_bottom_row = i >= (layout['rows'] - 1) * layout['cols']
-            self._setup_axis(axes[i], data["year"], data[var_name], color, title,
+            self._setup_axis(axes[i], data["year"], data[var_name], color, title, ylabel,
                            obs_range, None, year_limits, add_xlabel=is_bottom_row)
 
         self._save_figure(fig, f"{self.model_name}_summary_pfts.jpg")
@@ -273,26 +286,28 @@ class FigureCreator:
     def create_nutrient_summary(self, data):
         year_limits = self._get_global_year_limits(data)
         layout = self.config['layout']['nutrient_summary']
+        subplot_width = self.config['layout']['subplot_width']
+        subplot_height = self.config['layout']['subplot_height']
 
         nutrient_configs = [
-            (data["nPO4"], self.colors[0], "Surface Phosphate [μmol/L]", None, ObservationLine(0.530)),
-            (data["NO3"], self.colors[1], "Surface Nitrate [μmol/L]", None, ObservationLine(5.152)),
-            (data["nFer"], self.colors[2], "Surface Iron [nmol/L]", None, None),
-            (data["Si"], self.colors[3], "Surface Silica [μmol/L]", None, ObservationLine(7.485)),
-            (data["O2"], self.colors[4], "Surface Oxygen [μmol/L]", None, ObservationLine(251.1)),
-            (data["Alkalini"], self.colors[5], "Surface Alkalinity [μmol/L]", None, ObservationLine(2295.10936157)),
+            (data["nPO4"], self.colors[0], "Surface Phosphate", "μmol/L", None, ObservationLine(0.530)),
+            (data["NO3"], self.colors[1], "Surface Nitrate", "μmol/L", None, ObservationLine(5.152)),
+            (data["nFer"], self.colors[2], "Surface Iron", "nmol/L", None, None),
+            (data["Si"], self.colors[3], "Surface Silica", "μmol/L", None, ObservationLine(7.485)),
+            (data["O2"], self.colors[4], "Surface Oxygen", "μmol/L", None, ObservationLine(251.1)),
+            (data["Alkalini"], self.colors[5], "Surface Alkalinity", "μmol/L", None, ObservationLine(2295.10936157)),
         ]
 
         fig, axes = plt.subplots(
             layout['rows'], layout['cols'],
-            figsize=(layout['width_multiplier'] * self.ratio, layout['height_multiplier'] * self.ratio),
+            figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
             sharex=True, constrained_layout=self.config['layout']['use_constrained_layout']
         )
         axes = axes.flatten()
 
-        for i, (plot_data, color, title, obs_range, obs_line) in enumerate(nutrient_configs):
+        for i, (plot_data, color, title, ylabel, obs_range, obs_line) in enumerate(nutrient_configs):
             is_bottom_row = i >= (layout['rows'] - 1) * layout['cols']
-            self._setup_axis(axes[i], data["year"], plot_data, color, title,
+            self._setup_axis(axes[i], data["year"], plot_data, color, title, ylabel,
                            obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
 
         self._save_figure(fig, f"{self.model_name}_summary_nutrients.jpg")
@@ -300,21 +315,23 @@ class FigureCreator:
     def create_physics_summary(self, data):
         year_limits = self._get_global_year_limits(data)
         layout = self.config['layout']['physics_summary']
+        subplot_width = self.config['layout']['subplot_width']
+        subplot_height = self.config['layout']['subplot_height']
 
         physics_configs = [
-            (data["SST"], self.colors[0], "SST [°C]", None, None),
-            (data["SSS"], self.colors[1], "SSS [‰]", None, None),
-            (data["MLD"], self.colors[2], "MLD [m]", None, None),
+            (data["SST"], self.colors[0], "SST", "°C", None, None),
+            (data["SSS"], self.colors[1], "SSS", "‰", None, None),
+            (data["MLD"], self.colors[2], "MLD", "m", None, None),
         ]
 
         fig, axes = plt.subplots(
             layout['rows'], layout['cols'],
-            figsize=(layout['width_multiplier'] * self.ratio, layout['height_multiplier'] * self.ratio),
+            figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
             sharex=True, constrained_layout=self.config['layout']['use_constrained_layout']
         )
 
-        for i, (plot_data, color, title, obs_range, obs_line) in enumerate(physics_configs):
-            self._setup_axis(axes[i], data["year"], plot_data, color, title,
+        for i, (plot_data, color, title, ylabel, obs_range, obs_line) in enumerate(physics_configs):
+            self._setup_axis(axes[i], data["year"], plot_data, color, title, ylabel,
                            obs_range, obs_line, year_limits, add_xlabel=True)
 
         self._save_figure(fig, f"{self.model_name}_summary_physics.jpg")

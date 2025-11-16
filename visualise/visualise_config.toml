@@ -1,9 +1,9 @@
 # Configuration for ocean model visualization
 
 [figure]
-ratio = 2.5
 dpi = 300
 style = "seaborn-v0_8-poster"
+format = "png"  # Options: png (lossless), svg (vector), jpg (compressed)
 
 [colors]
 # Use a professional color palette
@@ -13,53 +13,50 @@ palette = "tab10"  # Options: tab10, Set3, Paired, husl, etc.
 # Automatic layout using constrained_layout
 use_constrained_layout = true
 
-# Grid configurations for different plot types
+# Standard subplot size - all plots use the same per-subplot dimensions
+# Final figure size = (cols * subplot_width, rows * subplot_height)
+subplot_width = 2.5   # Width of each individual subplot
+subplot_height = 2.0   # Height of each individual subplot
+
+# Grid configurations for different plot types (rows x cols only)
 [layout.global_summary]
 rows = 3
 cols = 3
-width_multiplier = 12
-height_multiplier = 8.5
 
 [layout.pft_summary]
 rows = 4
 cols = 3
-width_multiplier = 12
-height_multiplier = 10
 
 [layout.nutrient_summary]
 rows = 2
 cols = 3
-width_multiplier = 14
-height_multiplier = 7.5
 
 [layout.physics_summary]
 rows = 1
 cols = 3
-width_multiplier = 6
-height_multiplier = 2
 
 # Plot styling
 [style]
-linewidth = 4.5
+linewidth = 1.5
 alpha = 0.9
-grid_linewidth = 1.5
+grid_linewidth = 0.5
 grid_color = "#cccccc"
 grid_linestyle = "--"
 
 # Font sizes
 [style.fonts]
-base = 20
-title = 24
-axis_label = 22
-tick_label = 18
-legend = 18
-figure_title = 30
+base = 8
+title = 10
+axis_label = 9
+tick_label = 7
+legend = 7
+figure_title = 12
 
 # Axis styling
 [style.axes]
-linewidth = 2
-tick_major_width = 2
-tick_major_size = 8
+linewidth = 0.8
+tick_major_width = 0.8
+tick_major_size = 3
 
 # Observation styling
 [style.observations]
@@ -68,7 +65,7 @@ range_alpha = 0.1
 line_color = "#d00000"
 line_linestyle = "--"
 line_alpha = 0.9
-line_linewidth = 3.5
+line_linewidth = 1.2
 
 # Observation ranges (from literature)
 [observations.ecosystem]
