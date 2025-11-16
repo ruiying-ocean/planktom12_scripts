@@ -20,7 +20,7 @@ echo "Output directory: $saveDir"
 
 # Run Python map generation with observations
 # This replaces all the Ferret scripts (maps.jnl, mapsPFT.jnl, mapsDiff.jnl)
-python python_maps.py "$run" "$year" "$year" \
+python make_maps.py "$run" "$year" "$year" \
     --basedir "$baseDir" \
     --output-dir "$saveDir" \
     --obs-dir "/gpfs/home/vhf24tbu/Observations"

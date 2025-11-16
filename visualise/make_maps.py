@@ -6,7 +6,7 @@ Creates publication-quality oceanographic maps from NEMO/PlankTom output.
 Based on plotting style from ~/tompy/code/OBio_state.ipynb and warming_map.ipynb
 
 Usage:
-    python python_maps.py <run_name> <year_start> <year_end> [--output-dir OUTPUT_DIR]
+    python make_maps.py <run_name> <year_start> <year_end> [--output-dir OUTPUT_DIR]
 """
 
 import argparse
@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 
 # Import our plotting utilities
-from ocean_maps import (
+from map_utils import (
     OceanMapPlotter,
     PHYTOS, ZOOS, PHYTO_NAMES, ZOO_NAMES,
     BIOMASS_RANGES, ECOSYSTEM_VARS, NUTRIENT_VARS,
@@ -291,13 +291,16 @@ def plot_pft_maps(
             if not np.isnan(obs_min):
                 obs_range_str = f', ({obs_min:.1f}-{obs_max:.1f}) Pg C'
 
+        # Calculate dynamic vmax from 95th percentile
+        vmax = float(np.nanpercentile(data.values, 95))
+
         # Plot integrated biomass per grid cell (Tg C)
         im = plotter.plot_variable(
             ax=ax,
             data=data,
             cmap=cmap,
             vmin=0,
-            vmax=0.05,  # Tg C per grid cell
+            vmax=vmax,
             add_colorbar=False
         )
 
@@ -505,13 +508,34 @@ def plot_nutrient_comparison(
         # Apply mask
         model_data = plotter.apply_mask(model_data)
 
+        # Calculate dynamic vmax from 95th percentile of model and obs data
+        vmax_model = float(np.nanpercentile(model_data.values, 95))
+
+        # Get obs data first to calculate combined vmax
+        obs_data = None
+        if nut in obs_datasets and obs_datasets[nut] is not None:
+            obs_data = obs_datasets[nut]
+            # Get surface level
+            if 'depth' in obs_data.dims:
+                obs_data = obs_data.isel(depth=0)
+            elif 'deptht' in obs_data.dims:
+                obs_data = obs_data.isel(deptht=0)
+            # Remove any singleton dimensions
+            obs_data = obs_data.squeeze()
+            # Apply mask
+            obs_data = plotter.apply_mask(obs_data)
+            vmax_obs = float(np.nanpercentile(obs_data.values, 95))
+            vmax = max(vmax_model, vmax_obs)
+        else:
+            vmax = vmax_model
+
         # Plot model
         im = plotter.plot_variable(
             ax=ax_model,
             data=model_data,
             cmap=meta['cmap'],
             vmin=0,
-            vmax=meta['vmax'],
+            vmax=vmax,
             add_colorbar=False
         )
 
@@ -520,28 +544,14 @@ def plot_nutrient_comparison(
         # Observational data (bottom row)
         ax_obs = axs[1, i]
 
-        if nut in obs_datasets and obs_datasets[nut] is not None:
-            obs_data = obs_datasets[nut]
-
-            # Get surface level
-            if 'depth' in obs_data.dims:
-                obs_data = obs_data.isel(depth=0)
-            elif 'deptht' in obs_data.dims:
-                obs_data = obs_data.isel(deptht=0)
-
-            # Remove any singleton dimensions
-            obs_data = obs_data.squeeze()
-
-            # Apply mask
-            obs_data = plotter.apply_mask(obs_data)
-
+        if obs_data is not None:
             # Plot observations
             plotter.plot_variable(
                 ax=ax_obs,
                 data=obs_data,
                 cmap=meta['cmap'],
                 vmin=0,
-                vmax=meta['vmax'],
+                vmax=vmax,
                 add_colorbar=False
             )
 
