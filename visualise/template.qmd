@@ -1,151 +1,126 @@
 ---
-title: "$identifier$"
+title: "IDENTIFIER_PLACEHOLDER"
+subtitle: "Ocean Biogeochemical Model Analysis"
 format:
   html:
     toc: true
     toc-location: left
-    theme: cosmo
-    css: custom.css
+    toc-depth: 2
+    theme:
+      - journal
+      - custom.scss
     self-contained: true
-    code-tools: false
+    page-layout: full
+    fig-width: 12
+    fig-height: 7
+    smooth-scroll: true
+    link-external-newwindow: true
 ---
 
-## Model Run Information
+# Time Series
 
-::: {.panel-tabset}
+## Global Ecosystem Metrics
 
-### Configuration
+![](${identifier}_summary_global.jpg)
 
-| Parameter | Value |
-|-----------|-------|
-| **Version** | $version$ |
-| **Date** | $date$ |
-| **Period** | $start_year$ - $end_year$ |
-| **CO2** | $co2$ |
-| **Forcing** | $forcing$ |
-| **Type** | $type$ |
-| **Temp. restoring** | $temperature_restoring$ |
-| **Salinity restoring** | $salinity_restoring$ |
+## Plankton Functional Types
 
-:::
+![](${identifier}_summary_pfts.jpg)
 
----
+## Nutrient Cycles
 
-## Ecosystem {#ecosystem}
+![](${identifier}_summary_nutrients.jpg)
 
-### Ecosystem global summary
-![](${identifier}_summary_global.jpg){width=91.67%}
+## Physical Environment
 
-### Cflx monthly regional plots
-![](${identifier}_summary_monthly_Cflx.jpg){width=66.67%}
+![](${identifier}_summary_physics.jpg)
 
-### Chlorophyll monthly regional plots
-![](${identifier}_summary_monthly_TChl.jpg){width=66.67%}
+## Regional Monthly Patterns
 
-### Ecosystem diagnostics (chlorophyll, export, primary production)
-![](${identifier}_${start_year}_diagnostics.png){width=100%}
+### Carbon Flux
 
----
+![](${identifier}_summary_monthly_Cflx.jpg)
 
-## PFTs {#pfts}
+### Chlorophyll
 
-### PFTs global summary
-![](${identifier}_summary_pfts.jpg){width=75%}
+![](${identifier}_summary_monthly_TChl.jpg)
 
-### Phytoplankton functional types
-![](${identifier}_${start_year}_phytos.png){width=100%}
+### pCO₂
 
-### Zooplankton functional types
-![](${identifier}_${start_year}_zoos.png){width=100%}
+![](${identifier}_summary_monthly_pCO2.jpg)
+
+### Sea Surface Temperature
+
+![](${identifier}_summary_monthly_SST.jpg)
+
+### Mixed Layer Depth
+
+![](${identifier}_summary_monthly_MLD.jpg)
 
 ---
 
-## Nutrients {#nutrients}
+# Time Slices
 
-### Nutrients global summary
-![](${identifier}_summary_nutrients.jpg){width=91.67%}
+## Ecosystem Diagnostics
 
-### Nutrients: Model vs Observations
-![](${identifier}_${start_year}_nutrients.png){width=100%}
+![](${identifier}_${end_year}_diagnostics.png)
 
-### Atlantic Basin Transect (35°W)
-![](${identifier}_${start_year}_transect_atlantic.png){width=100%}
+## Phytoplankton
 
-### Pacific Basin Transect (170°W)
-![](${identifier}_${start_year}_transect_pacific.png){width=100%}
+![](${identifier}_${end_year}_phytos.png)
 
----
+## Zooplankton
 
-## pCO2 {#pco2}
+![](${identifier}_${end_year}_zoos.png)
 
-### pCO2 monthly regional plots
-![](${identifier}_summary_monthly_pCO2.jpg){width=66.67%}
+## Nutrients
 
-### pCO2 monthly regional plots (normalised)
-![](${identifier}_summary_monthly_pCO2_normalised.jpg){width=66.67%}
+![](${identifier}_${end_year}_nutrients.png)
 
-### dpCO2 annual mean map (average over the year)
+## Vertical Transects
 
-| Model run | Observations (data products: 2010-2019 ave) | Difference (model - obs.) |
-|-----------|---------------------------------------------|---------------------------|
-| ![](${identifier}_${end_year}_dpco2.png) | ![](gcb_2022_dpco2_ORCA.png) | ![](${identifier}_${end_year}_difference_dpco2.png) |
+### Atlantic (35°W)
 
----
+![](${identifier}_${end_year}_transect_atlantic.png)
 
-## Physics {#physics}
+### Pacific (170°W)
 
-### Physics global summary
-![](${identifier}_summary_physics.jpg){width=75%}
+![](${identifier}_${end_year}_transect_pacific.png)
 
-### Sea surface temperature monthly regional plots
-![](${identifier}_summary_monthly_SST.jpg){width=66.67%}
+## Vertical Profiles
 
-### Mixed layer depth monthly regional plots
-![](${identifier}_summary_monthly_MLD.jpg){width=66.67%}
+### Ecosystem
 
-### Physics annual mean maps
-
-::: {.callout-note}
-Physics maps (temperature, salinity, MLD) are generated separately if available.
-:::
-
----
-
-## Vertical Depths {#vertical}
-
-### Ecosystem vertical depth profile
 ![](${identifier}_vertical_depth_ecosystem.png){width=75%}
 
-### PFTs vertical depth profile
-![](${identifier}_vertical_depth_pfts.png){width=100%}
+### Plankton Functional Types
 
-### Nutrients vertical depth profile
+![](${identifier}_vertical_depth_pfts.png)
+
+### Nutrients
+
 ![](${identifier}_vertical_depth_nutrients.png){width=75%}
 
-### Organic carbon vertical depth profile
+### Organic Carbon
+
 ![](${identifier}_vertical_depth_orgcarbon.png){width=75%}
 
-### Physics vertical depth profile
-![](${identifier}_vertical_depth_physics.png){width=50%}
+### Physics
+
+![](${identifier}_vertical_depth_physics.png){width=60%}
 
 ---
 
-## References {#references}
+# Data Sources
 
-### Observation data
+:::{.callout-note appearance="simple"}
+## Observational Data References
 
-- The observation value for total chlorohpyll is determined by calculating a global average from the OCCCI version 5 monthly climatology dataset. This data is also used to create the maps and calculate the difference to the model.
-
-- The observation ranges for primary production and CaCO3 flux and the observation value for Si flux are taken from the paper [*Role of zooplankton dynamics for Southern Ocean phytoplankton biomass and global biogeochemical cycles*](https://bg.copernicus.org/articles/13/4111/2016/bg-13-4111-2016.html) (2016).
-
-- The observation range for export is taken from the paper [*Effect of sampling bias on global estimates of ocean carbon export*](https://iopscience.iop.org/article/10.1088/1748-9326/ad1e7f) (2024).
-
-- The biomass ranges for all plankton functional types (PFTs) except for GEL are taken from the paper [*Role of zooplankton dynamics for Southern Ocean phytoplankton biomass and global biogeochemical cycles*](https://bg.copernicus.org/articles/13/4111/2016/bg-13-4111-2016.html) (2016).
-
-- The biomass range for GEL is taken from the paper [*Role of jellyfish in the plankton ecosystem revealed using a global ocean biogeochemical model*](https://bg.copernicus.org/articles/18/1291/2021/) (2021).
-
-- The observation values for nutrients (phosphate, nitrates, silica, and oxygen) are determined by calculating a global average from the [*World Ocean Atlas 2018*](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.nodc:NCEI-WOA18) annual datasets. These datasets are also used for creating the observation maps and calculating the difference to the model output.
-
-- The observation values for pCO2 are calculated from an ensemble mean of the data-products from the [*Global Carbon Budget 2022*](https://essd.copernicus.org/articles/14/4811/2022/essd-14-4811-2022.html). This data is also used for creating the observation map for dpCO2 and calculating the difference to the model output.
-
-- The observation data for the physics tracers used to create maps and calculate the difference to the model output is taken from the [*World Ocean Atlas 2018*](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.nodc:NCEI-WOA18) annual datasets. We use the dataset for the period 2005-2018 for our comparison.
+- **Chlorophyll**: OCCCI version 5 monthly climatology
+- **Primary Production & CaCO₃**: [Laufkötter et al. (2016)](https://bg.copernicus.org/articles/13/4111/2016/)
+- **Export Production**: [Weber et al. (2024)](https://iopscience.iop.org/article/10.1088/1748-9326/ad1e7f)
+- **Plankton Biomass**: [Laufkötter et al. (2016)](https://bg.copernicus.org/articles/13/4111/2016/); [Henschke et al. (2021)](https://bg.copernicus.org/articles/18/1291/2021/) (jellyfish)
+- **Nutrients**: [World Ocean Atlas 2018](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.nodc:NCEI-WOA18)
+- **pCO₂**: [Global Carbon Budget 2022](https://essd.copernicus.org/articles/14/4811/2022/)
+- **Temperature & Salinity**: WOA18 (2005-2018 period)
+:::

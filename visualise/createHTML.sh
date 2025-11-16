@@ -33,21 +33,27 @@ mkdir -p "${saveDir}"
 # Get the directory where the script is located (visualise directory)
 scriptDir="$(cd "$(dirname "$0")" && pwd)"
 
-# Copy template and custom.css to save directory
+# Find the latest year from existing map files
+latest_year=$(find "${saveDir}" -name "${run}_[0-9]*_diagnostics.png" 2>/dev/null | \
+              sed -n "s/.*${run}_\([0-9]\+\)_diagnostics.png/\1/p" | \
+              sort -n | tail -1)
+
+# If no year found, use end year from html_parms
+if [ -z "$latest_year" ]; then
+    latest_year=$end
+fi
+
+echo "Using time slice year: $latest_year"
+
+# Copy template and custom.scss to save directory
 cp "${scriptDir}/template.qmd" "${saveDir}/temp_template.qmd"
-cp "${scriptDir}/custom.css" "${saveDir}/"
+cp "${scriptDir}/custom.scss" "${saveDir}/"
 
 # Substitute variables in the template
-sed -e "s/\${identifier}/${run}/g" \
-    -e "s/\${version}/${version}/g" \
-    -e "s/\${date}/${date}/g" \
+sed -e "s/IDENTIFIER_PLACEHOLDER/${run}/g" \
+    -e "s/\${identifier}/${run}/g" \
     -e "s/\${start_year}/${start}/g" \
-    -e "s/\${end_year}/${end}/g" \
-    -e "s/\${co2}/${co2}/g" \
-    -e "s/\${forcing}/${forcing}/g" \
-    -e "s/\${type}/${type}/g" \
-    -e "s/\${temperature_restoring}/${temperature}/g" \
-    -e "s/\${salinity_restoring}/${salinity}/g" \
+    -e "s/\${end_year}/${latest_year}/g" \
     "${saveDir}/temp_template.qmd" > "${saveDir}/${run}.qmd"
 
 # Change to save directory and render there
@@ -57,6 +63,6 @@ cd "${saveDir}"
 quarto render "${run}.qmd" --output "${run}.html"
 
 # Clean up template files
-rm temp_template.qmd "${run}.qmd" custom.css
+rm temp_template.qmd "${run}.qmd" custom.scss
 
 echo "✓ HTML report generated: ${saveDir}${run}.html"

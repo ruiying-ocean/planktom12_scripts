@@ -1,0 +1,145 @@
+# Configuration for ocean model visualization
+
+[figure]
+ratio = 2.5
+dpi = 300
+style = "seaborn-v0_8-poster"
+
+[colors]
+# Use a professional color palette
+palette = "tab10"  # Options: tab10, Set3, Paired, husl, etc.
+
+[layout]
+# Automatic layout using constrained_layout
+use_constrained_layout = true
+
+# Grid configurations for different plot types
+[layout.global_summary]
+rows = 3
+cols = 3
+width_multiplier = 12
+height_multiplier = 8.5
+
+[layout.pft_summary]
+rows = 4
+cols = 3
+width_multiplier = 12
+height_multiplier = 10
+
+[layout.nutrient_summary]
+rows = 2
+cols = 3
+width_multiplier = 14
+height_multiplier = 7.5
+
+[layout.physics_summary]
+rows = 1
+cols = 3
+width_multiplier = 6
+height_multiplier = 2
+
+# Plot styling
+[style]
+linewidth = 4.5
+alpha = 0.9
+grid_linewidth = 1.5
+grid_color = "#cccccc"
+grid_linestyle = "--"
+
+# Font sizes
+[style.fonts]
+base = 20
+title = 24
+axis_label = 22
+tick_label = 18
+legend = 18
+figure_title = 30
+
+# Axis styling
+[style.axes]
+linewidth = 2
+tick_major_width = 2
+tick_major_size = 8
+
+# Observation styling
+[style.observations]
+range_color = "#6c757d"
+range_alpha = 0.1
+line_color = "#d00000"
+line_linestyle = "--"
+line_alpha = 0.9
+line_linewidth = 3.5
+
+# Observation ranges (from literature)
+[observations.ecosystem]
+TChl = 0.2921  # OCCCI observation value
+PPT = [51, 65]  # Primary production range [PgC/yr]
+EXP = [7.8, 12.2]  # Export at 100m [PgC/yr]
+PROCACO3 = [1.04, 3.34]  # CaCO3 production [PgC/yr]
+EXPCACO3 = [0.68, 0.9]  # CaCO3 export [PgC/yr]
+probsi = [203, 307]  # Silica production [Tmol/yr]
+SI_FLX = [89, 135]  # Silica export [Tmol/yr]
+
+[observations.pfts.phytoplankton]
+PIC = [0.28, 0.52]
+PHA = [0.11, 0.69]
+DIA = [0.013, 0.75]
+COC = [0.001, 0.032]
+FIX = [0.008, 0.12]
+
+[observations.pfts.zooplankton]
+GEL = [0.002, 0.01]
+PRO = [0.0001, 0.69]
+BAC = [0.29, 1.69]
+MAC = [0.16, 0.34]
+PTE = [0.001, 0.032]
+MES = [0.08, 0.29]
+
+[observations.nutrients]
+PO4 = 2.17
+NO3 = 30.56
+SIL = 68.88
+FER = 0.63
+OXY = 169.16
+ALK = 2408.19
+
+# Plot titles and units
+[plot_info.ecosystem]
+Cflx = {title = "Air-Sea Carbon Flux [PgC/yr]", color_index = 0}
+TChl = {title = "Surface Chlorophyll [μg Chl/L]", color_index = 1}
+PPT = {title = "Primary Production [PgC/yr]", color_index = 2}
+EXP = {title = "Export at 100m [PgC/yr]", color_index = 3}
+EXP1000 = {title = "Export at 1000m [PgC/yr]", color_index = 4}
+PROCACO3 = {title = "CaCO₃ Production [PgC/yr]", color_index = 5}
+EXPCACO3 = {title = "CaCO₃ Export at 100m [PgC/yr]", color_index = 6}
+probsi = {title = "Silica Production [Tmol/yr]", color_index = 7}
+SI_FLX = {title = "Silica Export at 100m [Tmol/yr]", color_index = 8}
+
+[plot_info.pfts.phytoplankton]
+PIC = {title = "Picophytoplankton", color_index = 0}
+PHA = {title = "Phaeocystis", color_index = 1}
+MIX = {title = "Mixotrophs", color_index = 2}
+DIA = {title = "Diatoms", color_index = 3}
+COC = {title = "Coccolithophores", color_index = 4}
+FIX = {title = "Nitrogen Fixers", color_index = 5}
+
+[plot_info.pfts.zooplankton]
+GEL = {title = "Gelatinous", color_index = 6}
+PRO = {title = "Protozooplankton", color_index = 7}
+BAC = {title = "Bacteria", color_index = 8}
+MAC = {title = "Macrozooplankton", color_index = 9}
+PTE = {title = "Pteropods", color_index = 0}
+MES = {title = "Mesozooplankton", color_index = 1}
+
+[plot_info.nutrients]
+PO4 = {title = "Phosphate [mmol/m³]", color_index = 0}
+NO3 = {title = "Nitrate [mmol/m³]", color_index = 1}
+SIL = {title = "Silica [mmol/m³]", color_index = 2}
+FER = {title = "Iron [μmol/m³]", color_index = 3}
+OXY = {title = "Oxygen [mmol/m³]", color_index = 4}
+ALK = {title = "Alkalinity [mmol/m³]", color_index = 5}
+
+[plot_info.physics]
+SST = {title = "Sea Surface Temperature [°C]", color_index = 0}
+SSS = {title = "Sea Surface Salinity [PSU]", color_index = 1}
+MLD = {title = "Mixed Layer Depth [m]", color_index = 2}

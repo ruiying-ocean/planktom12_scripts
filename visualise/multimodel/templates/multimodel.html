@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multimodel Comparison - PlankTOM</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* Style the tab */
+.tab {
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
+}
+
+/* Style the buttons inside the tab */
+.tab button {
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: 0.3s;
+  font-size: 17px;
+}
+
+/* Change background color of buttons on hover */
+.tab button:hover {
+  background-color: #ddd;
+}
+
+/* Create an active/current tablink class */
+.tab button.active {
+  background-color: #ccc;
+}
+
+/* Focus indicator for keyboard navigation */
+.tab button:focus {
+  outline: 2px solid #0066cc;
+  outline-offset: -2px;
+}
+
+/* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+.active, .collapsible:hover {
+  background-color: #ccc;
+}
+
+/* Style the collapsible content. Note: hidden by default */
+.content {
+  display: none;
+  overflow: hidden;
+  padding: 8px 0px 0px 0px
+}
+
+/* Style the tab content */
+.tabcontent {
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-top: none;
+}
+
+/* Style the buttons inside the tab */
+.button1 {
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Add some padding to table rows */
+td {
+  padding-right: 15px;
+}
+
+/* Add some padding to bullet lists */
+li {
+  margin: 0px 0px 10px 0px;
+}
+
+/* Responsive images */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Table styling */
+table {
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+th {
+  text-align: left;
+  padding: 8px;
+  background-color: #f2f2f2;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Multimodel comparison plots</h1>
+</header>
+
+<section aria-labelledby="model-list-heading">
+  <h2 id="model-list-heading" style="position: absolute; left: -10000px;">Compared Models</h2>
+  <table role="table" aria-label="List of models being compared">
+    <tbody>
+      {% for model in models %}
+      <tr>
+        <td><b>{{ model.id }}</b></td>
+        <td>{{ model.description }}</td>
+        <td>{{ model.year }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<p>Use the tabs below to view details on this model run.</p>
+
+<nav class="tab" role="tablist" aria-label="Comparison visualization sections">
+  <button class="tablinks" onclick="openTab(event, 'ecosystem')" id="default" role="tab" aria-selected="false" aria-controls="ecosystem">Ecosystem</button>
+  <button class="tablinks" onclick="openTab(event, 'pfts')" role="tab" aria-selected="false" aria-controls="pfts">PFTs</button>
+  <button class="tablinks" onclick="openTab(event, 'nutrients')" role="tab" aria-selected="false" aria-controls="nutrients">Nutrients</button>
+  <button class="tablinks" onclick="openTab(event, 'pco2')" role="tab" aria-selected="false" aria-controls="pco2">pCO2</button>
+  <button class="tablinks" onclick="openTab(event, 'physics')" role="tab" aria-selected="false" aria-controls="physics">Physics</button>
+  {% if include_benchmarking %}
+  <button class="tablinks" onclick="openTab(event, 'benchmarking')" role="tab" aria-selected="false" aria-controls="benchmarking">Benchmarking</button>
+  {% endif %}
+  <button class="tablinks" onclick="openTab(event, 'references')" role="tab" aria-selected="false" aria-controls="references">References</button>
+</nav>
+
+<!-- ECOSYSTEM -->
+<section id="ecosystem" class="tabcontent" role="tabpanel" aria-labelledby="tab-ecosystem">
+  <h2>Ecosystem global comparison summary</h2>
+  <img src="multimodel_summary_global.jpg" alt="Ecosystem global comparison showing carbon flux, chlorophyll, primary production, export, and CaCO3 flux across all models" style="width: 75%">
+
+  <h3>Cflx monthly comparison summary</h3>
+  <img src="multimodel_summary_cflx.jpg" alt="Carbon flux monthly comparison across all models" style="width: 91.67%">
+
+  <h3>TChl monthly comparison summary</h3>
+  <img src="multimodel_summary_tchl.jpg" alt="Total chlorophyll monthly comparison across all models" style="width: 91.67%">
+
+  <h3>Ecosystem annual mean maps</h3>
+  <button type="button" class="collapsible button1" aria-expanded="false">Observation data</button>
+  <div class="content">
+    <table role="table">
+      <tbody>
+        <tr><td><b>Description:</b></td><td>OCCCI chlorophyll observation data</td></tr>
+      </tbody>
+    </table>
+    <table role="table">
+      <tr>
+        <td style="width:25%"></td>
+        <td style="width:25%"><img src="OCCCI_tchl_ORCA.png" alt="Observed total chlorophyll from OCCCI satellite data" style="width: 100%"></td>
+        <td style="width:25%"></td>
+        <td style="width:25%"></td>
+      </tr>
+    </table>
+  </div>
+
+  {% for model in models %}
+  <button type="button" class="collapsible button1" aria-expanded="false">{{ model.id }}</button>
+  <div class="content">
+    <table role="table">
+      <tbody>
+        <tr><td><b>Description:</b></td><td>{{ model.description }}</td></tr>
+        <tr><td><b>Year:</b></td><td>{{ model.year }}</td></tr>
+      </tbody>
+    </table>
+    <table role="table">
+      <tr>
+        <td style="width:25%"><img src="{{ model.id }}_{{ model.year }}_cflx.png" alt="{{ model.id }} carbon flux map for {{ model.year }}" style="width: 100%"></td>
+        <td style="width:25%"><img src="{{ model.id }}_{{ model.year }}_tchl.png" alt="{{ model.id }} total chlorophyll map for {{ model.year }}" style="width: 100%"></td>
+        <td style="width:25%"><img src="{{ model.id }}_{{ model.year }}_ppint.png" alt="{{ model.id }} integrated primary production map for {{ model.year }}" style="width: 100%"></td>
+        <td style="width:25%"><img src="{{ model.id }}_{{ model.year }}_exp.png" alt="{{ model.id }} export production map for {{ model.year }}" style="width: 100%"></td>
+      </tr>
+    </table>
+  </div>
+  {% endfor %}
+</section>
+
+<!-- PFTS -->
+<section id="pfts" class="tabcontent" role="tabpanel" aria-labelledby="tab-pfts">
+  <h2>PFTs global comparison summary</h2>
+  <img src="multimodel_summary_pfts.jpg" alt="Plankton functional types (PFTs) global comparison showing biomass across all models" style="width: 100%">
+</section>
+
+<!-- NUTRIENTS -->
+<section id="nutrients" class="tabcontent" role="tabpanel" aria-labelledby="tab-nutrients">
+  <h2>Nutrients global comparison summary</h2>
+  <img src="multimodel_summary_nutrients.jpg" alt="Nutrients global comparison showing phosphate, nitrate, iron, silica, and oxygen across all models" style="width: 100%">
+
+  <h3>Nutrients annual mean maps</h3>
+  <button type="button" class="collapsible button1" aria-expanded="false">Observation data</button>
+  <div class="content">
+    <table role="table">
+      <tbody>
+        <tr><td><b>Description:</b></td><td>World Ocean Atlas 2018</td></tr>
+      </tbody>
+    </table>
+    <table role="table">
+      <tr>
+        <td style="width:25%"><img src="woa18_po4.png" alt="Observed phosphate from World Ocean Atlas 2018" style="width: 100%"></td>
+        <td style="width:25%"><img src="woa18_no3.png" alt="Observed nitrate from World Ocean Atlas 2018" style="width: 100%"></td>
+        <td style="width:25%"><img src="woa18_sil.png" alt="Observed silica from World Ocean Atlas 2018" style="width: 100%"></td>
+        <td style="width:25%"><img src="woa18_oxy.png" alt="Observed oxygen from World Ocean Atlas 2018" style="width: 100%"></td>
+      </tr>
+    </table>
+  </div>
+
+  {% for model in models %}
+  <button type="button" class="collapsible button1" aria-expanded="false">{{ model.id }}</button>
+  <div class="content">
+    <table role="table">
+      <tbody>
+        <tr><td><b>Description:</b></td><td>{{ model.description }}</td></tr>
+        <tr><td><b>Year:</b></td><td>{{ model.year }}</td></tr>
+      </tbody>
+    </table>
+    <table role="table">
+      <tr>
+        <td style="width:25%"><img src="{{ model.id }}_{{ model.year }}_po4.png" alt="{{ model.id }} phosphate map for {{ model.year }}" style="width: 100%"></td>
+        <td style="width:25%"><img src="{{ model.id }}_{{ model.year }}_no3.png" alt="{{ model.id }} nitrate map for {{ model.year }}" style="width: 100%"></td>
+        <td style="width:25%"><img src="{{ model.id }}_{{ model.year }}_sil.png" alt="{{ model.id }} silica map for {{ model.year }}" style="width: 100%"></td>
+        <td style="width:25%"><img src="{{ model.id }}_{{ model.year }}_o2.png" alt="{{ model.id }} oxygen map for {{ model.year }}" style="width: 100%"></td>
+      </tr>
+    </table>
+  </div>
+  {% endfor %}
+</section>
+
+<!-- PCO2 -->
+<section id="pco2" class="tabcontent" role="tabpanel" aria-labelledby="tab-pco2">
+  <h2>pCO2 monthly comparison summary</h2>
+  <img src="multimodel_summary_pco2.jpg" alt="Partial pressure of CO2 monthly comparison across all models" style="width: 100%">
+
+  <h3>dpCO2 annual mean maps</h3>
+  <button type="button" class="collapsible button1" aria-expanded="false">Observation data</button>
+  <div class="content">
+    <table role="table">
+      <tbody>
+        <tr><td><b>Description:</b></td><td>Global Carbon Budget 2022 data products (2010-2019 average)</td></tr>
+      </tbody>
+    </table>
+    <table role="table">
+      <tr>
+        <td><img src="gcb_2022_dpco2_ORCA.png" alt="Observed delta pCO2 from Global Carbon Budget 2022" style="width: 50%"></td>
+      </tr>
+    </table>
+  </div>
+
+  {% for model in models %}
+  <button type="button" class="collapsible button1" aria-expanded="false">{{ model.id }}</button>
+  <div class="content">
+    <table role="table">
+      <tbody>
+        <tr><td><b>Description:</b></td><td>{{ model.description }}</td></tr>
+        <tr><td><b>Year:</b></td><td>{{ model.year }}</td></tr>
+      </tbody>
+    </table>
+    <table role="table">
+      <tr>
+        <td><img src="{{ model.id }}_{{ model.year }}_dpco2.png" alt="{{ model.id }} delta pCO2 map for {{ model.year }}" style="width: 50%"></td>
+      </tr>
+    </table>
+  </div>
+  {% endfor %}
+</section>
+
+<!-- PHYSICS -->
+<section id="physics" class="tabcontent" role="tabpanel" aria-labelledby="tab-physics">
+  <h2>Physics global comparison summary</h2>
+  <img src="multimodel_summary_physics.jpg" alt="Physics global comparison showing temperature, salinity, and mixed layer depth across all models" style="width: 100%">
+
+  <h3>Physics annual mean maps</h3>
+  <button type="button" class="collapsible button1" aria-expanded="false">Observation data</button>
+  <div class="content">
+    <table role="table">
+      <tbody>
+        <tr><td><b>Description:</b></td><td>World Ocean Atlas 2018</td></tr>
+      </tbody>
+    </table>
+    <table role="table">
+      <tr>
+        <td style="width:25%"><img src="woa18_A5B7_temp.png" alt="Observed sea surface temperature from World Ocean Atlas 2018" style="width: 100%"></td>
+        <td style="width:25%"><img src="woa18_A5B7_salin.png" alt="Observed salinity from World Ocean Atlas 2018" style="width: 100%"></td>
+        <td style="width:25%"></td>
+        <td style="width:25%"></td>
+      </tr>
+    </table>
+  </div>
+
+  {% for model in models %}
+  <button type="button" class="collapsible button1" aria-expanded="false">{{ model.id }}</button>
+  <div class="content">
+    <table role="table">
+      <tbody>
+        <tr><td><b>Description:</b></td><td>{{ model.description }}</td></tr>
+        <tr><td><b>Year:</b></td><td>{{ model.year }}</td></tr>
+      </tbody>
+    </table>
+    <table role="table">
+      <tr>
+        <td><img src="{{ model.id }}_{{ model.year }}_temp.png" alt="{{ model.id }} sea surface temperature map for {{ model.year }}" style="width: 100%"></td>
+        <td><img src="{{ model.id }}_{{ model.year }}_salin.png" alt="{{ model.id }} salinity map for {{ model.year }}" style="width: 100%"></td>
+        <td><img src="{{ model.id }}_{{ model.year }}_mld_ave.png" alt="{{ model.id }} average mixed layer depth map for {{ model.year }}" style="width: 100%"></td>
+        <td><img src="{{ model.id }}_{{ model.year }}_mld_max.png" alt="{{ model.id }} maximum mixed layer depth map for {{ model.year }}" style="width: 100%"></td>
+      </tr>
+    </table>
+  </div>
+  {% endfor %}
+</section>
+
+{% if include_benchmarking %}
+<!-- BENCHMARKING -->
+<section id="benchmarking" class="tabcontent" role="tabpanel" aria-labelledby="tab-benchmarking">
+  <h2>Benchmarking to observations</h2>
+  <ul>
+    <li>The following heatmaps give a benchmarking of each model to observation data and a direct comparison of the model outputs.</li>
+    <li>The relative difference is calculated as the model value in the final year minus the observation value, converted to a percentage.
+      <ul>
+        <li>A relative difference of +100% thus indicates the model value is double the observation value, and -100% that the model value is zero.</li>
+      </ul>
+    </li>
+    <li>If the observation comparison has a range of data, we use the upper or lower limit for calculating the relative difference, depending on whether the model value is above or below the range, respectively.</li>
+    <li>If the model value is within the observation range, we set the difference to zero.</li>
+    <li>Blank columns indicate no observation data is available for that variable.</li>
+  </ul>
+
+  <img src="benchmark_difference.jpg" alt="Benchmarking heatmap showing relative differences between models and observations" style="width: 95.833%">
+  <img src="benchmark_values.jpg" alt="Benchmarking heatmap showing actual model and observation values" style="width: 95.833%">
+</section>
+{% endif %}
+
+<!-- REFERENCES -->
+<section id="references" class="tabcontent" role="tabpanel" aria-labelledby="tab-references">
+  <h2>Observation data</h2>
+  <ul>
+    <li>The observation value for total chlorohpyll is determined by calculating a global average from the OCCCI version 5 monthly climatology dataset. This dataset is also used for creating the observation map.</li>
+    <li>The observation ranges for primary production and CaCO3 flux, and the observation value for Si flux, are taken from the paper <a href="https://bg.copernicus.org/articles/13/4111/2016/bg-13-4111-2016.html" target="_blank" rel="noopener noreferrer"><i>Role of zooplankton dynamics for Southern Ocean phytoplankton biomass and global biogeochemical cycles</i></a> (2016).</li>
+    <li>The observation range for export is taken from the paper <a href="https://iopscience.iop.org/article/10.1088/1748-9326/ad1e7f" target="_blank" rel="noopener noreferrer"><i>Effect of sampling bias on global estimates of ocean carbon export</i></a> (2024).</li>
+    <li>The biomass ranges for all plankton functional types (PFTs) except for GEL are taken from the paper <a href="https://bg.copernicus.org/articles/13/4111/2016/bg-13-4111-2016.html" target="_blank" rel="noopener noreferrer"><i>Role of zooplankton dynamics for Southern Ocean phytoplankton biomass and global biogeochemical cycles</i></a> (2016).</li>
+    <li>The biomass range for GEL is taken from the paper <a href="https://bg.copernicus.org/articles/18/1291/2021/" target="_blank" rel="noopener noreferrer"><i>Role of jellyfish in the plankton ecosystem revealed using a global ocean biogeochemical model</i></a> (2021).</li>
+    <li>The observation values for nutrients (phosphate, nitrates, silica, and oxygen) are determined by calculating a global average from the <a href="https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.nodc:NCEI-WOA18" target="_blank" rel="noopener noreferrer"><i>World Ocean Atlas 2018</i></a> annual datasets. These datasets are also used for creating the observation maps.</li>
+    <li>The observation values for pCO2 are calculated from an ensemble mean of the data-products from the <a href="https://essd.copernicus.org/articles/14/4811/2022/essd-14-4811-2022.html" target="_blank" rel="noopener noreferrer"><i>Global Carbon Budget 2022</i></a>. This data is also used for creating the observation map for dpCO2.</li>
+    <li>The observation data for the physics tracers used to create maps is taken from the <a href="https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.nodc:NCEI-WOA18" target="_blank" rel="noopener noreferrer"><i>World Ocean Atlas 2018</i></a> annual datasets. We use the dataset for the period 2005-2018 for our comparison.</li>
+  </ul>
+</section>
+
+<!-- SCRIPTS -->
+<script>
+function openTab(evt, tabName) {
+  var i, tabcontent, tablinks;
+
+  // Hide all tab content
+  tabcontent = document.getElementsByClassName("tabcontent");
+  for (i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = "none";
+  }
+
+  // Remove active class from all tab buttons
+  tablinks = document.getElementsByClassName("tablinks");
+  for (i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(" active", "");
+    tablinks[i].setAttribute("aria-selected", "false");
+  }
+
+  // Show the selected tab and mark button as active
+  document.getElementById(tabName).style.display = "block";
+  evt.currentTarget.className += " active";
+  evt.currentTarget.setAttribute("aria-selected", "true");
+}
+
+// Collapsible sections
+document.addEventListener('DOMContentLoaded', function() {
+  var coll = document.getElementsByClassName("collapsible");
+  var i;
+
+  for (i = 0; i < coll.length; i++) {
+    coll[i].addEventListener("click", function() {
+      this.classList.toggle("active");
+      var content = this.nextElementSibling;
+      var isExpanded = content.style.display === "block";
+
+      if (isExpanded) {
+        content.style.display = "none";
+        this.setAttribute("aria-expanded", "false");
+      } else {
+        content.style.display = "block";
+        this.setAttribute("aria-expanded", "true");
+      }
+    });
+  }
+
+  // Open the default tab on page load
+  document.getElementById("default").click();
+});
+</script>
+
+</body>
+</html>
