@@ -12,12 +12,12 @@ import pathlib
 # Script for creating vertical depth plots for given variables
 # Will only be run at the end of the model run process
 
-tmod    = sys.argv[1]
-baseDir = sys.argv[2]
-year    = sys.argv[3]
+model_id = sys.argv[1]
+modelOutputDir = sys.argv[2]
+year = sys.argv[3]
 
-# basedir: ~/scratch/ModelRuns
-saveDir = f'/{baseDir}/visualise/{tmod}/'
+# Save to monitor/ directory to match visualise.py output
+saveDir = f'{modelOutputDir}/monitor/{model_id}/'
 pathlib.Path(saveDir).mkdir(parents=True, exist_ok=True)
 
 ## Define functions
@@ -68,9 +68,9 @@ m2_glob_tot = np.apply_over_axes(np.nansum, m2_glob, [1,2])
 
 
 ## Import model data
-in_file_diad = Dataset(f"{baseDir}/{tmod}/ORCA2_1m_{year}0101_{year}1231_diad_T.nc", "r")
-in_file_grid = Dataset(f"{baseDir}/{tmod}/ORCA2_1m_{year}0101_{year}1231_grid_T.nc", "r")
-in_file_ptrc = Dataset(f"{baseDir}/{tmod}/ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc", "r")
+in_file_diad = Dataset(f"{modelOutputDir}/{model_id}/ORCA2_1m_{year}0101_{year}1231_diad_T.nc", "r")
+in_file_grid = Dataset(f"{modelOutputDir}/{model_id}/ORCA2_1m_{year}0101_{year}1231_grid_T.nc", "r")
+in_file_ptrc = Dataset(f"{modelOutputDir}/{model_id}/ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc", "r")
 
 depthsLR = np.array((5, 15.00029, 25.00176, 35.00541, 45.01332, 55.0295, 65.06181, 75.12551, 85.25037, 95.49429, 105.9699, 116.8962, 128.6979, 142.1953, 158.9606, 181.9628,
                      216.6479, 272.4767, 364.303, 511.5348, 732.2009, 1033.217, 1405.698, 1830.885, 2289.768, 2768.242, 3257.479, 3752.442, 4250.401, 4749.913, 5250.227))
@@ -118,8 +118,8 @@ axs[0].set_ylabel('depth [m]')
 axs[2].set_ylabel('depth [m]')
 
 plt.tight_layout()
-fig.savefig(f'{saveDir}/{tmod}_vertical_depth_ecosystem.png')
-print(f'Created {tmod} vertical depth figure for ecosystem')
+fig.savefig(f'{saveDir}/{model_id}_vertical_depth_ecosystem.png')
+print(f'Created {model_id} vertical depth figure for ecosystem')
 
 
 ## Create PFTs plot
@@ -168,8 +168,8 @@ axs[6].set_ylabel('depth [m]')
 axs[10].set_ylabel('depth [m]')
 
 plt.tight_layout()
-fig.savefig(f'{saveDir}/{tmod}_vertical_depth_pfts.png')
-print(f'Created {tmod} vertical depth figure for pfts')
+fig.savefig(f'{saveDir}/{model_id}_vertical_depth_pfts.png')
+print(f'Created {model_id} vertical depth figure for pfts')
 
 
 ## Create nutrient plot
@@ -231,8 +231,8 @@ axs[3].set_ylabel('depth [m]')
 axs[5].set_ylabel('depth [m]')
 
 plt.tight_layout()
-fig.savefig(f'{saveDir}/{tmod}_vertical_depth_nutrients.png')
-print(f'Created {tmod} vertical depth figure for nutrients')
+fig.savefig(f'{saveDir}/{model_id}_vertical_depth_nutrients.png')
+print(f'Created {model_id} vertical depth figure for nutrients')
 
 
 ## Create physics plot
@@ -276,8 +276,8 @@ axs[0].set_ylabel('depth [m]')
 axs[1].set_xlim(34.4,35.2) # adjust the x scale for the salinity plot
 
 plt.tight_layout()
-fig.savefig(f'{saveDir}/{tmod}_vertical_depth_physics.png')
-print(f'Created {tmod} vertical depth figure for physics')
+fig.savefig(f'{saveDir}/{model_id}_vertical_depth_physics.png')
+print(f'Created {model_id} vertical depth figure for physics')
 
 
 ## Create OC plot
@@ -313,6 +313,6 @@ for ax in axs:
 axs[0].set_ylabel('depth [m]')
 
 plt.tight_layout()
-fig.savefig(f'{saveDir}/{tmod}_vertical_depth_orgcarbon.png')
-print(f'Created {tmod} vertical depth figure for organic carbon')
+fig.savefig(f'{saveDir}/{model_id}_vertical_depth_orgcarbon.png')
+print(f'Created {model_id} vertical depth figure for organic carbon')
 

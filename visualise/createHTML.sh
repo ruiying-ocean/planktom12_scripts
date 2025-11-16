@@ -25,23 +25,38 @@ else
 fi
 
 # Set up save directory
-baseDir=$1
-saveDir="${baseDir}/visualise/${run}/"
+# Note: visualise.py saves to monitor/ not visualise/
+modelOutputDir=$1
+saveDir="${modelOutputDir}/monitor/${run}/"
 mkdir -p "${saveDir}"
 
-# Render Quarto document with parameters
-quarto render template.qmd \
-  -P identifier:"${run}" \
-  -P version:"${version}" \
-  -P date:"${date}" \
-  -P start_year:"${start}" \
-  -P end_year:"${end}" \
-  -P co2:"${co2}" \
-  -P forcing:"${forcing}" \
-  -P type:"${type}" \
-  -P temperature_restoring:"${temperature}" \
-  -P salinity_restoring:"${salinity}" \
-  --output "${saveDir}${run}.html" \
-  --execute-dir "${saveDir}"
+# Get the directory where the script is located (visualise directory)
+scriptDir="$(cd "$(dirname "$0")" && pwd)"
+
+# Copy template and custom.css to save directory
+cp "${scriptDir}/template.qmd" "${saveDir}/temp_template.qmd"
+cp "${scriptDir}/custom.css" "${saveDir}/"
+
+# Substitute variables in the template
+sed -e "s/\${identifier}/${run}/g" \
+    -e "s/\${version}/${version}/g" \
+    -e "s/\${date}/${date}/g" \
+    -e "s/\${start_year}/${start}/g" \
+    -e "s/\${end_year}/${end}/g" \
+    -e "s/\${co2}/${co2}/g" \
+    -e "s/\${forcing}/${forcing}/g" \
+    -e "s/\${type}/${type}/g" \
+    -e "s/\${temperature_restoring}/${temperature}/g" \
+    -e "s/\${salinity_restoring}/${salinity}/g" \
+    "${saveDir}/temp_template.qmd" > "${saveDir}/${run}.qmd"
+
+# Change to save directory and render there
+cd "${saveDir}"
+
+# Render Quarto document
+quarto render "${run}.qmd" --output "${run}.html"
+
+# Clean up template files
+rm temp_template.qmd "${run}.qmd" custom.css
 
 echo "✓ HTML report generated: ${saveDir}${run}.html"

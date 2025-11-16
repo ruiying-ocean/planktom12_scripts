@@ -301,23 +301,23 @@ class FigureCreator:
 
 def main():
     if len(sys.argv) != 3:
-        print("Usage: visualize.py <model_name> <model_dir>")
+        print("Usage: visualize.py <model_name> <model_output_dir>")
         sys.exit(1)
-        
+
     model_name = sys.argv[1]
-    base_dir = sys.argv[2]
+    model_output_dir = sys.argv[2]
     
     print(f"\n🌊 Ocean Model Visualization Tool")
     print(f"📊 Processing model: {model_name}")
-    print(f"📁 Base directory: {base_dir}")
+    print(f"📁 Model output directory: {model_output_dir}")
     print("="*50)
-    
-    save_dir = f"{base_dir}/monitor/{model_name}/"
+
+    save_dir = f"{model_output_dir}/monitor/{model_name}/"
     pathlib.Path(save_dir).mkdir(parents=True, exist_ok=True)
     print(f"✓ Output directory ready: {save_dir}")
-    
+
     try:
-        loader = ModelDataLoader(base_dir, model_name)
+        loader = ModelDataLoader(model_output_dir, model_name)
         data = loader.load_all_data()
         
         creator = FigureCreator(save_dir, model_name)

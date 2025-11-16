@@ -1,5 +1,5 @@
 ---
-title: "`r params$identifier`"
+title: "$identifier$"
 format:
   html:
     toc: true
@@ -8,22 +8,7 @@ format:
     css: custom.css
     self-contained: true
     code-tools: false
-params:
-  identifier: ""
-  version: ""
-  date: ""
-  start_year: ""
-  end_year: ""
-  co2: ""
-  forcing: ""
-  type: ""
-  temperature_restoring: ""
-  salinity_restoring: ""
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
-```
 
 ## Model Run Information
 
@@ -33,14 +18,14 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 | Parameter | Value |
 |-----------|-------|
-| **Version** | `r params$version` |
-| **Date** | `r params$date` |
-| **Period** | `r params$start_year` - `r params$end_year` |
-| **CO2** | `r params$co2` |
-| **Forcing** | `r params$forcing` |
-| **Type** | `r params$type` |
-| **Temp. restoring** | `r params$temperature_restoring` |
-| **Salinity restoring** | `r params$salinity_restoring` |
+| **Version** | $version$ |
+| **Date** | $date$ |
+| **Period** | $start_year$ - $end_year$ |
+| **CO2** | $co2$ |
+| **Forcing** | $forcing$ |
+| **Type** | $type$ |
+| **Temp. restoring** | $temperature_restoring$ |
+| **Salinity restoring** | $salinity_restoring$ |
 
 :::
 
@@ -49,172 +34,79 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ## Ecosystem {#ecosystem}
 
 ### Ecosystem global summary
-![]({{< meta identifier >}}_summary_global.jpg){width=91.67%}
+![](${identifier}_summary_global.jpg){width=91.67%}
 
 ### Cflx monthly regional plots
-![]({{< meta identifier >}}_summary_monthly_Cflx.jpg){width=66.67%}
+![](${identifier}_summary_monthly_Cflx.jpg){width=66.67%}
 
 ### Chlorophyll monthly regional plots
-![]({{< meta identifier >}}_summary_monthly_TChl.jpg){width=66.67%}
+![](${identifier}_summary_monthly_TChl.jpg){width=66.67%}
 
-### Ecosystem annual mean maps
-
-::: {.panel-tabset}
-
-#### Carbon Flux
-| Model run | Observations | Difference (model - obs.) |
-|-----------|--------------|---------------------------|
-| ![]({{< meta identifier >}}_`r params$end_year`_cflx.png) | | |
-
-#### Total Chlorophyll
-| Model run | Observations | Difference (model - obs.) |
-|-----------|--------------|---------------------------|
-| ![]({{< meta identifier >}}_`r params$end_year`_tchl.png) | ![](OCCCI_tchl_ORCA.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_tchl.png) |
-
-#### Primary Production
-| Model run | Observations | Difference (model - obs.) |
-|-----------|--------------|---------------------------|
-| ![]({{< meta identifier >}}_`r params$end_year`_ppint.png) | | |
-
-#### Export
-| Model run | Observations | Difference (model - obs.) |
-|-----------|--------------|---------------------------|
-| ![]({{< meta identifier >}}_`r params$end_year`_exp.png) | | |
-
-:::
+### Ecosystem diagnostics (chlorophyll, export, primary production)
+![](${identifier}_${start_year}_diagnostics.png){width=100%}
 
 ---
 
 ## PFTs {#pfts}
 
 ### PFTs global summary
-![]({{< meta identifier >}}_summary_pfts.jpg){width=75%}
+![](${identifier}_summary_pfts.jpg){width=75%}
 
-### PFTs annual mean maps
+### Phytoplankton functional types
+![](${identifier}_${start_year}_phytos.png){width=100%}
 
-::: {layout-ncol=2}
-
-#### Phytoplankton
-
-![Picophytoplankton]({{< meta identifier >}}_`r params$end_year`_pic.png)
-
-![Phaeocystis]({{< meta identifier >}}_`r params$end_year`_pha.png)
-
-![Mixotrophs]({{< meta identifier >}}_`r params$end_year`_mix.png)
-
-![Diatoms]({{< meta identifier >}}_`r params$end_year`_dia.png)
-
-![Coccolithophores]({{< meta identifier >}}_`r params$end_year`_coc.png)
-
-![Nitrogen Fixers]({{< meta identifier >}}_`r params$end_year`_fix.png)
-
-#### Zooplankton
-
-![Gelatinous]({{< meta identifier >}}_`r params$end_year`_gel.png)
-
-![Protozooplankton]({{< meta identifier >}}_`r params$end_year`_pro.png)
-
-![Bacteria]({{< meta identifier >}}_`r params$end_year`_bac.png)
-
-![Macrozooplankton]({{< meta identifier >}}_`r params$end_year`_mac.png)
-
-![Pteropods]({{< meta identifier >}}_`r params$end_year`_pte.png)
-
-![Mesozooplankton]({{< meta identifier >}}_`r params$end_year`_mes.png)
-
-:::
+### Zooplankton functional types
+![](${identifier}_${start_year}_zoos.png){width=100%}
 
 ---
 
 ## Nutrients {#nutrients}
 
 ### Nutrients global summary
-![]({{< meta identifier >}}_summary_nutrients.jpg){width=91.67%}
+![](${identifier}_summary_nutrients.jpg){width=91.67%}
 
-### Nutrients annual mean maps and comparison to observations
+### Nutrients: Model vs Observations
+![](${identifier}_${start_year}_nutrients.png){width=100%}
 
-::: {.panel-tabset}
+### Atlantic Basin Transect (35°W)
+![](${identifier}_${start_year}_transect_atlantic.png){width=100%}
 
-#### Phosphate
-| Model run | Observations | Difference (model - obs.) |
-|-----------|--------------|---------------------------|
-| ![]({{< meta identifier >}}_`r params$end_year`_po4.png) | ![](woa18_po4.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_po4.png) |
-
-#### Nitrate
-| Model run | Observations | Difference (model - obs.) |
-|-----------|--------------|---------------------------|
-| ![]({{< meta identifier >}}_`r params$end_year`_no3.png) | ![](woa18_no3.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_no3.png) |
-
-#### Iron
-| Model run | Observations | Difference (model - obs.) |
-|-----------|--------------|---------------------------|
-| ![]({{< meta identifier >}}_`r params$end_year`_fer.png) | | |
-
-#### Silica
-| Model run | Observations | Difference (model - obs.) |
-|-----------|--------------|---------------------------|
-| ![]({{< meta identifier >}}_`r params$end_year`_sil.png) | ![](woa18_sil.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_sil.png) |
-
-#### Oxygen
-| Model run | Observations | Difference (model - obs.) |
-|-----------|--------------|---------------------------|
-| ![]({{< meta identifier >}}_`r params$end_year`_o2.png) | ![](woa18_oxy.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_o2.png) |
-
-:::
+### Pacific Basin Transect (170°W)
+![](${identifier}_${start_year}_transect_pacific.png){width=100%}
 
 ---
 
 ## pCO2 {#pco2}
 
 ### pCO2 monthly regional plots
-![]({{< meta identifier >}}_summary_monthly_pCO2.jpg){width=66.67%}
+![](${identifier}_summary_monthly_pCO2.jpg){width=66.67%}
 
 ### pCO2 monthly regional plots (normalised)
-![]({{< meta identifier >}}_summary_monthly_pCO2_normalised.jpg){width=66.67%}
+![](${identifier}_summary_monthly_pCO2_normalised.jpg){width=66.67%}
 
 ### dpCO2 annual mean map (average over the year)
 
 | Model run | Observations (data products: 2010-2019 ave) | Difference (model - obs.) |
 |-----------|---------------------------------------------|---------------------------|
-| ![]({{< meta identifier >}}_`r params$end_year`_dpco2.png) | ![](gcb_2022_dpco2_ORCA.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_dpco2.png) |
+| ![](${identifier}_${end_year}_dpco2.png) | ![](gcb_2022_dpco2_ORCA.png) | ![](${identifier}_${end_year}_difference_dpco2.png) |
 
 ---
 
 ## Physics {#physics}
 
 ### Physics global summary
-![]({{< meta identifier >}}_summary_physics.jpg){width=75%}
+![](${identifier}_summary_physics.jpg){width=75%}
 
 ### Sea surface temperature monthly regional plots
-![]({{< meta identifier >}}_summary_monthly_SST.jpg){width=66.67%}
+![](${identifier}_summary_monthly_SST.jpg){width=66.67%}
 
 ### Mixed layer depth monthly regional plots
-![]({{< meta identifier >}}_summary_monthly_MLD.jpg){width=66.67%}
+![](${identifier}_summary_monthly_MLD.jpg){width=66.67%}
 
 ### Physics annual mean maps
 
-::: {.panel-tabset}
-
-#### Temperature
-| Model run | Observations | Difference (model - obs.) |
-|-----------|--------------|---------------------------|
-| ![]({{< meta identifier >}}_`r params$end_year`_temp.png) | ![](woa18_A5B7_temp.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_temp.png) |
-
-#### Salinity
-| Model run | Observations | Difference (model - obs.) |
-|-----------|--------------|---------------------------|
-| ![]({{< meta identifier >}}_`r params$end_year`_salin.png) | ![](woa18_A5B7_salin.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_salin.png) |
-
-#### MLD Average
-| Model run | Observations | Difference (model - obs.) |
-|-----------|--------------|---------------------------|
-| ![]({{< meta identifier >}}_`r params$end_year`_mld_ave.png) | | |
-
-#### MLD Maximum
-| Model run | Observations | Difference (model - obs.) |
-|-----------|--------------|---------------------------|
-| ![]({{< meta identifier >}}_`r params$end_year`_mld_max.png) | | |
-
+::: {.callout-note}
+Physics maps (temperature, salinity, MLD) are generated separately if available.
 :::
 
 ---
@@ -222,19 +114,19 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ## Vertical Depths {#vertical}
 
 ### Ecosystem vertical depth profile
-![]({{< meta identifier >}}_vertical_depth_ecosystem.png){width=75%}
+![](${identifier}_vertical_depth_ecosystem.png){width=75%}
 
 ### PFTs vertical depth profile
-![]({{< meta identifier >}}_vertical_depth_pfts.png){width=100%}
+![](${identifier}_vertical_depth_pfts.png){width=100%}
 
 ### Nutrients vertical depth profile
-![]({{< meta identifier >}}_vertical_depth_nutrients.png){width=75%}
+![](${identifier}_vertical_depth_nutrients.png){width=75%}
 
 ### Organic carbon vertical depth profile
-![]({{< meta identifier >}}_vertical_depth_orgcarbon.png){width=75%}
+![](${identifier}_vertical_depth_orgcarbon.png){width=75%}
 
 ### Physics vertical depth profile
-![]({{< meta identifier >}}_vertical_depth_physics.png){width=50%}
+![](${identifier}_vertical_depth_physics.png){width=50%}
 
 ---
 

@@ -12,8 +12,8 @@ import calendar
 # Script for creating monthly plots of variables using breakdowns created during the model run process
 # Will only be run at the end of the model run process
 
-tModel = sys.argv[1]
-baseDir = sys.argv[2]
+model_id = sys.argv[1]
+modelOutputDir = sys.argv[2]
 
 
 def read_breakdown_monthly(file_path):
@@ -28,14 +28,14 @@ def read_breakdown_monthly(file_path):
         return pd.read_csv(file_path, sep='\t', header=2)
 
 
-def makeSummaryFromBreakdowns(tmod, modBaseDir):
-    
-	saveDir = f'/{modBaseDir}/visualise/{tmod}/'
+def makeSummaryFromBreakdowns(model_id, modBaseDir):
+
+	saveDir = f'{modBaseDir}/monitor/{model_id}/'
 	pathlib.Path(saveDir).mkdir(parents=True, exist_ok=True)
     
 	try:
 		### Surface monthly
-		w = read_breakdown_monthly(f'/{modBaseDir}/{tmod}/breakdown.sur.monthly.dat')
+		w = read_breakdown_monthly(f'{modBaseDir}/{model_id}/breakdown.sur.monthly.dat')
 		print('Read surface monthly')
 
 		mnth = w.month[-12:].to_numpy().astype(int)
@@ -47,7 +47,7 @@ def makeSummaryFromBreakdowns(tmod, modBaseDir):
 		Cflx_reg5 = w['Cflx.5'][-12:].to_numpy().astype(float)
 
 		### Average monthly
-		w = read_breakdown_monthly(f'/{modBaseDir}/{tmod}/breakdown.ave.monthly.dat')
+		w = read_breakdown_monthly(f'/{modBaseDir}/{model_id}/breakdown.ave.monthly.dat')
 		print('Read average monthly')
         
 		mnth = w.month[-12:].to_numpy().astype(int)
@@ -141,8 +141,8 @@ def makeSummaryFromBreakdowns(tmod, modBaseDir):
 			ax.grid(linestyle='--', linewidth=0.25)
 
 		plt.tight_layout()
-		fig.savefig(f'{saveDir}/{tmod}_summary_monthly_Cflx.jpg')
-		print(f'Created CFLX monthly summary figure for {tmod}')
+		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_Cflx.jpg')
+		print(f'Created CFLX monthly summary figure for {model_id}')
 
 		### Creating monthly region figures for TCHL
 		ratio = 2
@@ -187,8 +187,8 @@ def makeSummaryFromBreakdowns(tmod, modBaseDir):
 			ax.grid(linestyle='--', linewidth=0.25)
 
 		plt.tight_layout()
-		fig.savefig(f'{saveDir}/{tmod}_summary_monthly_TChl.jpg')
-		print(f'Created TCHL monthly summary figure for {tmod}')
+		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_TChl.jpg')
+		print(f'Created TCHL monthly summary figure for {model_id}')
 
 		### Creating monthly region figures for pCO2
 		ratio = 2
@@ -230,8 +230,8 @@ def makeSummaryFromBreakdowns(tmod, modBaseDir):
 			ax.grid(linestyle='--', linewidth=0.25)
 
 		plt.tight_layout()
-		fig.savefig(f'{saveDir}/{tmod}_summary_monthly_pCO2.jpg')
-		print(f'Created pCO2 monthly summary figure for {tmod}')
+		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_pCO2.jpg')
+		print(f'Created pCO2 monthly summary figure for {model_id}')
 		
 		### Creating monthly region figures for pCO2 (normalised)
 		npCO2_total = pCO2_total - pCO2_total[0]
@@ -287,8 +287,8 @@ def makeSummaryFromBreakdowns(tmod, modBaseDir):
 			ax.grid(linestyle='--', linewidth=0.25)
 
 		plt.tight_layout()
-		fig.savefig(f'{saveDir}/{tmod}_summary_monthly_pCO2_normalised.jpg')
-		print(f'Created normalised pCO2 monthly summary figure for {tmod}')
+		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_pCO2_normalised.jpg')
+		print(f'Created normalised pCO2 monthly summary figure for {model_id}')
 
 		### Creating monthly region figures for SST
 		ratio = 2
@@ -332,8 +332,8 @@ def makeSummaryFromBreakdowns(tmod, modBaseDir):
 			ax.grid(linestyle='--', linewidth=0.25)
 
 		plt.tight_layout()
-		fig.savefig(f'{saveDir}/{tmod}_summary_monthly_SST.jpg')
-		print(f'Created SST monthly summary figure for {tmod}')
+		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_SST.jpg')
+		print(f'Created SST monthly summary figure for {model_id}')
 
 		### Creating monthly region figures for MLD
 		ratio = 2
@@ -377,11 +377,11 @@ def makeSummaryFromBreakdowns(tmod, modBaseDir):
 			ax.grid(linestyle='--', linewidth=0.25)
 
 		plt.tight_layout()
-		fig.savefig(f'{saveDir}/{tmod}_summary_monthly_MLD.jpg')
-		print(f'Created MLD monthly summary figure for {tmod}')
+		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_MLD.jpg')
+		print(f'Created MLD monthly summary figure for {model_id}')
 
 	except:
 		print('Oops, something went awry')
 
 # Run summary on input model
-makeSummaryFromBreakdowns(tModel, baseDir)
+makeSummaryFromBreakdowns(model_id, modelOutputDir)

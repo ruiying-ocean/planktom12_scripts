@@ -4,7 +4,7 @@
 yearFrom=$1
 yearTo=$2
 version=$3
-homeDir=$4
+modelOutputDir=$4
 
 # Get parameters as specified in setUpData.dat file
 read -r -a parms < tidy_parms 
@@ -64,7 +64,7 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 	python3 breakdown.py breakdown_config.toml ${y} ${y}
 
 	# Run visualise script
-	python3 visualise.py $model $homeDir
+	python3 visualise.py $model $modelOutputDir
 
 	# Process output files
 	if [[ $y < $spinupEnd ]]; then
@@ -164,14 +164,14 @@ if [[ $yearTo -eq $yearEnd ]]; then
 	cp breakdown* $baseDir$model
 
 	# run script to generate monthly regional plots
-	python3 monthly.py $model $homeDir
+	python3 monthly.py $model $modelOutputDir
 
-	python3 verticalDepth.py $model $homeDir $yearTo
-	
-	./annualMaps_python.sh $model $yearTo $homeDir
+	python3 verticalDepth.py $model $modelOutputDir $yearTo
+
+	./annualMaps_python.sh $model $yearTo $modelOutputDir
 
 	# run script to create html file
-	./createHTML.sh $homeDir
+	./createHTML.sh $modelOutputDir
 
 
 fi
