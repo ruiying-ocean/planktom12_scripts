@@ -31,14 +31,11 @@ if [ ! -f "modelsToPlot.csv" ]; then
     exit 1
 fi
 
-# Read in runs to compare from csv files
+# Read in runs to compare from csv files (model_id, description, start_year, to_year, location)
 runs=( $( cut -f 1 -d , modelsToPlot.csv | tail -n +2 ) )
 desc=( $( cut -f 2 -d , modelsToPlot.csv | tail -n +2 ) )
-strt=( $( cut -f 3 -d , modelsToPlot.csv | tail -n +2 ) )
-from=( $( cut -f 4 -d , modelsToPlot.csv | tail -n +2 ) )
-  to=( $( cut -f 5 -d , modelsToPlot.csv | tail -n +2 ) )
- end=( $( cut -f 6 -d , modelsToPlot.csv | tail -n +2 ) )
-locs=( $( cut -f 7 -d , modelsToPlot.csv | tail -n +2 ) )
+  to=( $( cut -f 4 -d , modelsToPlot.csv | tail -n +2 ) )
+locs=( $( cut -f 5 -d , modelsToPlot.csv | tail -n +2 ) )
 
 # Create folder name from model runs (e.g., JRA3-JRA1)
 # Strip TOM12_RY_ prefix from each run name
@@ -75,6 +72,11 @@ if [ ! -f "${visualiseDir}/make_maps.py" ]; then
 fi
 cp ${visualiseDir}/make_maps.py .
 cp ${visualiseDir}/map_utils.py .
+
+# Export config path for Python scripts to find
+if [ -f "${visualiseDir}/visualise_config.toml" ]; then
+    export VISUALISE_CONFIG="${visualiseDir}/visualise_config.toml"
+fi
 
 # Run the python script to generate the time series plots (with debug to see warnings)
 ./multimodel.py ${saveDir} --debug

@@ -2,6 +2,7 @@
 
 import calendar
 import sys
+import os
 import pathlib
 from dataclasses import dataclass
 from typing import List, Tuple, Dict, Optional
@@ -23,16 +24,27 @@ except ModuleNotFoundError:
 # Load visualise_config.toml
 def load_config():
     """Load configuration from visualise_config.toml"""
-    # Try to find config in parent directory (visualise/)
+    # Try environment variable first (set by shell script)
+    config_path_env = pathlib.Path(os.environ.get("VISUALISE_CONFIG", ""))
+    if config_path_env and config_path_env.exists():
+        with open(config_path_env, "rb") as f:
+            return tomllib.load(f)
+
+    # Try current directory (for when script is copied to output dir)
+    config_path = pathlib.Path("visualise_config.toml")
+    if config_path.exists():
+        with open(config_path, "rb") as f:
+            return tomllib.load(f)
+
+    # Try parent directory (visualise/) if not in current dir
     script_dir = pathlib.Path(__file__).parent
     config_path = script_dir.parent / "visualise_config.toml"
+    if config_path.exists():
+        with open(config_path, "rb") as f:
+            return tomllib.load(f)
 
-    if not config_path.exists():
-        print(f"Warning: Config file not found at {config_path}, using defaults")
-        return None
-
-    with open(config_path, "rb") as f:
-        return tomllib.load(f)
+    print(f"Warning: Config file not found, using defaults")
+    return None
 
 CONFIG = load_config()
 
@@ -44,10 +56,18 @@ class ModelConfig:
     name: str
     description: str
     start_year: int
-    from_year: int
     to_year: int
-    end_year: int
     base_dir: str
+
+    @property
+    def from_year(self):
+        """Analysis starts from beginning of run (no spin-up skip by default)"""
+        return self.start_year
+
+    @property
+    def end_year(self):
+        """Analysis ends at the same year as to_year"""
+        return self.to_year
 
     @property
     def label(self):
@@ -411,12 +431,10 @@ class DataLoader:
         df = pd.read_csv(csv_path)
         return [
             ModelConfig(
-                name=row["model"],
+                name=row["model_id"],
                 description=row["description"],
                 start_year=row["start_year"],
-                from_year=row["from_year"],
                 to_year=row["to_year"],
-                end_year=row["end_year"],
                 base_dir=row["location"],
             )
             for _, row in df.iterrows()

@@ -17,6 +17,8 @@ def read_models_csv(csv_file='modelsToPlot.csv'):
     """
     Read model information from CSV file.
 
+    Expected CSV format: model_id,description,start_year,to_year,location
+
     Args:
         csv_file: Path to the CSV file containing model information
 
@@ -41,9 +43,9 @@ def read_models_csv(csv_file='modelsToPlot.csv'):
             description = row.get('description', '').replace('_', ' ')
 
             models.append({
-                'id': row.get('id', ''),
+                'id': row.get('model_id', ''),
                 'description': description,
-                'year': row.get('to', '')  # Using 'to' year as the display year
+                'year': row.get('to_year', '')  # Using to_year as the display year
             })
 
     if len(models) < 2:

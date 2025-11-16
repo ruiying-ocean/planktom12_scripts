@@ -1,0 +1,3 @@
+model_id,description,start_year,to_year,location
+TOM12_RY_SPE4,Control,2000,2010,/path/to/model/output
+TOM12_RY_EXP1,High CO2,2000,2010,/path/to/model/output

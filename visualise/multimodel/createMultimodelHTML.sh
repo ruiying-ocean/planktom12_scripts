@@ -24,10 +24,10 @@ if [ ! -f "modelsToPlot.csv" ]; then
     exit 1
 fi
 
-# Read model information from CSV
+# Read model information from CSV (model_id, description, start_year, to_year, location)
 runs=( $( cut -f 1 -d , modelsToPlot.csv | tail -n +2 ) )
 desc=( $( cut -f 2 -d , modelsToPlot.csv | tail -n +2 ) )
-to=( $( cut -f 5 -d , modelsToPlot.csv | tail -n +2 ) )
+to=( $( cut -f 4 -d , modelsToPlot.csv | tail -n +2 ) )
 
 length=${#runs[@]}
 
@@ -62,6 +62,20 @@ fi
 if [ -f "multimodel_spatial_ecosystem.${img_format}" ]; then
     model_maps_section="${model_maps_section}## Ecosystem Variables\n\n"
     model_maps_section="${model_maps_section}![](multimodel_spatial_ecosystem.${img_format})\n\n"
+    model_maps_section="${model_maps_section}---\n\n"
+fi
+
+# Add phytoplankton maps
+if [ -f "multimodel_spatial_phytoplankton.${img_format}" ]; then
+    model_maps_section="${model_maps_section}## Phytoplankton\n\n"
+    model_maps_section="${model_maps_section}![](multimodel_spatial_phytoplankton.${img_format})\n\n"
+    model_maps_section="${model_maps_section}---\n\n"
+fi
+
+# Add zooplankton maps
+if [ -f "multimodel_spatial_zooplankton.${img_format}" ]; then
+    model_maps_section="${model_maps_section}## Zooplankton\n\n"
+    model_maps_section="${model_maps_section}![](multimodel_spatial_zooplankton.${img_format})\n\n"
     model_maps_section="${model_maps_section}---\n\n"
 fi
 

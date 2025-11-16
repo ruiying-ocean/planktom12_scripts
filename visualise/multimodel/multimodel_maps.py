@@ -20,6 +20,10 @@ import matplotlib.gridspec as gridspec
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
+# Import map utilities from parent directory
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from map_utils import OceanMapPlotter, get_variable_metadata
+
 # Import configuration
 try:
     import tomllib
@@ -38,24 +42,49 @@ def load_config():
     return None
 
 
-def load_model_data(basedir, run_name, year, var_name):
-    """Load annual mean surface data for a variable."""
-    ptrc_file = Path(basedir) / run_name / f"{run_name}_{year}0101_{year}1231_ptrc_T.nc"
+def load_model_data(basedir, run_name, year, var_name, plotter):
+    """
+    Load annual mean surface data for a variable using OceanMapPlotter.
 
-    if not ptrc_file.exists():
-        print(f"Warning: File not found: {ptrc_file}")
-        return None, None, None
+    Args:
+        basedir: Base directory for model output
+        run_name: Model run name
+        year: Year to load
+        var_name: Variable name (can be preprocessed like _NO3, _PO4, _Si)
+        plotter: OceanMapPlotter instance for preprocessing
+    """
+    run_dir = Path(basedir) / run_name
+
+    # Determine which file type to use based on variable
+    # Diagnostic variables are in diad_T.nc
+    # Tracer variables (nutrients, PFTs) are in ptrc_T.nc
+    diagnostic_vars = ['Cflx', 'TChl', '_TChl', 'PPT', 'EXP', '_EXP', '_PPINT']
+
+    if var_name in diagnostic_vars:
+        file_type = 'diad_T'
+    else:
+        file_type = 'ptrc_T'
+
+    # Try different filename patterns
+    # Pattern 1: ORCA2_1m_YYYY0101_YYYY1231_<type>.nc
+    nc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_{file_type}.nc"
+
+    # Pattern 2: run_name_YYYY0101_YYYY1231_<type>.nc (fallback)
+    if not nc_file.exists():
+        nc_file = run_dir / f"{run_name}_{year}0101_{year}1231_{file_type}.nc"
+
+    if not nc_file.exists():
+        print(f"Warning: File not found: {nc_file}")
+        return None
 
     try:
-        ds = xr.open_dataset(ptrc_file)
+        # Use plotter.load_data() to get preprocessed variables with unit conversions
+        # Pass volume to create integrated variables (_PICINT, _BACINT, etc.)
+        ds = plotter.load_data(str(nc_file), volume=plotter.volume)
 
         if var_name not in ds:
-            print(f"Warning: Variable {var_name} not found")
-            return None, None, None
-
-        # Get navigation
-        nav_lon = ds.nav_lon if 'nav_lon' in ds else ds.lon
-        nav_lat = ds.nav_lat if 'nav_lat' in ds else ds.lat
+            print(f"Warning: Variable {var_name} not found after preprocessing")
+            return None
 
         # Calculate annual mean
         data = ds[var_name].mean(dim='time_counter')
@@ -65,12 +94,14 @@ def load_model_data(basedir, run_name, year, var_name):
             depth_dim = 'deptht' if 'deptht' in data.dims else 'nav_lev'
             data = data.isel({depth_dim: 0})
 
-        ds.close()
-        return data, nav_lon, nav_lat
+        # Apply land mask
+        data = plotter.apply_mask(data)
+
+        return data
 
     except Exception as e:
-        print(f"Error loading {var_name} from {ptrc_file}: {e}")
-        return None, None, None
+        print(f"Error loading {var_name} from {nc_file}: {e}")
+        return None
 
 
 def create_map_ax(fig, position, projection=ccrs.Robinson()):
@@ -99,59 +130,87 @@ def plot_multimodel_maps(models, output_dir, config):
     dpi = config.get("figure", {}).get("dpi", 300) if config else 300
     fmt = config.get("figure", {}).get("format", "png") if config else "png"
 
-    # Define variable groups
+    # Create OceanMapPlotter for data preprocessing
+    plotter = OceanMapPlotter()
+
+    # Define variable groups - get metadata from map_utils for consistency
+    # Use derived variables (with underscore) for integrated/processed values
     var_groups = {
-        'ecosystem': [
-            ('Cflx', 'Air-Sea CO₂ Flux', 'mol C/m²/s', 'RdBu_r', None),
-            ('TChl', 'Total Chlorophyll', 'mg Chl/m³', 'viridis', (0, 2)),
-        ],
-        'nutrients': [
-            ('_PO4', 'Phosphate', 'mmol/m³', 'YlOrRd', (0, 3)),
-            ('_NO3', 'Nitrate', 'mmol/m³', 'YlOrRd', (0, 40)),
-            ('_Si', 'Silicate', 'mmol/m³', 'YlOrRd', (0, 100)),
-        ],
+        'ecosystem': ['_TChl', '_EXP', '_PPINT'],
+        'nutrients': ['_PO4', '_NO3', '_Si', '_Fer'],
+        'phytoplankton': ['_PICINT', '_FIXINT', '_COCINT', '_DIAINT', '_MIXINT', '_PHAINT'],
+        'zooplankton': ['_BACINT', '_PROINT', '_MESINT', '_PTEINT', '_CRUINT', '_GELINT'],
     }
 
-    projection = ccrs.Robinson()
+    projection = ccrs.PlateCarree()
     data_crs = ccrs.PlateCarree()
 
-    for group_name, variables in var_groups.items():
-        n_rows = len(variables)
+    # Load one file to get navigation
+    nav_lon, nav_lat = None, None
+    for model in models:
+        run_dir = Path(model['basedir']) / model['name']
+        ptrc_file = run_dir / f"ORCA2_1m_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
+        if not ptrc_file.exists():
+            ptrc_file = run_dir / f"{model['name']}_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
+        if ptrc_file.exists():
+            ds = xr.open_dataset(ptrc_file)
+            nav_lon = ds.nav_lon if 'nav_lon' in ds else ds.lon
+            nav_lat = ds.nav_lat if 'nav_lat' in ds else ds.lat
+            ds.close()
+            break
 
-        # Create figure with subplots
-        fig = plt.figure(figsize=(5 * n_cols, 4 * n_rows))
-        gs = gridspec.GridSpec(n_rows, n_cols, figure=fig, hspace=0.3, wspace=0.15)
+    if nav_lon is None:
+        print("Error: Could not load navigation from any model files")
+        return
+
+    for group_name, var_names in var_groups.items():
+        n_rows = len(var_names)
+
+        # Create figure with subplots using constrained_layout
+        fig = plt.figure(figsize=(5 * n_cols, 4 * n_rows), constrained_layout=True)
+        gs = gridspec.GridSpec(n_rows, n_cols, figure=fig)
 
         print(f"Generating {group_name} comparison map...")
 
-        for row_idx, (var_name, var_label, var_unit, cmap, vrange) in enumerate(variables):
+        for row_idx, var_name in enumerate(var_names):
+            # Get variable metadata from map_utils
+            metadata = get_variable_metadata(var_name)
+            var_label = metadata.get('long_name', var_name)
+            var_unit = metadata.get('units', '')
+            cmap = metadata.get('cmap', 'viridis')
+            vmax = metadata.get('vmax', None)
+
             # Load data for all models
             model_data = []
-            nav_lon, nav_lat = None, None
 
             for model in models:
-                data, lon, lat = load_model_data(
-                    model['basedir'], model['name'], model['year'], var_name
+                data = load_model_data(
+                    model['basedir'], model['name'], model['year'], var_name, plotter
                 )
                 model_data.append(data)
-                if nav_lon is None and lon is not None:
-                    nav_lon, nav_lat = lon, lat
 
             # Skip if no data loaded
             if all(d is None for d in model_data):
                 print(f"  Skipping {var_name}: no data available")
                 continue
 
-            # Determine color range if not specified
-            if vrange is None:
+            # Determine color range
+            if vmax is not None:
+                if 'Cflx' in var_name or 'flux' in var_label.lower():
+                    # Symmetric for flux variables
+                    vrange = (-vmax, vmax)
+                else:
+                    vrange = (0, vmax)
+            else:
+                # Auto-determine from data
                 valid_data = [d for d in model_data if d is not None]
                 if valid_data:
                     all_vals = np.concatenate([d.values.flatten() for d in valid_data])
                     all_vals = all_vals[~np.isnan(all_vals)]
-                    if 'Cflx' in var_name:
+                    if 'Cflx' in var_name or 'flux' in var_label.lower():
                         # Symmetric for flux
-                        vmax = np.abs(np.percentile(all_vals, [5, 95])).max()
-                        vrange = (-vmax, vmax)
+                        vmax_calc = np.abs(np.percentile(all_vals, [5, 95])).max()
+                        vrange = (-vmax_calc, vmax_calc)
                     else:
                         vrange = (np.percentile(all_vals, 5), np.percentile(all_vals, 95))
 
@@ -171,22 +230,31 @@ def plot_multimodel_maps(models, output_dir, config):
                     # Add colorbar below the map
                     cbar = plt.colorbar(im, ax=ax, orientation='horizontal',
                                        pad=0.05, shrink=0.8)
-                    cbar.set_label(var_unit, fontsize=8)
+                    cbar.set_label(var_unit, fontsize=12)
+                    cbar.ax.tick_params(labelsize=10)
 
                 # Add title (model name on first row, variable on first column)
                 if row_idx == 0:
-                    ax.set_title(model['desc'].replace('_', ' '), fontsize=10, fontweight='bold')
+                    ax.set_title(model['name'], fontsize=14, fontweight='bold')
                 if col_idx == 0:
                     ax.text(-0.1, 0.5, var_label, transform=ax.transAxes,
-                           fontsize=10, fontweight='bold', rotation=90,
+                           fontsize=14, fontweight='bold', rotation=90,
                            va='center', ha='right')
 
             # Add anomaly column if 2 models
             if has_anomaly and model_data[0] is not None and model_data[1] is not None:
                 ax = create_map_ax(fig, gs[row_idx, n_cols-1], projection)
 
-                diff = model_data[0] - model_data[1]
-                diff_max = np.abs(diff).max().values
+                diff = model_data[1] - model_data[0]  # B - A
+
+                # Use percentiles to avoid outliers dominating the colorbar
+                diff_vals = diff.values.flatten()
+                diff_vals = diff_vals[~np.isnan(diff_vals)]
+                if len(diff_vals) > 0:
+                    # Use 95th percentile of absolute values for symmetric range
+                    diff_max = np.percentile(np.abs(diff_vals), 95)
+                else:
+                    diff_max = 1.0  # Fallback
 
                 im = ax.pcolormesh(
                     nav_lon, nav_lat, diff,
@@ -198,14 +266,15 @@ def plot_multimodel_maps(models, output_dir, config):
 
                 cbar = plt.colorbar(im, ax=ax, orientation='horizontal',
                                    pad=0.05, shrink=0.8)
-                cbar.set_label(f'Δ {var_unit}', fontsize=8)
+                cbar.set_label(f'Δ {var_unit}', fontsize=12)
+                cbar.ax.tick_params(labelsize=10)
 
                 if row_idx == 0:
-                    ax.set_title('Anomaly (A - B)', fontsize=10, fontweight='bold')
+                    ax.set_title('Anomaly (B - A)', fontsize=14, fontweight='bold')
 
         # Save figure
         output_file = output_dir / f"multimodel_spatial_{group_name}.{fmt}"
-        fig.savefig(output_file, dpi=dpi, bbox_inches='tight')
+        fig.savefig(output_file, dpi=dpi)
         print(f"Created {output_file}")
         plt.close(fig)
 
@@ -221,17 +290,19 @@ def main():
     # Load config
     config = load_config()
 
-    # Read models from CSV
+    # Read models from CSV (columns: model_id, description, start_year, to_year, location)
     models = []
     with open(csv_file, 'r') as f:
-        reader = csv.DictReader(f)
+        reader = csv.reader(f)
+        next(reader, None)  # Skip header row
         for row in reader:
-            models.append({
-                'name': row['run'],
-                'desc': row['description'],
-                'year': row['to'],
-                'basedir': row['location']
-            })
+            if len(row) >= 5:  # Ensure we have all columns
+                models.append({
+                    'name': row[0],      # model_id
+                    'desc': row[1],      # description
+                    'year': row[3],      # to_year
+                    'basedir': row[4]    # location
+                })
 
     print(f"Generating spatial comparison maps for {len(models)} models...")
     plot_multimodel_maps(models, output_dir, config)
