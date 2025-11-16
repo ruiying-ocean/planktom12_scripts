@@ -26,22 +26,22 @@ fi
 
 # Set up save directory
 baseDir=$1
-visualise="visualise/"
-saveDir="${baseDir}${visualise}${run}/"
+saveDir="${baseDir}/visualise/${run}/"
+mkdir -p "${saveDir}"
 
-# Move template to match run and replace parameters
-mv template.html ${run}.html
+# Render Quarto document with parameters
+quarto render template.qmd \
+  -P identifier:"${run}" \
+  -P version:"${version}" \
+  -P date:"${date}" \
+  -P start_year:"${start}" \
+  -P end_year:"${end}" \
+  -P co2:"${co2}" \
+  -P forcing:"${forcing}" \
+  -P type:"${type}" \
+  -P temperature_restoring:"${temperature}" \
+  -P salinity_restoring:"${salinity}" \
+  --output "${saveDir}${run}.html" \
+  --execute-dir "${saveDir}"
 
-sed -i "s/{{identifier}}/${run}/g" ${run}.html
-sed -i "s/{{version}}/${version}/g" ${run}.html
-sed -i "s/{{date}}/${date}/g" ${run}.html
-sed -i "s/{{start_year}}/${start}/g" ${run}.html
-sed -i "s/{{end_year}}/${end}/g" ${run}.html
-sed -i "s/{{co2}}/${co2}/g" ${run}.html
-sed -i "s/{{forcing}}/${forcing}/g" ${run}.html
-sed -i "s/{{type}}/${type}/g" ${run}.html
-sed -i "s/{{temperature_restoring}}/${temperature}/g" ${run}.html
-sed -i "s/{{salinity_restoring}}/${salinity}/g" ${run}.html
-
-# Move html file to save directory
-mv ${run}.html ${saveDir}
+echo "✓ HTML report generated: ${saveDir}${run}.html"

@@ -1,0 +1,259 @@
+---
+title: "`r params$identifier`"
+format:
+  html:
+    toc: true
+    toc-location: left
+    theme: cosmo
+    css: custom.css
+    self-contained: true
+    code-tools: false
+params:
+  identifier: ""
+  version: ""
+  date: ""
+  start_year: ""
+  end_year: ""
+  co2: ""
+  forcing: ""
+  type: ""
+  temperature_restoring: ""
+  salinity_restoring: ""
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+## Model Run Information
+
+::: {.panel-tabset}
+
+### Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| **Version** | `r params$version` |
+| **Date** | `r params$date` |
+| **Period** | `r params$start_year` - `r params$end_year` |
+| **CO2** | `r params$co2` |
+| **Forcing** | `r params$forcing` |
+| **Type** | `r params$type` |
+| **Temp. restoring** | `r params$temperature_restoring` |
+| **Salinity restoring** | `r params$salinity_restoring` |
+
+:::
+
+---
+
+## Ecosystem {#ecosystem}
+
+### Ecosystem global summary
+![]({{< meta identifier >}}_summary_global.jpg){width=91.67%}
+
+### Cflx monthly regional plots
+![]({{< meta identifier >}}_summary_monthly_Cflx.jpg){width=66.67%}
+
+### Chlorophyll monthly regional plots
+![]({{< meta identifier >}}_summary_monthly_TChl.jpg){width=66.67%}
+
+### Ecosystem annual mean maps
+
+::: {.panel-tabset}
+
+#### Carbon Flux
+| Model run | Observations | Difference (model - obs.) |
+|-----------|--------------|---------------------------|
+| ![]({{< meta identifier >}}_`r params$end_year`_cflx.png) | | |
+
+#### Total Chlorophyll
+| Model run | Observations | Difference (model - obs.) |
+|-----------|--------------|---------------------------|
+| ![]({{< meta identifier >}}_`r params$end_year`_tchl.png) | ![](OCCCI_tchl_ORCA.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_tchl.png) |
+
+#### Primary Production
+| Model run | Observations | Difference (model - obs.) |
+|-----------|--------------|---------------------------|
+| ![]({{< meta identifier >}}_`r params$end_year`_ppint.png) | | |
+
+#### Export
+| Model run | Observations | Difference (model - obs.) |
+|-----------|--------------|---------------------------|
+| ![]({{< meta identifier >}}_`r params$end_year`_exp.png) | | |
+
+:::
+
+---
+
+## PFTs {#pfts}
+
+### PFTs global summary
+![]({{< meta identifier >}}_summary_pfts.jpg){width=75%}
+
+### PFTs annual mean maps
+
+::: {layout-ncol=2}
+
+#### Phytoplankton
+
+![Picophytoplankton]({{< meta identifier >}}_`r params$end_year`_pic.png)
+
+![Phaeocystis]({{< meta identifier >}}_`r params$end_year`_pha.png)
+
+![Mixotrophs]({{< meta identifier >}}_`r params$end_year`_mix.png)
+
+![Diatoms]({{< meta identifier >}}_`r params$end_year`_dia.png)
+
+![Coccolithophores]({{< meta identifier >}}_`r params$end_year`_coc.png)
+
+![Nitrogen Fixers]({{< meta identifier >}}_`r params$end_year`_fix.png)
+
+#### Zooplankton
+
+![Gelatinous]({{< meta identifier >}}_`r params$end_year`_gel.png)
+
+![Protozooplankton]({{< meta identifier >}}_`r params$end_year`_pro.png)
+
+![Bacteria]({{< meta identifier >}}_`r params$end_year`_bac.png)
+
+![Macrozooplankton]({{< meta identifier >}}_`r params$end_year`_mac.png)
+
+![Pteropods]({{< meta identifier >}}_`r params$end_year`_pte.png)
+
+![Mesozooplankton]({{< meta identifier >}}_`r params$end_year`_mes.png)
+
+:::
+
+---
+
+## Nutrients {#nutrients}
+
+### Nutrients global summary
+![]({{< meta identifier >}}_summary_nutrients.jpg){width=91.67%}
+
+### Nutrients annual mean maps and comparison to observations
+
+::: {.panel-tabset}
+
+#### Phosphate
+| Model run | Observations | Difference (model - obs.) |
+|-----------|--------------|---------------------------|
+| ![]({{< meta identifier >}}_`r params$end_year`_po4.png) | ![](woa18_po4.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_po4.png) |
+
+#### Nitrate
+| Model run | Observations | Difference (model - obs.) |
+|-----------|--------------|---------------------------|
+| ![]({{< meta identifier >}}_`r params$end_year`_no3.png) | ![](woa18_no3.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_no3.png) |
+
+#### Iron
+| Model run | Observations | Difference (model - obs.) |
+|-----------|--------------|---------------------------|
+| ![]({{< meta identifier >}}_`r params$end_year`_fer.png) | | |
+
+#### Silica
+| Model run | Observations | Difference (model - obs.) |
+|-----------|--------------|---------------------------|
+| ![]({{< meta identifier >}}_`r params$end_year`_sil.png) | ![](woa18_sil.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_sil.png) |
+
+#### Oxygen
+| Model run | Observations | Difference (model - obs.) |
+|-----------|--------------|---------------------------|
+| ![]({{< meta identifier >}}_`r params$end_year`_o2.png) | ![](woa18_oxy.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_o2.png) |
+
+:::
+
+---
+
+## pCO2 {#pco2}
+
+### pCO2 monthly regional plots
+![]({{< meta identifier >}}_summary_monthly_pCO2.jpg){width=66.67%}
+
+### pCO2 monthly regional plots (normalised)
+![]({{< meta identifier >}}_summary_monthly_pCO2_normalised.jpg){width=66.67%}
+
+### dpCO2 annual mean map (average over the year)
+
+| Model run | Observations (data products: 2010-2019 ave) | Difference (model - obs.) |
+|-----------|---------------------------------------------|---------------------------|
+| ![]({{< meta identifier >}}_`r params$end_year`_dpco2.png) | ![](gcb_2022_dpco2_ORCA.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_dpco2.png) |
+
+---
+
+## Physics {#physics}
+
+### Physics global summary
+![]({{< meta identifier >}}_summary_physics.jpg){width=75%}
+
+### Sea surface temperature monthly regional plots
+![]({{< meta identifier >}}_summary_monthly_SST.jpg){width=66.67%}
+
+### Mixed layer depth monthly regional plots
+![]({{< meta identifier >}}_summary_monthly_MLD.jpg){width=66.67%}
+
+### Physics annual mean maps
+
+::: {.panel-tabset}
+
+#### Temperature
+| Model run | Observations | Difference (model - obs.) |
+|-----------|--------------|---------------------------|
+| ![]({{< meta identifier >}}_`r params$end_year`_temp.png) | ![](woa18_A5B7_temp.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_temp.png) |
+
+#### Salinity
+| Model run | Observations | Difference (model - obs.) |
+|-----------|--------------|---------------------------|
+| ![]({{< meta identifier >}}_`r params$end_year`_salin.png) | ![](woa18_A5B7_salin.png) | ![]({{< meta identifier >}}_`r params$end_year`_difference_salin.png) |
+
+#### MLD Average
+| Model run | Observations | Difference (model - obs.) |
+|-----------|--------------|---------------------------|
+| ![]({{< meta identifier >}}_`r params$end_year`_mld_ave.png) | | |
+
+#### MLD Maximum
+| Model run | Observations | Difference (model - obs.) |
+|-----------|--------------|---------------------------|
+| ![]({{< meta identifier >}}_`r params$end_year`_mld_max.png) | | |
+
+:::
+
+---
+
+## Vertical Depths {#vertical}
+
+### Ecosystem vertical depth profile
+![]({{< meta identifier >}}_vertical_depth_ecosystem.png){width=75%}
+
+### PFTs vertical depth profile
+![]({{< meta identifier >}}_vertical_depth_pfts.png){width=100%}
+
+### Nutrients vertical depth profile
+![]({{< meta identifier >}}_vertical_depth_nutrients.png){width=75%}
+
+### Organic carbon vertical depth profile
+![]({{< meta identifier >}}_vertical_depth_orgcarbon.png){width=75%}
+
+### Physics vertical depth profile
+![]({{< meta identifier >}}_vertical_depth_physics.png){width=50%}
+
+---
+
+## References {#references}
+
+### Observation data
+
+- The observation value for total chlorohpyll is determined by calculating a global average from the OCCCI version 5 monthly climatology dataset. This data is also used to create the maps and calculate the difference to the model.
+
+- The observation ranges for primary production and CaCO3 flux and the observation value for Si flux are taken from the paper [*Role of zooplankton dynamics for Southern Ocean phytoplankton biomass and global biogeochemical cycles*](https://bg.copernicus.org/articles/13/4111/2016/bg-13-4111-2016.html) (2016).
+
+- The observation range for export is taken from the paper [*Effect of sampling bias on global estimates of ocean carbon export*](https://iopscience.iop.org/article/10.1088/1748-9326/ad1e7f) (2024).
+
+- The biomass ranges for all plankton functional types (PFTs) except for GEL are taken from the paper [*Role of zooplankton dynamics for Southern Ocean phytoplankton biomass and global biogeochemical cycles*](https://bg.copernicus.org/articles/13/4111/2016/bg-13-4111-2016.html) (2016).
+
+- The biomass range for GEL is taken from the paper [*Role of jellyfish in the plankton ecosystem revealed using a global ocean biogeochemical model*](https://bg.copernicus.org/articles/18/1291/2021/) (2021).
+
+- The observation values for nutrients (phosphate, nitrates, silica, and oxygen) are determined by calculating a global average from the [*World Ocean Atlas 2018*](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.nodc:NCEI-WOA18) annual datasets. These datasets are also used for creating the observation maps and calculating the difference to the model output.
+
+- The observation values for pCO2 are calculated from an ensemble mean of the data-products from the [*Global Carbon Budget 2022*](https://essd.copernicus.org/articles/14/4811/2022/essd-14-4811-2022.html). This data is also used for creating the observation map for dpCO2 and calculating the difference to the model output.
+
+- The observation data for the physics tracers used to create maps and calculate the difference to the model output is taken from the [*World Ocean Atlas 2018*](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.nodc:NCEI-WOA18) annual datasets. We use the dataset for the period 2005-2018 for our comparison.
