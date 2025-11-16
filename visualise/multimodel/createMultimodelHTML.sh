@@ -37,62 +37,44 @@ echo "Creating Quarto HTML for $length models..."
 cp "${scriptDir}/template_multimodel.qmd" ./temp_template.qmd
 cp "${scriptDir}/custom.scss" ./
 
-# Build the model maps section as a grid/table
-# Format: Rows = variables, Columns = models + anomaly (if 2 models)
+# Build the spatial maps section
+# The multimodel_maps.py script generates grid-format PNG files
 model_maps_section=""
 
-# Check if we have difference maps (only for 2 models)
-has_diff_maps=0
-if [ $length -eq 2 ] && [ -f "difference_${to[0]}_diagnostics.png" ]; then
-    has_diff_maps=1
+# Get image format from first model's config or default to png
+img_format="png"
+if [ -f "../visualise_config.toml" ]; then
+    img_format=$(python3 -c "
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
+try:
+    with open('../visualise_config.toml', 'rb') as f:
+        config = tomllib.load(f)
+        print(config.get('figure', {}).get('format', 'png'))
+except:
+    print('png')
+" 2>/dev/null || echo "png")
 fi
 
-# Define the map types (rows)
-map_types=("diagnostics" "phytos" "zoos" "nutrients")
-map_labels=("Ecosystem Diagnostics" "Phytoplankton" "Zooplankton" "Nutrients")
-
-# Build markdown table for each map type
-for idx in ${!map_types[@]}; do
-    map_type=${map_types[$idx]}
-    map_label=${map_labels[$idx]}
-
-    model_maps_section="${model_maps_section}## ${map_label}\n\n"
-    model_maps_section="${model_maps_section}::: {.grid}\n\n"
-
-    # Add each model's map
-    for i in ${!runs[@]}; do
-        run=${runs[$i]}
-        year=${to[$i]}
-        display_name=${desc[$i]//_/ }
-
-        map_file="${run}_${year}_${map_type}.png"
-
-        if [ -f "$map_file" ]; then
-            model_maps_section="${model_maps_section}::: {.g-col-6}\n"
-            model_maps_section="${model_maps_section}### ${display_name}\n\n"
-            model_maps_section="${model_maps_section}![](${map_file})\n"
-            model_maps_section="${model_maps_section}:::\n\n"
-        fi
-    done
-
-    # Add difference map if it exists (for 2-model comparison)
-    if [ $has_diff_maps -eq 1 ]; then
-        diff_file="difference_${to[0]}_${map_type}.png"
-        if [ -f "$diff_file" ]; then
-            model_maps_section="${model_maps_section}::: {.g-col-6}\n"
-            model_maps_section="${model_maps_section}### Anomaly (${desc[0]} - ${desc[1]})\n\n"
-            model_maps_section="${model_maps_section}![](${diff_file})\n"
-            model_maps_section="${model_maps_section}:::\n\n"
-        fi
-    fi
-
-    model_maps_section="${model_maps_section}:::\n\n"
+# Add ecosystem maps
+if [ -f "multimodel_spatial_ecosystem.${img_format}" ]; then
+    model_maps_section="${model_maps_section}## Ecosystem Variables\n\n"
+    model_maps_section="${model_maps_section}![](multimodel_spatial_ecosystem.${img_format})\n\n"
     model_maps_section="${model_maps_section}---\n\n"
-done
+fi
+
+# Add nutrient maps
+if [ -f "multimodel_spatial_nutrients.${img_format}" ]; then
+    model_maps_section="${model_maps_section}## Nutrients\n\n"
+    model_maps_section="${model_maps_section}![](multimodel_spatial_nutrients.${img_format})\n\n"
+    model_maps_section="${model_maps_section}---\n\n"
+fi
 
 # Substitute variables in the template
-# Use printf to handle newlines properly
-printf "%s" "$model_maps_section" > temp_model_maps.txt
+# Use printf with -e to interpret escape sequences properly
+printf "%b" "$model_maps_section" > temp_model_maps.txt
 
 # Use sed to substitute the timestamp and model maps section
 sed -e "s/\${timestamp}/${timestamp}/g" \

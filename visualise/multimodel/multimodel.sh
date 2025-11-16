@@ -76,30 +76,15 @@ fi
 cp ${visualiseDir}/make_maps.py .
 cp ${visualiseDir}/map_utils.py .
 
-# Run the python script to generate the plots (with debug to see warnings)
+# Run the python script to generate the time series plots (with debug to see warnings)
 ./multimodel.py ${saveDir} --debug
 
-# Create maps for each run for final year using Python
-for i in ${!runs[@]}; do
-	echo "Creating maps for" ${runs[$i]}
-
-	# Use Python map generation instead of Ferret
-	python3 make_maps.py ${runs[$i]} ${to[$i]} ${to[$i]} \
-		--basedir ${locs[$i]} \
-		--output-dir ${saveDir} \
-		--obs-dir /gpfs/home/vhf24tbu/Observations
-done
+# Generate spatial comparison maps (grid format with all models)
+echo "Generating spatial comparison maps..."
+python3 ${srcDir}/multimodel_maps.py modelsToPlot.csv ${saveDir}
 
 # Copy observation images to save directory
 cp ${srcDir}/*.png .
-
-# Generate difference/anomaly maps for 2-model comparisons
-if [ $length -eq 2 ]; then
-	echo "Generating difference maps for 2-model comparison..."
-	python3 ${srcDir}/make_difference_maps.py \
-		${runs[0]} ${runs[1]} ${to[0]} \
-		${locs[0]} ${locs[1]} ${saveDir}
-fi
 
 # Generate HTML using Quarto (replaces Python + Jinja2 system)
 ${srcDir}/createMultimodelHTML.sh "${folderName}" 0
