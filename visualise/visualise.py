@@ -275,7 +275,7 @@ class FigureCreator:
             (data["nFer"], self.colors['red'], "Surface Iron [nmol/L]"),
             (data["Si"], self.colors['purple'], "Surface Silica [μmol/L]", None, ObservationLine(7.485)),
             (data["O2"], self.colors['cyan'], "Surface Oxygen [μmol/L]", None, ObservationLine(251.1)),
-            (data["Alkalini"], self.colors['green'], "Surface Alkalinity [μmol/L]"),
+            (data["Alkalini"], self.colors['green'], "Surface Alkalinity [μmol/L]", None, ObservationLine(2295.10936157)),
         ]
 
         self._create_subplot_grid(
