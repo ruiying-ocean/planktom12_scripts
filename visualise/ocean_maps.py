@@ -58,8 +58,12 @@ class OceanMapPlotter:
         if volume_key in mask_ds:
             self.volume = mask_ds[volume_key]
 
+            # Rename 'z' dimension to 'deptht' for consistency with NEMO output
+            if 'z' in self.volume.dims:
+                self.volume = self.volume.rename({'z': 'deptht'})
+
     def load_data(self, filepath: str, variables: Optional[List[str]] = None,
-                  volume: Optional[xr.DataArray] = None) -> xr.Dataset:
+                  volume: Optional[xr.DataArray] = None, chunks: dict = None) -> xr.Dataset:
         """
         Load NEMO NetCDF output file with automatic processing.
         Follows the logic from nemo_func.open_nc()
@@ -68,11 +72,21 @@ class OceanMapPlotter:
             filepath: Path to NetCDF file
             variables: Optional list of variables to load (loads all if None)
             volume: Volume data for vertical integration (optional)
+            chunks: Dask chunking spec for lazy loading (e.g., {'time_counter': 1})
 
         Returns:
             xarray Dataset with loaded and processed variables
         """
-        ds = xr.open_dataset(filepath, decode_times=False)
+        # Use lazy loading with dask if chunks specified
+        if chunks:
+            ds = xr.open_dataset(filepath, decode_times=False, chunks=chunks)
+        else:
+            ds = xr.open_dataset(filepath, decode_times=False)
+
+        # When using dask chunks, xarray may rename dimensions to 'z' instead of 'deptht'
+        # Rename back to 'deptht' for consistency with volume and nemo_func.py
+        if 'z' in ds.dims:
+            ds = ds.rename({'z': 'deptht'})
 
         # Determine file type
         if 'ptrc_T' in filepath:
@@ -170,8 +184,11 @@ class OceanMapPlotter:
         """
         Vertically integrate ptrc variables.
         Copied from nemo_func.vint()
+
+        Note: Assumes depth dimension is named 'deptht' (ensured by load_data)
         """
         ds = ds.copy()
+
         if suffix == 'ptrc':
             ## integrate PFT biomass
             pfts = ['PIC', 'FIX', 'COC', 'DIA', 'MIX', 'PHA',
@@ -323,17 +340,50 @@ class OceanMapPlotter:
         Returns:
             Mappable object for creating colorbars
         """
-        im = data.plot(
-            ax=ax,
-            cmap=cmap,
-            vmin=vmin,
-            vmax=vmax,
-            x='nav_lon' if 'nav_lon' in data.coords else 'x',
-            y='nav_lat' if 'nav_lat' in data.coords else 'y',
-            add_colorbar=add_colorbar,
-            transform=transform,
-            **kwargs
-        )
+        # Check if we have proper 2D coordinates
+        has_nav_coords = 'nav_lon' in data.coords and 'nav_lat' in data.coords
+
+        if has_nav_coords:
+            # Use nav_lon and nav_lat directly as x/y coordinates
+            lon = data.coords['nav_lon']
+            lat = data.coords['nav_lat']
+
+            # If nav_lon/nav_lat are 2D, use them directly with pcolormesh
+            if lon.ndim == 2 and lat.ndim == 2:
+                im = ax.pcolormesh(
+                    lon.values,
+                    lat.values,
+                    data.values,
+                    cmap=cmap,
+                    vmin=vmin,
+                    vmax=vmax,
+                    transform=transform,
+                    **kwargs
+                )
+            else:
+                # Fallback to xarray plot for 1D coordinates
+                im = data.plot.pcolormesh(
+                    ax=ax,
+                    cmap=cmap,
+                    vmin=vmin,
+                    vmax=vmax,
+                    x='nav_lon',
+                    y='nav_lat',
+                    add_colorbar=add_colorbar,
+                    transform=transform,
+                    **kwargs
+                )
+        else:
+            # Use dimension-based coordinates (x, y)
+            im = data.plot.pcolormesh(
+                ax=ax,
+                cmap=cmap,
+                vmin=vmin,
+                vmax=vmax,
+                add_colorbar=add_colorbar,
+                transform=transform,
+                **kwargs
+            )
 
         return im
 
@@ -427,7 +477,7 @@ ECOSYSTEM_VARS = {
         'units': 'µg Chl L⁻¹',
         'vmax': 1.2,
         'depth_index': 0,
-        'cmap': 'NCV_jet'
+        'cmap': 'turbo'
     },
     'Cflx': {
         'long_name': 'Surface Carbon Flux',
@@ -442,14 +492,14 @@ ECOSYSTEM_VARS = {
         'units': 'g C m⁻² yr⁻¹',
         'vmax': 400,
         'depth_index': None,
-        'cmap': 'Spectral_r'
+        'cmap': 'viridis'
     },
     '_EXP': {
         'long_name': 'Export at 100m',
         'units': 'g C m⁻² yr⁻¹',
         'vmax': 80,
         'depth_index': 10,  # ~100m depth
-        'cmap': 'Spectral_r'
+        'cmap': 'viridis'
     },
     'dpco2': {
         'long_name': 'dpCO2',
@@ -467,25 +517,25 @@ NUTRIENT_VARS = {
         'long_name': 'Nitrate',
         'units': 'µmol L⁻¹',
         'vmax': 30,
-        'cmap': 'viridis'
+        'cmap': 'Spectral_r'
     },
     '_PO4': {
         'long_name': 'Phosphate',
         'units': 'µmol L⁻¹',
         'vmax': 2.5,
-        'cmap': 'viridis'
+        'cmap': 'Spectral_r'
     },
     '_Si': {
         'long_name': 'Silica',
         'units': 'µmol L⁻¹',
         'vmax': 60,
-        'cmap': 'viridis'
+        'cmap': 'Spectral_r'
     },
     '_Fer': {
         'long_name': 'Iron',
         'units': 'nmol L⁻¹',
         'vmax': 1.5,
-        'cmap': 'viridis'
+        'cmap': 'Spectral_r'
     },
     '_O2': {
         'long_name': 'Oxygen',
@@ -545,6 +595,7 @@ def get_variable_metadata(var_name: str) -> Dict:
 def convert_units(data: xr.DataArray, var_name: str) -> xr.DataArray:
     """
     Convert data to appropriate units for plotting.
+    NOTE: Variables starting with '_' are already converted by _convert_units()
 
     Args:
         data: Input data array
@@ -553,21 +604,24 @@ def convert_units(data: xr.DataArray, var_name: str) -> xr.DataArray:
     Returns:
         Data converted to plotting units
     """
-    # Convert based on variable name patterns
-    if 'INT' in var_name:
-        # Integrated quantities - convert from umol to Tg C
-        # Typically already in right units from breakdown
+    # If variable starts with '_', it's already been converted by _convert_units()
+    if var_name.startswith('_'):
         return data
 
-    if '_Fer' in var_name or 'Fer' in var_name:
+    # Convert based on variable name patterns (for raw variables)
+    if 'INT' in var_name:
+        # Integrated quantities - already in right units
+        return data
+
+    if 'Fer' in var_name:
         # Iron: convert to nmol/L (multiply by 1e9)
         return data * 1e9
 
-    if '_TChl' in var_name or 'tchl' in var_name:
+    if 'tchl' in var_name.lower():
         # Chlorophyll: convert to µg/L (multiply by 1e6)
         return data * 1e6
 
-    if var_name in ['_NO3', '_PO4', '_Si', 'O2']:
+    if var_name in ['NO3', 'PO4', 'Si', 'O2']:
         # Other nutrients: convert to µmol/L (multiply by 1e6)
         return data * 1e6
 

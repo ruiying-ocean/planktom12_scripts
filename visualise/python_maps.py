@@ -32,7 +32,7 @@ def plot_pft_maps(
     pft_list: list,
     pft_type: str,
     output_path: Path,
-    cmap: str = 'NCV_jet'
+    cmap: str = 'turbo'
 ):
     """
     Create multi-panel map of plankton functional types.
@@ -51,7 +51,7 @@ def plot_pft_maps(
     fig, axs = plotter.create_subplot_grid(
         nrows=2, ncols=3,
         projection=ccrs.PlateCarree(),
-        figsize=(10, 4)
+        figsize=(10, 5)
     )
 
     # Plot each PFT
@@ -67,8 +67,15 @@ def plot_pft_maps(
                    ha='center', va='center', transform=ax.transAxes)
             continue
 
-        # Get time-averaged integrated biomass (Tg C per grid cell)
-        data = ptrc_ds[var_int].mean(dim='time_counter')
+        # Get integrated biomass (already time-averaged and vertically integrated)
+        data = ptrc_ds[var_int]
+
+        # If time dimension still exists, average it
+        if 'time_counter' in data.dims:
+            data = data.mean(dim='time_counter')
+
+        # Remove any singleton dimensions
+        data = data.squeeze()
 
         # Apply land mask
         data = plotter.apply_mask(data)
@@ -119,77 +126,117 @@ def plot_ecosystem_diagnostics(
     plotter: OceanMapPlotter,
     diad_ds: xr.Dataset,
     output_path: Path,
+    sat_chl_path: Path = None,
     variables: list = ['_TChl', '_EXP', '_PPINT']
 ):
     """
-    Create multi-panel map of ecosystem diagnostics.
+    Create multi-panel map of ecosystem diagnostics with satellite chlorophyll comparison.
 
-    Matches style from OBio_state.ipynb cell 3.
+    Creates a 2x2 grid with:
+    - Top left: Model Chlorophyll
+    - Top right: Satellite Chlorophyll
+    - Bottom left: Export Production
+    - Bottom right: Primary Production
 
     Args:
         plotter: OceanMapPlotter instance
         diad_ds: Dataset with diagnostic variables
         output_path: Where to save the figure
+        sat_chl_path: Path to satellite chlorophyll data (optional)
         variables: List of variables to plot
     """
-    nvars = len(variables)
-
-    # Create subplot grid
+    # Create 2x2 subplot grid
     fig, axs = plotter.create_subplot_grid(
-        nrows=1, ncols=nvars,
+        nrows=2, ncols=2,
         projection=ccrs.PlateCarree(),
-        figsize=(10, 3)
+        figsize=(10, 6)
     )
 
-    # Ensure axs is iterable
-    if nvars == 1:
-        axs = [axs.flat[0]]
-    else:
-        axs = axs.flat
+    # Top left: Model Chlorophyll
+    ax = axs[0, 0]
+    if '_TChl' in diad_ds:
+        meta = get_variable_metadata('_TChl')
+        data = diad_ds['_TChl']
 
-    for i, var in enumerate(variables):
-        ax = axs[i]
+        if 'time_counter' in data.dims:
+            data = data.mean(dim='time_counter')
+        if 'deptht' in data.dims:
+            data = data.isel(deptht=0)
+
+        data = data.squeeze()
+        data = convert_units(data, '_TChl')
+        data = plotter.apply_mask(data)
+
+        im = plotter.plot_variable(
+            ax=ax, data=data, cmap=meta['cmap'],
+            vmin=0, vmax=meta['vmax'], add_colorbar=False
+        )
+
+        cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, shrink=0.8)
+        cbar.set_label(meta['units'], fontsize=10)
+        ax.set_title('Model Chlorophyll', fontsize=11)
+
+    # Top right: Satellite Chlorophyll
+    ax = axs[0, 1]
+    if sat_chl_path and sat_chl_path.exists():
+        try:
+            sat_ds = xr.open_dataset(sat_chl_path, decode_times=False)
+            meta = get_variable_metadata('_TChl')
+
+            if 'chlor_a' in sat_ds:
+                sat_chl = sat_ds['chlor_a']
+
+                if 'time' in sat_chl.dims:
+                    sat_chl = sat_chl.mean(dim='time')
+                elif 'month' in sat_chl.dims:
+                    sat_chl = sat_chl.mean(dim='month')
+
+                sat_chl = sat_chl.squeeze()
+                sat_chl = plotter.apply_mask(sat_chl)
+
+                im_sat = plotter.plot_variable(
+                    ax=ax, data=sat_chl, cmap=meta['cmap'],
+                    vmin=0, vmax=meta['vmax'], add_colorbar=False
+                )
+
+                cbar = fig.colorbar(im_sat, ax=ax, orientation='horizontal', pad=0.05, shrink=0.8)
+                cbar.set_label(meta['units'], fontsize=10)
+                ax.set_title('Satellite Chlorophyll', fontsize=11)
+            else:
+                ax.text(0.5, 0.5, 'chlor_a not found', ha='center', va='center', transform=ax.transAxes)
+        except Exception as e:
+            ax.text(0.5, 0.5, f'Error loading\nsatellite data', ha='center', va='center', transform=ax.transAxes)
+    else:
+        ax.text(0.5, 0.5, 'Satellite data\nnot available', ha='center', va='center', transform=ax.transAxes)
+
+    # Bottom row: EXP and PPINT
+    for i, var in enumerate(['_EXP', '_PPINT']):
+        ax = axs[1, i]
 
         if var not in diad_ds:
             print(f"Warning: {var} not found in dataset")
             continue
 
-        # Get metadata
         meta = get_variable_metadata(var)
+        data = diad_ds[var]
 
-        # Get data
-        data = diad_ds[var].mean(dim='time_counter')
-
-        # Apply depth indexing if needed
+        if 'time_counter' in data.dims:
+            data = data.mean(dim='time_counter')
         if 'deptht' in data.dims:
             depth_idx = meta.get('depth_index', 0)
             data = data.isel(deptht=depth_idx)
 
-        # Convert units
+        data = data.squeeze()
         data = convert_units(data, var)
-
-        # Apply land mask
         data = plotter.apply_mask(data)
 
-        # Plot
         im = plotter.plot_variable(
-            ax=ax,
-            data=data,
-            cmap=meta['cmap'],
-            vmin=0,
-            vmax=meta['vmax'],
-            add_colorbar=False
+            ax=ax, data=data, cmap=meta['cmap'],
+            vmin=0, vmax=meta['vmax'], add_colorbar=False
         )
 
-        # Add individual colorbar
-        cbar = fig.colorbar(
-            im, ax=ax,
-            orientation='horizontal',
-            pad=0.05,
-            shrink=0.8
-        )
+        cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, shrink=0.8)
         cbar.set_label(meta['units'], fontsize=10)
-
         ax.set_title(meta['long_name'], fontsize=11)
 
     # Save figure
@@ -238,12 +285,20 @@ def plot_nutrient_comparison(
         # Get metadata
         meta = get_variable_metadata(nut)
 
-        # Get surface model data
-        model_data = ptrc_ds[nut].mean(dim='time_counter')
+        # Get surface model data (already time-averaged from preprocessing if available)
+        model_data = ptrc_ds[nut]
+
+        # If time dimension still exists, average it
+        if 'time_counter' in model_data.dims:
+            model_data = model_data.mean(dim='time_counter')
+
         if 'deptht' in model_data.dims:
             model_data = model_data.isel(deptht=0)
 
-        # Convert units
+        # Remove any singleton dimensions
+        model_data = model_data.squeeze()
+
+        # Convert units (if not already converted)
         model_data = convert_units(model_data, nut)
 
         # Apply mask
@@ -272,6 +327,9 @@ def plot_nutrient_comparison(
                 obs_data = obs_data.isel(depth=0)
             elif 'deptht' in obs_data.dims:
                 obs_data = obs_data.isel(deptht=0)
+
+            # Remove any singleton dimensions
+            obs_data = obs_data.squeeze()
 
             # Apply mask
             obs_data = plotter.apply_mask(obs_data)
@@ -319,6 +377,11 @@ def main():
     parser.add_argument('--mask-path',
                        default='/gpfs/data/greenocean/software/resources/breakdown/basin_mask.nc',
                        help='Path to basin mask file')
+    parser.add_argument('--obs-dir',
+                       default='/gpfs/home/vhf24tbu/Observations',
+                       help='Directory containing observational data files')
+    parser.add_argument('--no-nutrient-comparison', action='store_true',
+                       help='Disable model vs observations nutrient comparison plots (generate model-only)')
 
     args = parser.parse_args()
 
@@ -347,21 +410,63 @@ def main():
     # Initialize plotter
     plotter = OceanMapPlotter(mask_path=args.mask_path)
 
-    # Load datasets with volume integration
-    print("Loading ptrc_T dataset...")
-    ptrc_ds = plotter.load_data(str(ptrc_file), volume=plotter.volume)
+    # Load datasets with volume integration using chunked/lazy loading
+    # This is memory efficient - data is only loaded when needed
+    print("Loading ptrc_T dataset (lazy loading with dask)...")
+    ptrc_ds = plotter.load_data(
+        str(ptrc_file),
+        volume=plotter.volume,
+        chunks={'time_counter': 1}  # Load one time step at a time
+    )
 
-    print("Loading diad_T dataset...")
-    diad_ds = plotter.load_data(str(diad_file), volume=plotter.volume)
+    print("Loading diad_T dataset (lazy loading with dask)...")
+    diad_ds = plotter.load_data(
+        str(diad_file),
+        volume=plotter.volume,
+        chunks={'time_counter': 1}  # Load one time step at a time
+    )
+
+    # Compute only the variables we need for plotting (triggers dask computation)
+    # This processes data in chunks and releases memory as it goes
+    print("Computing time averages (this may take a moment)...")
+
+    # For PFTs, we only need the integrated variables
+    # Note: Vertical integration should already be done by _vint() in ocean_maps.py
+    pft_vars = [f'_{pft}INT' for pft in PHYTOS + ZOOS]
+    for var in pft_vars:
+        if var in ptrc_ds:
+            # Compute time average immediately to reduce memory
+            # Squeeze to remove any singleton dimensions
+            if 'time_counter' in ptrc_ds[var].dims:
+                ptrc_ds[var] = ptrc_ds[var].mean(dim='time_counter').squeeze().compute()
+            else:
+                ptrc_ds[var] = ptrc_ds[var].squeeze().compute()
+
+    # For diagnostics, we only need these variables
+    diag_vars = ['_TChl', '_EXP', '_PPINT']
+    for var in diag_vars:
+        if var in diad_ds:
+            diad_ds[var] = diad_ds[var].mean(dim='time_counter').squeeze().compute()
+
+    print("Data processing complete.")
 
     # Generate maps
     print("\n=== Generating Maps ===\n")
 
-    # 1. Ecosystem diagnostics (TChl, EXP, PPINT)
-    print("1. Ecosystem diagnostics...")
+    # 1. Ecosystem diagnostics (TChl, EXP, PPINT) with satellite chlorophyll comparison
+    print("1. Ecosystem diagnostics with satellite chlorophyll...")
+    obs_dir = Path(args.obs_dir)
+    # Try OC-CCI first, then modis, then merged climatology
+    chl_obs_file = obs_dir / 'occi_chla_monthly_climatology.nc'
+    if not chl_obs_file.exists():
+        chl_obs_file = obs_dir / 'modis_chla_climatology_orca.nc'
+    if not chl_obs_file.exists():
+        chl_obs_file = obs_dir / 'merged_chla_climatology_orca.nc'
+
     plot_ecosystem_diagnostics(
         plotter=plotter,
         diad_ds=diad_ds,
+        sat_chl_path=chl_obs_file,
         output_path=output_dir / f"{args.run_name}_{args.year_start}_diagnostics.png"
     )
 
@@ -373,7 +478,7 @@ def main():
         pft_list=PHYTOS,
         pft_type='phyto',
         output_path=output_dir / f"{args.run_name}_{args.year_start}_phytos.png",
-        cmap='NCV_jet'
+        cmap='turbo'
     )
 
     # 3. Zooplankton PFTs
@@ -384,13 +489,110 @@ def main():
         pft_list=ZOOS,
         pft_type='zoo',
         output_path=output_dir / f"{args.run_name}_{args.year_start}_zoos.png",
-        cmap='NCV_jet'
+        cmap='turbo'
     )
 
-    # 4. Nutrient maps (model only - observations require separate loading)
-    print("4. Nutrients (model only)...")
-    # For now, skip obs comparison - can be added when obs files are available
-    # plot_nutrient_comparison would be called here
+    # 4. Nutrient maps
+    if not args.no_nutrient_comparison:
+        print("4. Nutrients (model vs observations)...")
+
+        # Load observational datasets
+        obs_dir = Path(args.obs_dir)
+        obs_datasets = {}
+
+        # Try to load WOA data for NO3, PO4, Si
+        woa_file = obs_dir / 'woa_orca_bil.nc'
+        if woa_file.exists():
+            print(f"  Loading WOA data from {woa_file}")
+            woa_ds = xr.open_dataset(woa_file, decode_times=False)
+            print(f"  WOA variables: {list(woa_ds.data_vars)}")
+            # Map WOA variables to our naming convention
+            if 'no3' in woa_ds:
+                obs_datasets['_NO3'] = woa_ds['no3']
+            if 'po4' in woa_ds:
+                obs_datasets['_PO4'] = woa_ds['po4']
+            if 'si' in woa_ds:
+                obs_datasets['_Si'] = woa_ds['si']
+        else:
+            print(f"  Warning: WOA file not found at {woa_file}")
+
+        # Try to load Fe data from Huang2022
+        fe_file = obs_dir / 'Huang2022_orca.nc'
+        if fe_file.exists():
+            print(f"  Loading Fe data from {fe_file}")
+            fe_ds = xr.open_dataset(fe_file, decode_times=False)
+            print(f"  Fe variables: {list(fe_ds.data_vars)}")
+            if 'fe' in fe_ds:
+                obs_datasets['_Fer'] = fe_ds['fe']
+        else:
+            print(f"  Warning: Fe file not found at {fe_file}")
+
+        # Generate comparison plot
+        plot_nutrient_comparison(
+            plotter=plotter,
+            ptrc_ds=ptrc_ds,
+            obs_datasets=obs_datasets,
+            output_path=output_dir / f"{args.run_name}_{args.year_start}_nutrients.png",
+            nutrients=['_NO3', '_PO4', '_Si', '_Fer']
+        )
+    else:
+        print("4. Nutrients (model only)...")
+
+        # Create a simple model-only nutrient plot
+        nutrients = ['_NO3', '_PO4', '_Si', '_Fer']
+        fig, axs = plotter.create_subplot_grid(
+            nrows=2, ncols=2,
+            projection=ccrs.PlateCarree(),
+            figsize=(10, 6)
+        )
+
+        for i, nut in enumerate(nutrients):
+            ax = axs.flat[i]
+
+            if nut not in ptrc_ds:
+                print(f"Warning: {nut} not found in dataset")
+                continue
+
+            # Get metadata
+            meta = get_variable_metadata(nut)
+
+            # Get surface data
+            data = ptrc_ds[nut]
+
+            # Time average if needed
+            if 'time_counter' in data.dims:
+                data = data.mean(dim='time_counter')
+
+            # Get surface level
+            depth_dims = [d for d in data.dims if d in ['deptht', 'z', 'depth', 'depthu', 'depthv']]
+            if depth_dims:
+                data = data.isel({depth_dims[0]: 0})
+
+            # Squeeze and mask
+            data = data.squeeze()
+            data = plotter.apply_mask(data)
+
+            # Plot
+            im = plotter.plot_variable(
+                ax=ax,
+                data=data,
+                cmap=meta['cmap'],
+                vmin=0,
+                vmax=meta['vmax'],
+                add_colorbar=False
+            )
+
+            # Add colorbar
+            cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, shrink=0.8)
+            cbar.set_label(meta['units'], fontsize=10)
+
+            ax.set_title(meta['long_name'], fontsize=11)
+
+        # Save
+        output_path = output_dir / f"{args.run_name}_{args.year_start}_nutrients.png"
+        fig.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        print(f"Saved: {output_path}")
 
     print("\n=== All maps generated successfully ===")
     print(f"Output directory: {output_dir}")
