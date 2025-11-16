@@ -9,6 +9,21 @@ format = "png"  # Options: png (lossless), svg (vector), jpg (compressed)
 # Use a professional color palette
 palette = "tab10"  # Options: tab10, Set3, Paired, husl, etc.
 
+# Multi-model comparison colors (for plotting multiple models on same axes)
+# These are the high-quality colors from multimodel's PlotConfig
+multimodel_palette = [
+    "#1f77b4",  # Blue
+    "#ff7f0e",  # Orange
+    "#2ca02c",  # Green
+    "#d62728",  # Red
+    "#9467bd",  # Purple
+    "#8c564b",  # Brown
+    "#e377c2",  # Pink
+    "#7f7f7f",  # Gray
+    "#bcbd22",  # Olive
+    "#17becf",  # Cyan
+]
+
 [layout]
 # Automatic layout using constrained_layout
 use_constrained_layout = true
@@ -35,6 +50,14 @@ cols = 3
 rows = 1
 cols = 3
 
+# Multimodel-specific settings
+[multimodel]
+# Figure aspect ratio (width = height * ratio)
+figure_ratio = 2.5
+
+# Maximum number of models to compare
+max_models = 8
+
 # Plot styling
 [style]
 linewidth = 1.5
@@ -60,12 +83,21 @@ tick_major_size = 3
 
 # Observation styling
 [style.observations]
+# For filled/solid observation ranges (single-model plots)
 range_color = "#6c757d"
 range_alpha = 0.1
-line_color = "#d00000"
+
+# For hatched observation ranges (multi-model plots - preferred style)
+hatch_color = "k"  # Black
+hatch_alpha = 0.15
+hatch_pattern = "///"  # Diagonal lines
+hatch_fill = false  # Don't fill, only hatch
+
+# For observation line values
+line_color = "k"  # Black (multimodel style) or "#d00000" (red)
 line_linestyle = "--"
-line_alpha = 0.9
-line_linewidth = 1.2
+line_alpha = 0.8
+line_linewidth = 1.5
 
 # Observation ranges (from literature)
 [observations.ecosystem]

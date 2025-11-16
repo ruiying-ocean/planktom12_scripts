@@ -10,19 +10,26 @@ fi
 export PATH=~/miniforge3/bin:$PATH
 
 
-# Create save directory from current date
-now=$(date +'%d%m%y-%H%M%S')
-
 # Source central directory where the files and scripts are located
-srcDir="/gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/multimodel/"
+# Resolve symlinks to find the actual script location
+scriptPath="$0"
+if [ -L "$scriptPath" ]; then
+    scriptPath="$(readlink -f "$scriptPath" 2>/dev/null || readlink "$scriptPath")"
+fi
+scriptDir="$(cd "$(dirname "$scriptPath")" && pwd)"
+srcDir="${scriptDir}/"
 
-# Create directory to save files to
-curDir=${PWD}
-saveDir=${curDir}/${now}/
+# Verify we found multimodel.py
+if [ ! -f "${srcDir}/multimodel.py" ]; then
+    echo "Error: Cannot find multimodel.py at ${srcDir}"
+    exit 1
+fi
 
-mkdir ${saveDir}
-cp modelsToPlot.csv ${saveDir}
-cd ${saveDir}
+# Check if modelsToPlot.csv exists
+if [ ! -f "modelsToPlot.csv" ]; then
+    echo "Error: modelsToPlot.csv not found in current directory"
+    exit 1
+fi
 
 # Read in runs to compare from csv files
 runs=( $( cut -f 1 -d , modelsToPlot.csv | tail -n +2 ) )
@@ -32,6 +39,22 @@ from=( $( cut -f 4 -d , modelsToPlot.csv | tail -n +2 ) )
   to=( $( cut -f 5 -d , modelsToPlot.csv | tail -n +2 ) )
  end=( $( cut -f 6 -d , modelsToPlot.csv | tail -n +2 ) )
 locs=( $( cut -f 7 -d , modelsToPlot.csv | tail -n +2 ) )
+
+# Create folder name from model runs (e.g., JRA3-JRA1)
+# Strip TOM12_RY_ prefix from each run name
+cleanRuns=()
+for run in "${runs[@]}"; do
+    cleanRuns+=("${run#TOM12_RY_}")
+done
+folderName=$(IFS=- ; echo "${cleanRuns[*]}")
+
+# Create directory to save files to
+curDir=${PWD}
+saveDir=${curDir}/${folderName}/
+
+mkdir -p ${saveDir}
+cp modelsToPlot.csv ${saveDir}
+cd ${saveDir}
 
 length=${#runs[@]}
 if [ $length -gt 8 ]; then
@@ -43,7 +66,13 @@ fi
 cp ${srcDir}/multimodel.py .
 
 # Copy Python map generation scripts from visualise directory
-visualiseDir="/gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/visualise/"
+# scriptDir is visualise/multimodel, so parent is visualise
+visualiseDir="$(cd "$(dirname "${scriptDir}")" && pwd)/"
+
+if [ ! -f "${visualiseDir}/make_maps.py" ]; then
+    echo "Error: Cannot find make_maps.py at ${visualiseDir}"
+    exit 1
+fi
 cp ${visualiseDir}/make_maps.py .
 cp ${visualiseDir}/map_utils.py .
 
@@ -64,20 +93,15 @@ done
 # Copy observation images to save directory
 cp ${srcDir}/*.png .
 
+# Generate difference/anomaly maps for 2-model comparisons
+if [ $length -eq 2 ]; then
+	echo "Generating difference maps for 2-model comparison..."
+	python3 ${srcDir}/make_difference_maps.py \
+		${runs[0]} ${runs[1]} ${to[0]} \
+		${locs[0]} ${locs[1]} ${saveDir}
+fi
+
 # Generate HTML using Quarto (replaces Python + Jinja2 system)
-${srcDir}/createMultimodelHTML.sh ${now} 0
-
-# Save list of models
-cd ..
-echo "" >> multiplots.txt
-echo ${now} >> multiplots.txt
-
-for i in ${!runs[@]}; do    
-
-        old_desc=${desc[$i]}
-        new_desc=${old_desc//_/ }
-
-        echo ${runs[$i]} ${new_desc} ${to[$i]} ${locs[$i]} >> multiplots.txt
-done
+${srcDir}/createMultimodelHTML.sh "${folderName}" 0
 
 echo "Finished: saved to" ${saveDir}

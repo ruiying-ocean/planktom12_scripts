@@ -37,43 +37,56 @@ echo "Creating Quarto HTML for $length models..."
 cp "${scriptDir}/template_multimodel.qmd" ./temp_template.qmd
 cp "${scriptDir}/custom.scss" ./
 
-# Build the model maps section
+# Build the model maps section as a grid/table
+# Format: Rows = variables, Columns = models + anomaly (if 2 models)
 model_maps_section=""
 
-for i in ${!runs[@]}; do
-    run=${runs[$i]}
-    year=${to[$i]}
+# Check if we have difference maps (only for 2 models)
+has_diff_maps=0
+if [ $length -eq 2 ] && [ -f "difference_${to[0]}_diagnostics.png" ]; then
+    has_diff_maps=1
+fi
 
-    # Replace underscores with spaces for display
-    display_name=${desc[$i]//_/ }
+# Define the map types (rows)
+map_types=("diagnostics" "phytos" "zoos" "nutrients")
+map_labels=("Ecosystem Diagnostics" "Phytoplankton" "Zooplankton" "Nutrients")
 
-    # Add model heading
-    model_maps_section="${model_maps_section}## ${display_name} (${run}, ${year})\n\n"
+# Build markdown table for each map type
+for idx in ${!map_types[@]}; do
+    map_type=${map_types[$idx]}
+    map_label=${map_labels[$idx]}
 
-    # Add diagnostics map if exists
-    if [ -f "${run}_${year}_diagnostics.png" ]; then
-        model_maps_section="${model_maps_section}### Ecosystem Diagnostics\n\n"
-        model_maps_section="${model_maps_section}![](${run}_${year}_diagnostics.png)\n\n"
+    model_maps_section="${model_maps_section}## ${map_label}\n\n"
+    model_maps_section="${model_maps_section}::: {.grid}\n\n"
+
+    # Add each model's map
+    for i in ${!runs[@]}; do
+        run=${runs[$i]}
+        year=${to[$i]}
+        display_name=${desc[$i]//_/ }
+
+        map_file="${run}_${year}_${map_type}.png"
+
+        if [ -f "$map_file" ]; then
+            model_maps_section="${model_maps_section}::: {.g-col-6}\n"
+            model_maps_section="${model_maps_section}### ${display_name}\n\n"
+            model_maps_section="${model_maps_section}![](${map_file})\n"
+            model_maps_section="${model_maps_section}:::\n\n"
+        fi
+    done
+
+    # Add difference map if it exists (for 2-model comparison)
+    if [ $has_diff_maps -eq 1 ]; then
+        diff_file="difference_${to[0]}_${map_type}.png"
+        if [ -f "$diff_file" ]; then
+            model_maps_section="${model_maps_section}::: {.g-col-6}\n"
+            model_maps_section="${model_maps_section}### Anomaly (${desc[0]} - ${desc[1]})\n\n"
+            model_maps_section="${model_maps_section}![](${diff_file})\n"
+            model_maps_section="${model_maps_section}:::\n\n"
+        fi
     fi
 
-    # Add phytoplankton map if exists
-    if [ -f "${run}_${year}_phytos.png" ]; then
-        model_maps_section="${model_maps_section}### Phytoplankton\n\n"
-        model_maps_section="${model_maps_section}![](${run}_${year}_phytos.png)\n\n"
-    fi
-
-    # Add zooplankton map if exists
-    if [ -f "${run}_${year}_zoos.png" ]; then
-        model_maps_section="${model_maps_section}### Zooplankton\n\n"
-        model_maps_section="${model_maps_section}![](${run}_${year}_zoos.png)\n\n"
-    fi
-
-    # Add nutrients map if exists
-    if [ -f "${run}_${year}_nutrients.png" ]; then
-        model_maps_section="${model_maps_section}### Nutrients\n\n"
-        model_maps_section="${model_maps_section}![](${run}_${year}_nutrients.png)\n\n"
-    fi
-
+    model_maps_section="${model_maps_section}:::\n\n"
     model_maps_section="${model_maps_section}---\n\n"
 done
 

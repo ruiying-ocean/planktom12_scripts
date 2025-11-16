@@ -63,7 +63,7 @@ Comparison of physical variables across models.
 
 ---
 
-# Annual Mean Maps
+# Spatial Maps
 
 ${MODEL_MAPS}
 

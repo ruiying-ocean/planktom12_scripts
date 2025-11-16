@@ -14,6 +14,28 @@ from matplotlib import gridspec
 # Use a backend that doesn't require a display
 matplotlib.use("Agg")
 
+# Load configuration
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
+
+# Load visualise_config.toml
+def load_config():
+    """Load configuration from visualise_config.toml"""
+    # Try to find config in parent directory (visualise/)
+    script_dir = pathlib.Path(__file__).parent
+    config_path = script_dir.parent / "visualise_config.toml"
+
+    if not config_path.exists():
+        print(f"Warning: Config file not found at {config_path}, using defaults")
+        return None
+
+    with open(config_path, "rb") as f:
+        return tomllib.load(f)
+
+CONFIG = load_config()
+
 
 @dataclass
 class ModelConfig:
@@ -86,28 +108,53 @@ class ModelConfig:
 class PlotConfig:
     """Centralized configuration for plot styling and layout."""
 
-    COLORS = [
-        "#1f77b4",
-        "#ff7f0e",
-        "#2ca02c",
-        "#d62728",
-        "#9467bd",
-        "#8c564b",
-        "#e377c2",
-        "#7f7f7f",
-        "#bcbd22",
-        "#17becf",
-    ]
-    RATIO = 2.5
+    # Load from config or use defaults
+    if CONFIG:
+        COLORS = CONFIG.get("colors", {}).get("multimodel_palette", [
+            "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+            "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+        ])
+        RATIO = CONFIG.get("multimodel", {}).get("figure_ratio", 2.5)
+        FONT_FAMILY = "sans-serif"
+        TITLE_FONTSIZE = CONFIG.get("style", {}).get("fonts", {}).get("title", 8)
+        LABEL_FONTSIZE = CONFIG.get("style", {}).get("fonts", {}).get("axis_label", 10)
+        LINE_WIDTH = CONFIG.get("style", {}).get("linewidth", 1.5)
 
-    FONT_FAMILY = "sans-serif"
-    TITLE_FONTSIZE = 8
-    LABEL_FONTSIZE = 10
+        # Grid style from config
+        GRID_STYLE = {
+            "linestyle": CONFIG.get("style", {}).get("grid_linestyle", "--"),
+            "linewidth": CONFIG.get("style", {}).get("grid_linewidth", 0.5),
+            "alpha": 0.7
+        }
 
-    LINE_WIDTH = 1.5
-    GRID_STYLE = {"linestyle": "--", "linewidth": 0.5, "alpha": 0.7}
-    HATCH_STYLE = {"color": "k", "alpha": 0.15, "fill": False, "hatch": "///"}
-    LINE_STYLE = {"color": "k", "linestyle": "dashed", "alpha": 0.8, "linewidth": 1.5}
+        # Hatch style for observations (preferred multimodel style)
+        obs_config = CONFIG.get("style", {}).get("observations", {})
+        HATCH_STYLE = {
+            "color": obs_config.get("hatch_color", "k"),
+            "alpha": obs_config.get("hatch_alpha", 0.15),
+            "fill": obs_config.get("hatch_fill", False),
+            "hatch": obs_config.get("hatch_pattern", "///")
+        }
+
+        # Line style for observation lines
+        LINE_STYLE = {
+            "color": obs_config.get("line_color", "k"),
+            "linestyle": obs_config.get("line_linestyle", "--"),
+            "alpha": obs_config.get("line_alpha", 0.8),
+            "linewidth": obs_config.get("line_linewidth", 1.5)
+        }
+    else:
+        # Fallback defaults if config not found
+        COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+                  "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
+        RATIO = 2.5
+        FONT_FAMILY = "sans-serif"
+        TITLE_FONTSIZE = 8
+        LABEL_FONTSIZE = 10
+        LINE_WIDTH = 1.5
+        GRID_STYLE = {"linestyle": "--", "linewidth": 0.5, "alpha": 0.7}
+        HATCH_STYLE = {"color": "k", "alpha": 0.15, "fill": False, "hatch": "///"}
+        LINE_STYLE = {"color": "k", "linestyle": "dashed", "alpha": 0.8, "linewidth": 1.5}
 
     @staticmethod
     def setup_axes(axes):
@@ -387,7 +434,7 @@ class DataLoader:
             if df.empty:
                 print(f"Warning: Empty dataframe loaded from {csv_path}")
                 return None
-            print(f"Debug: Loaded CSV {csv_path}")
+            print(f"Loaded CSV {csv_path}")
             return df
         except FileNotFoundError:
             try:
@@ -398,7 +445,7 @@ class DataLoader:
                 if df.empty:
                     print(f"Warning: Empty dataframe loaded from {dat_path}")
                     return None
-                print(f"Debug: Loaded TSV {dat_path}")
+                print(f"Loaded TSV {dat_path}")
                 return df
             except FileNotFoundError:
                 print(f"Warning: File not found - tried both {csv_path} and {dat_path}")
@@ -480,12 +527,18 @@ class PlotGenerator:
 
     def save_figure(self, fig, filename):
         """
-        MODIFIED: Use subplots_adjust to make space for the right-hand legend.
+        Save figure with config-based DPI and format.
         """
-        # Adjust layout to prevent titles from overlapping and make space for legend
-        #        fig.subplots_adjust(top=0.9, bottom=0.1, left=0.1, right=0.78, hspace=0.45, wspace=0.35)
+        # Get DPI and format from config
+        dpi = CONFIG.get("figure", {}).get("dpi", 300) if CONFIG else 300
+        fmt = CONFIG.get("figure", {}).get("format", "jpg") if CONFIG else "jpg"
+
+        # Replace file extension with config format
+        base_name = filename.rsplit(".", 1)[0]
+        filename = f"{base_name}.{fmt}"
+
         filepath = f"{self.save_dir}/{filename}"
-        fig.savefig(filepath, dpi=300, bbox_inches="tight")
+        fig.savefig(filepath, dpi=dpi, bbox_inches="tight")
         print(f"Created {filename}")
         plt.close(fig)
 
@@ -532,15 +585,11 @@ class GlobalSummaryPlotter(PlotGenerator):
     def _plot_model(self, model, axes, color):
         sur_data = DataLoader.load_breakdown_data(model, "sur", "annual")
         if sur_data is None:
-            print(f"Debug: No sur_data for {model.name}")
             return
-
-        print(f"Debug: {model.name} sur_data columns: {list(sur_data.columns)}")
 
         actual_years = DataLoader.get_actual_years(sur_data)
         indices = model.get_year_range_indices(actual_years)
         if indices[0] is None:
-            print(f"Debug: No valid indices for {model.name}")
             return
 
         vol_data = DataLoader.load_breakdown_data(model, "vol", "annual")
