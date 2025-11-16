@@ -4,7 +4,7 @@
 #SBATCH --job-name=tidyup
 #SBATCH -o tidy-%j.log
 #SBATCH -e tidy-%j.log  
-#SBATCH --mem 32G
+#SBATCH --mem 64G
 
 echo "Tidying up: " $modelDir $yearToTidy $Model
 

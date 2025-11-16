@@ -6,6 +6,7 @@ Based on the style from tompy notebooks (OBio_state.ipynb, warming_map.ipynb).
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colorbar
 import cartopy.crs as ccrs
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple, Union
@@ -46,13 +47,16 @@ class OceanMapPlotter:
         mask_ds = xr.open_dataset(self.mask_path)
 
         # Create land mask from area (ocean cells have area > 0)
-        self.land_mask_2d = mask_ds['area'] > 0
+        # Try uppercase first (AREA, VOLUME), then lowercase
+        area_key = 'AREA' if 'AREA' in mask_ds else 'area'
+        volume_key = 'VOLUME' if 'VOLUME' in mask_ds else 'volume'
 
-        # Store area and volume for integration
-        if 'area' in mask_ds:
-            self.area = mask_ds['area']
-        if 'volume' in mask_ds:
-            self.volume = mask_ds['volume']
+        if area_key in mask_ds:
+            self.land_mask_2d = mask_ds[area_key] > 0
+            self.area = mask_ds[area_key]
+
+        if volume_key in mask_ds:
+            self.volume = mask_ds[volume_key]
 
     def load_data(self, filepath: str, variables: Optional[List[str]] = None,
                   volume: Optional[xr.DataArray] = None) -> xr.Dataset:
@@ -341,7 +345,7 @@ class OceanMapPlotter:
         label: str = '',
         orientation: str = 'horizontal',
         **kwargs
-    ) -> plt.colorbar.Colorbar:
+    ) -> matplotlib.colorbar.Colorbar:
         """
         Add a shared colorbar for multiple subplots.
 

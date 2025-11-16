@@ -168,7 +168,7 @@ if [[ $yearTo -eq $yearEnd ]]; then
 
 	python3 verticalDepth.py $model $homeDir $yearTo
 	
-	./annualMaps.sh $model $yearTo $homeDir
+	./annualMaps_python.sh $model $yearTo $homeDir
 
 	# run script to create html file
 	./createHTML.sh $homeDir
