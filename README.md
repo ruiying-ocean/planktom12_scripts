@@ -46,7 +46,7 @@ PlankTomRunner/
 
 3. **Create visualizations**:
    ```bash
-   python visualise/visualise.py <model_id> ~/scratch/ModelRuns
+   python visualise/make_timeseries.py --model-id <model_id> --model-dir ~/scratch/ModelRuns
    ```
 
 4. **Generate HTML report**:
@@ -117,11 +117,11 @@ python /path/to/breakdown/breakdown.py <config_file.toml> <start_year> <end_year
 
 #### Time Series Plots
 
-**Script**: `visualise.py`
+**Script**: `make_timeseries.py`
 
 **Usage**:
 ```bash
-python visualise.py <model_id> <model_dir>
+python make_timeseries.py --model-id <model_id> --model-dir <model_dir>
 ```
 
 **Output**: Generates time series plots for:

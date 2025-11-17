@@ -21,7 +21,7 @@ modelOutputDir=${2:-~/scratch/ModelRuns}
 modelOutputDir="${modelOutputDir/#\~/$HOME}"
 
 # Set up save directory
-# Note: visualise.py saves to monitor/ not visualise/
+# Note: make_timeseries.py saves to monitor/ not visualise/
 saveDir="${modelOutputDir}/monitor/${model_id}/"
 mkdir -p "${saveDir}"
 

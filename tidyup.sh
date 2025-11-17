@@ -63,8 +63,8 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
          echo "Python version: $(which python)"
 	python3 breakdown.py breakdown_config.toml ${y} ${y}
 
-	# Run visualise script
-	python3 visualise.py --model-id $model_id --model-dir $modelOutputDir
+	# Run timeseries visualization script
+	python3 make_timeseries.py --model-id $model_id --model-dir $modelOutputDir
 
 	# Process output files
 	if [[ $y < $spinupEnd ]]; then

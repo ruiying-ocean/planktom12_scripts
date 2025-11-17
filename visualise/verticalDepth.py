@@ -41,7 +41,7 @@ model_id = args.model_id
 modelOutputDir = str(pathlib.Path(args.model_dir).expanduser())
 year = args.year
 
-# Save to monitor/ directory to match visualise.py output
+# Save to monitor/ directory to match make_timeseries.py output
 saveDir = f'{modelOutputDir}/monitor/{model_id}/'
 pathlib.Path(saveDir).mkdir(parents=True, exist_ok=True)
 
