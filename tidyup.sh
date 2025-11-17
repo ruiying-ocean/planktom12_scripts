@@ -48,12 +48,12 @@ id=${model_id: -4}
 echo "Tidying up year: $1 to $2 for $model_id"
 
 # Specify directory for copying files to central area
-baseDir="/gpfs/afm/greenocean/software/runs/"
+afm_dir="/gpfs/afm/greenocean/software/runs/"
 
 # Make directory for run in central area
-if [ ! -d $baseDir$model_id ]; then
+if [ ! -d $afm_dir$model_id ]; then
 	echo "creating directory"
-	mkdir $baseDir$model_id
+	mkdir $afm_dir$model_id
 fi
 
 echo "Copying data centrally"
@@ -81,42 +81,42 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 	if [[ "$remainder" -eq 0 ]]; then
 
 		echo "Copying output $y"
-		if [[ $keepGrid_T -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc $baseDir$model_id; fi
-		if [[ $keepDiad -eq 1 ]];   then cp ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc $baseDir$model_id; fi
-		if [[ $keepPtrc -eq 1 ]];   then cp ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc $baseDir$model_id; fi
-		if [[ $keepIce -eq 1 ]];    then cp ORCA2_${freq}_${y}0101_${y}1231_icemod.nc $baseDir$model_id; fi
-		if [[ $keepGrid_U -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc $baseDir$model_id; fi
-		if [[ $keepGrid_V -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc $baseDir$model_id; fi
-		if [[ $keepGrid_W -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc $baseDir$model_id; fi
-		if [[ $keepLimPhy -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_limphy.nc $baseDir$model_id; fi
+		if [[ $keepGrid_T -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc $afm_dir$model_id; fi
+		if [[ $keepDiad -eq 1 ]];   then cp ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc $afm_dir$model_id; fi
+		if [[ $keepPtrc -eq 1 ]];   then cp ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc $afm_dir$model_id; fi
+		if [[ $keepIce -eq 1 ]];    then cp ORCA2_${freq}_${y}0101_${y}1231_icemod.nc $afm_dir$model_id; fi
+		if [[ $keepGrid_U -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc $afm_dir$model_id; fi
+		if [[ $keepGrid_V -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc $afm_dir$model_id; fi
+		if [[ $keepGrid_W -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc $afm_dir$model_id; fi
+		if [[ $keepLimPhy -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_limphy.nc $afm_dir$model_id; fi
 
 		echo "Copying extra set up data and EMPave files"
-		cp EMPave_${y}.dat $baseDir$model_id
-		cp namelist* $baseDir$model_id
-		cp *xml $baseDir$model_id
-		cp setUpData*dat $baseDir$model_id
-		cp ocean.output $baseDir$model_id
-		cp opa $baseDir$model_id
+		cp EMPave_${y}.dat $afm_dir$model_id
+		cp namelist* $afm_dir$model_id
+		cp *xml $afm_dir$model_id
+		cp setUpData*dat $afm_dir$model_id
+		cp ocean.output $afm_dir$model_id
+		cp opa $afm_dir$model_id
 
 		echo "Deleting local data if it exists centrally"
-		if [[ -f $baseDir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc || $keepGrid_T -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc; fi
-		if [[ -f $baseDir$model_id/ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc || $keepDiad -eq 0 ]];   then rm -f ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc; fi
-		if [[ -f $baseDir$model_id/ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc || $keepPtrc -eq 0 ]];   then rm -f ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc; fi
-		if [[ -f $baseDir$model_id/ORCA2_${freq}_${y}0101_${y}1231_icemod.nc || $keepIce -eq 0 ]];    then rm -f ORCA2_${freq}_${y}0101_${y}1231_icemod.nc; fi
-		if [[ -f $baseDir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc || $keepGrid_U -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc; fi
-		if [[ -f $baseDir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc || $keepGrid_V -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc; fi
-		if [[ -f $baseDir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc || $keepGrid_W -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc; fi
-		if [[ -f $baseDir$model_id/ORCA2_${freq}_${y}0101_${y}1231_limphy.nc || $keepLimPhy -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_limphy.nc; fi
+		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc || $keepGrid_T -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc; fi
+		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc || $keepDiad -eq 0 ]];   then rm -f ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc; fi
+		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc || $keepPtrc -eq 0 ]];   then rm -f ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc; fi
+		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_icemod.nc || $keepIce -eq 0 ]];    then rm -f ORCA2_${freq}_${y}0101_${y}1231_icemod.nc; fi
+		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc || $keepGrid_U -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc; fi
+		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc || $keepGrid_V -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc; fi
+		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc || $keepGrid_W -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc; fi
+		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_limphy.nc || $keepLimPhy -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_limphy.nc; fi
 
 		echo "Creating symlinks for copied data"
-		if [[ $keepGrid_T -eq 1 ]]; then ln -s ${baseDir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc; fi
-		if [[ $keepDiad -eq 1 ]];   then ln -s ${baseDir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc; fi
-		if [[ $keepPtrc -eq 1 ]];   then ln -s ${baseDir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc; fi
-		if [[ $keepIce -eq 1 ]];    then ln -s ${baseDir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_icemod.nc; fi
-		if [[ $keepGrid_U -eq 1 ]]; then ln -s ${baseDir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc; fi
-		if [[ $keepGrid_V -eq 1 ]]; then ln -s ${baseDir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc; fi
-		if [[ $keepGrid_W -eq 1 ]]; then ln -s ${baseDir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc; fi
-		if [[ $keepLimPhy -eq 1 ]]; then ln -s ${baseDir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_limphy.nc; fi
+		if [[ $keepGrid_T -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc; fi
+		if [[ $keepDiad -eq 1 ]];   then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc; fi
+		if [[ $keepPtrc -eq 1 ]];   then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc; fi
+		if [[ $keepIce -eq 1 ]];    then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_icemod.nc; fi
+		if [[ $keepGrid_U -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc; fi
+		if [[ $keepGrid_V -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc; fi
+		if [[ $keepGrid_W -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc; fi
+		if [[ $keepLimPhy -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_limphy.nc; fi
 	else
 		rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_*.nc
 		rm -f ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc
@@ -147,9 +147,9 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 
 	if [[ "$remainder" -eq 0 ]]; then
 		echo "Copying restart $y"
-		cp ORCA2_*${timestep}_restart_*.nc $baseDir$model_id
+		cp ORCA2_*${timestep}_restart_*.nc $afm_dir$model_id
 		rm -f ORCA2_*${timestep}_restart_*.nc
-		ls -1 ${baseDir}${model_id}/ORCA2_*${timestep}_restart_*.nc | awk '{print "ln -s "$1 }' | bash
+		ls -1 ${afm_dir}${model_id}/ORCA2_*${timestep}_restart_*.nc | awk '{print "ln -s "$1 }' | bash
 	else
 		echo "Deleting local data"
 		rm -f ORCA2_*${timestep}_restart_*.nc
@@ -161,7 +161,7 @@ if [[ $yearTo -eq $yearEnd ]]; then
 
 	# copy all breakdown files to base model directory
 	echo "copying breakdown files"
-	cp breakdown* $baseDir$model_id
+	cp breakdown* $afm_dir$model_id
 
 	# run script to generate monthly regional plots
 	python3 make_monthly_plots.py --model-id $model_id --model-dir $modelOutputDir
