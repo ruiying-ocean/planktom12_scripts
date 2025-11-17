@@ -66,13 +66,8 @@ def load_model_data(model_dir, model_id, year, var_name, plotter):
     else:
         file_type = 'ptrc_T'
 
-    # Try different filename patterns
-    # Pattern 1: ORCA2_1m_YYYY0101_YYYY1231_<type>.nc
+    # Files should always use ORCA2_1m prefix
     nc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_{file_type}.nc"
-
-    # Pattern 2: model_id_YYYY0101_YYYY1231_<type>.nc (fallback)
-    if not nc_file.exists():
-        nc_file = run_dir / f"{model_id}_{year}0101_{year}1231_{file_type}.nc"
 
     if not nc_file.exists():
         print(f"Warning: File not found: {nc_file}")
@@ -159,8 +154,6 @@ def plot_multimodel_maps(models, output_dir, config):
     for model in models:
         run_dir = Path(model['model_dir']) / model['name']
         ptrc_file = run_dir / f"ORCA2_1m_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
-        if not ptrc_file.exists():
-            ptrc_file = run_dir / f"{model['name']}_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
         if ptrc_file.exists():
             ds = xr.open_dataset(ptrc_file)
             nav_lon = ds.nav_lon if 'nav_lon' in ds else ds.lon

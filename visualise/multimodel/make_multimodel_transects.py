@@ -91,9 +91,6 @@ def load_transect_data(model_dir, model_id, year, variable, plotter):
     ptrc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc"
 
     if not ptrc_file.exists():
-        ptrc_file = run_dir / f"{model_id}_{year}0101_{year}1231_ptrc_T.nc"
-
-    if not ptrc_file.exists():
         print(f"Warning: File not found: {ptrc_file}")
         return None
 
@@ -169,8 +166,6 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
     for model in models:
         run_dir = Path(model['model_dir']) / model['name']
         ptrc_file = run_dir / f"ORCA2_1m_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
-        if not ptrc_file.exists():
-            ptrc_file = run_dir / f"{model['name']}_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
         if ptrc_file.exists():
             ds = xr.open_dataset(ptrc_file, decode_times=False)
             nav_lon = ds.nav_lon if 'nav_lon' in ds else ds.lon
@@ -322,8 +317,6 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
     for model in models:
         run_dir = Path(model['model_dir']) / model['name']
         ptrc_file = run_dir / f"ORCA2_1m_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
-        if not ptrc_file.exists():
-            ptrc_file = run_dir / f"{model['name']}_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
         if ptrc_file.exists():
             ds = xr.open_dataset(ptrc_file, decode_times=False)
             nav_lon = ds.nav_lon if 'nav_lon' in ds else ds.lon
