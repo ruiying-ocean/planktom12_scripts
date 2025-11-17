@@ -562,25 +562,25 @@ NUTRIENT_VARS = {
         'long_name': 'Nitrate',
         'units': 'µmol L⁻¹',
         'vmax': 30,
-        'cmap': 'Spectral_r'
+        'cmap': 'turbo'
     },
     '_PO4': {
         'long_name': 'Phosphate',
         'units': 'µmol L⁻¹',
         'vmax': 2.5,
-        'cmap': 'Spectral_r'
+        'cmap': 'turbo'
     },
     '_Si': {
         'long_name': 'Silica',
         'units': 'µmol L⁻¹',
         'vmax': 60,
-        'cmap': 'Spectral_r'
+        'cmap': 'turbo'
     },
     '_Fer': {
         'long_name': 'Iron',
         'units': 'nmol L⁻¹',
         'vmax': 1.5,
-        'cmap': 'Spectral_r'
+        'cmap': 'turbo'
     },
     '_O2': {
         'long_name': 'Oxygen',
