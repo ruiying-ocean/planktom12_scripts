@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Script to generate Quarto-based HTML for multimodel comparison
-# Usage: ./createMultimodelHTML.sh <timestamp> [benchmark_flag]
+# Usage: ./make_multimodel_html.sh <timestamp> [benchmark_flag]
 #
 # Arguments:
 #   timestamp: Directory timestamp (e.g., 151124-143022)
@@ -16,7 +16,7 @@ timestamp=$1
 benchmark=${2:-0}
 
 # Get the directory where this script is located
-scriptDir="$(cd "$(dirname "$0")" && pwd)"
+script_dir="$(cd "$(dirname "$0")" && pwd)"
 
 # Check if modelsToPlot.csv exists
 if [ ! -f "modelsToPlot.csv" ]; then
@@ -34,8 +34,8 @@ length=${#runs[@]}
 echo "Creating Quarto HTML for $length models..."
 
 # Copy template and stylesheet to current directory
-cp "${scriptDir}/template_multimodel.qmd" ./temp_template.qmd
-cp "${scriptDir}/custom.scss" ./
+cp "${script_dir}/template_multimodel.qmd" ./temp_template.qmd
+cp "${script_dir}/custom.scss" ./
 
 # Build the spatial maps section
 # The multimodel_maps.py script generates grid-format PNG files

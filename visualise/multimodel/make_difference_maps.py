@@ -4,7 +4,7 @@ Generate difference/anomaly maps for 2-model comparisons.
 Creates Model1 - Model2 difference maps for spatial diagnostics.
 
 Usage:
-    python make_difference_maps.py <model1_name> <model2_name> <year> <model1_basedir> <model2_basedir> <output_dir>
+    python make_difference_maps.py <model1_name> <model2_name> <year> <model1_model_dir> <model2_model_dir> <output_dir>
 """
 
 import argparse
@@ -19,9 +19,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from map_utils import OceanMapPlotter, get_variable_metadata
 
 
-def load_annual_mean(basedir, run_name, year, var_name):
+def load_annual_mean(model_dir, model_id, year, var_name):
     """Load annual mean for a specific variable."""
-    ptrc_file = Path(basedir) / run_name / f"{run_name}_{year}0101_{year}1231_ptrc_T.nc"
+    ptrc_file = Path(model_dir) / model_id / f"{model_id}_{year}0101_{year}1231_ptrc_T.nc"
 
     if not ptrc_file.exists():
         print(f"Warning: File not found: {ptrc_file}")
@@ -109,15 +109,15 @@ def main():
     parser.add_argument('model1', help='First model name')
     parser.add_argument('model2', help='Second model name')
     parser.add_argument('year', help='Year to compare')
-    parser.add_argument('basedir1', help='Base directory for model 1')
-    parser.add_argument('basedir2', help='Base directory for model 2')
+    parser.add_argument('model_dir1', help='Base directory for model 1')
+    parser.add_argument('model_dir2', help='Base directory for model 2')
     parser.add_argument('output_dir', help='Output directory')
 
     args = parser.parse_args()
     output_dir = Path(args.output_dir)
 
     # Initialize plotter (need to load navigation from one of the models)
-    ptrc_file = Path(args.basedir1) / args.model1 / f"{args.model1}_{args.year}0101_{args.year}1231_ptrc_T.nc"
+    ptrc_file = Path(args.model_dir1) / args.model1 / f"{args.model1}_{args.year}0101_{args.year}1231_ptrc_T.nc"
     if not ptrc_file.exists():
         print(f"Error: Cannot find model file: {ptrc_file}")
         return 1
@@ -134,8 +134,8 @@ def main():
 
     differences = {}
     for var, (var_name, title) in diag_vars.items():
-        data1 = load_annual_mean(args.basedir1, args.model1, args.year, var_name)
-        data2 = load_annual_mean(args.basedir2, args.model2, args.year, var_name)
+        data1 = load_annual_mean(args.model_dir1, args.model1, args.year, var_name)
+        data2 = load_annual_mean(args.model_dir2, args.model2, args.year, var_name)
         differences[var] = calculate_surface_difference(data1, data2)
 
     if any(diff is not None for diff in differences.values()):

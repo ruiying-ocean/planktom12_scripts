@@ -7,7 +7,7 @@ For 2 models: columns = Model A, Model B, Anomaly (A-B)
 For N models: columns = Model 1, Model 2, ..., Model N
 
 Usage:
-    python multimodel_transects.py <models_csv> <output_dir>
+    python make_multimodel_transects.py <models_csv> <output_dir>
 """
 
 import sys
@@ -73,13 +73,13 @@ def get_central_latitude(nav_lat):
     return central_lat
 
 
-def load_transect_data(basedir, run_name, year, variable, plotter):
+def load_transect_data(model_dir, model_id, year, variable, plotter):
     """
     Load 3D variable data for transect plotting.
 
     Args:
-        basedir: Base directory for model output
-        run_name: Model run name
+        model_dir: Base directory for model output
+        model_id: Model run name
         year: Year to load
         variable: Variable name (e.g., 'PIC', 'BAC', '_NO3', '_PO4')
         plotter: OceanMapPlotter instance
@@ -87,11 +87,11 @@ def load_transect_data(basedir, run_name, year, variable, plotter):
     Returns:
         xarray.DataArray with depth-resolved data
     """
-    run_dir = Path(basedir) / run_name
+    run_dir = Path(model_dir) / model_id
     ptrc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc"
 
     if not ptrc_file.exists():
-        ptrc_file = run_dir / f"{run_name}_{year}0101_{year}1231_ptrc_T.nc"
+        ptrc_file = run_dir / f"{model_id}_{year}0101_{year}1231_ptrc_T.nc"
 
     if not ptrc_file.exists():
         print(f"Warning: File not found: {ptrc_file}")
@@ -147,7 +147,7 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
     For N models: shows all N models side by side
 
     Args:
-        models: List of dicts with 'name', 'desc', 'year', 'basedir'
+        models: List of dicts with 'name', 'desc', 'year', 'model_dir'
         output_dir: Output directory
         config: Configuration dict
         max_depth: Maximum depth to plot in meters (default: None for full depth)
@@ -167,7 +167,7 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
     # Load navigation from first available model
     nav_lon, nav_lat = None, None
     for model in models:
-        run_dir = Path(model['basedir']) / model['name']
+        run_dir = Path(model['model_dir']) / model['name']
         ptrc_file = run_dir / f"ORCA2_1m_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
         if not ptrc_file.exists():
             ptrc_file = run_dir / f"{model['name']}_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
@@ -208,7 +208,7 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
             model_transects = []
             for model in models:
                 data_3d = load_transect_data(
-                    model['basedir'], model['name'], model['year'], nut, plotter
+                    model['model_dir'], model['name'], model['year'], nut, plotter
                 )
 
                 if data_3d is not None:
@@ -300,7 +300,7 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
     For N models: shows all N models side by side
 
     Args:
-        models: List of dicts with 'name', 'desc', 'year', 'basedir'
+        models: List of dicts with 'name', 'desc', 'year', 'model_dir'
         output_dir: Output directory
         config: Configuration dict
         max_depth: Maximum depth to plot in meters (default: 500m)
@@ -320,7 +320,7 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
     # Load navigation from first available model
     nav_lon, nav_lat = None, None
     for model in models:
-        run_dir = Path(model['basedir']) / model['name']
+        run_dir = Path(model['model_dir']) / model['name']
         ptrc_file = run_dir / f"ORCA2_1m_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
         if not ptrc_file.exists():
             ptrc_file = run_dir / f"{model['name']}_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
@@ -364,7 +364,7 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
             model_transects = []
             for model in models:
                 data_3d = load_transect_data(
-                    model['basedir'], model['name'], model['year'], pft, plotter
+                    model['model_dir'], model['name'], model['year'], pft, plotter
                 )
 
                 if data_3d is not None:
@@ -449,7 +449,7 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python multimodel_transects.py <models_csv> <output_dir>")
+        print("Usage: python make_multimodel_transects.py <models_csv> <output_dir>")
         return 1
 
     csv_file = Path(sys.argv[1])
@@ -461,7 +461,7 @@ def main():
     # Read models from CSV (columns: model_id, description, start_year, to_year, [location])
     # location column is optional - defaults to ~/scratch/ModelRuns if not provided
     import os
-    default_basedir = os.path.expanduser("~/scratch/ModelRuns")
+    default_model_dir = os.path.expanduser("~/scratch/ModelRuns")
 
     models = []
     with open(csv_file, 'r') as f:
@@ -471,12 +471,12 @@ def main():
 
         for row in reader:
             if len(row) >= 4:  # Need at least first 4 columns
-                basedir = row[4] if len(row) >= 5 and row[4].strip() else default_basedir
+                model_dir = row[4] if len(row) >= 5 and row[4].strip() else default_model_dir
                 models.append({
                     'name': row[0],      # model_id
                     'desc': row[1],      # description
                     'year': row[3],      # to_year
-                    'basedir': basedir   # location (or default)
+                    'model_dir': model_dir   # location (or default)
                 })
 
     print(f"Generating transect comparisons for {len(models)} models...")

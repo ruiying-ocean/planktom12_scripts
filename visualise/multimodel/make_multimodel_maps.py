@@ -7,7 +7,7 @@ For 2 models: columns = Model A, Model B, Anomaly (A-B)
 For N models: columns = Model 1, Model 2, ..., Model N
 
 Usage:
-    python multimodel_maps.py <models_csv> <output_dir>
+    python make_multimodel_maps.py <models_csv> <output_dir>
 """
 
 import sys
@@ -42,18 +42,18 @@ def load_config():
     return None
 
 
-def load_model_data(basedir, run_name, year, var_name, plotter):
+def load_model_data(model_dir, model_id, year, var_name, plotter):
     """
     Load annual mean surface data for a variable using OceanMapPlotter.
 
     Args:
-        basedir: Base directory for model output
-        run_name: Model run name
+        model_dir: Base directory for model output
+        model_id: Model run name
         year: Year to load
         var_name: Variable name (can be preprocessed like _NO3, _PO4, _Si)
         plotter: OceanMapPlotter instance for preprocessing
     """
-    run_dir = Path(basedir) / run_name
+    run_dir = Path(model_dir) / model_id
 
     # Determine which file type to use based on variable
     # Diagnostic variables are in diad_T.nc
@@ -69,9 +69,9 @@ def load_model_data(basedir, run_name, year, var_name, plotter):
     # Pattern 1: ORCA2_1m_YYYY0101_YYYY1231_<type>.nc
     nc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_{file_type}.nc"
 
-    # Pattern 2: run_name_YYYY0101_YYYY1231_<type>.nc (fallback)
+    # Pattern 2: model_id_YYYY0101_YYYY1231_<type>.nc (fallback)
     if not nc_file.exists():
-        nc_file = run_dir / f"{run_name}_{year}0101_{year}1231_{file_type}.nc"
+        nc_file = run_dir / f"{model_id}_{year}0101_{year}1231_{file_type}.nc"
 
     if not nc_file.exists():
         print(f"Warning: File not found: {nc_file}")
@@ -125,7 +125,7 @@ def plot_multimodel_maps(models, output_dir, config):
     Create multi-panel spatial comparison maps.
 
     Args:
-        models: List of dicts with 'name', 'desc', 'year', 'basedir'
+        models: List of dicts with 'name', 'desc', 'year', 'model_dir'
         output_dir: Output directory
         config: Configuration dict
     """
@@ -155,7 +155,7 @@ def plot_multimodel_maps(models, output_dir, config):
     # Load one file to get navigation
     nav_lon, nav_lat = None, None
     for model in models:
-        run_dir = Path(model['basedir']) / model['name']
+        run_dir = Path(model['model_dir']) / model['name']
         ptrc_file = run_dir / f"ORCA2_1m_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
         if not ptrc_file.exists():
             ptrc_file = run_dir / f"{model['name']}_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
@@ -192,7 +192,7 @@ def plot_multimodel_maps(models, output_dir, config):
 
             for model in models:
                 data = load_model_data(
-                    model['basedir'], model['name'], model['year'], var_name, plotter
+                    model['model_dir'], model['name'], model['year'], var_name, plotter
                 )
                 model_data.append(data)
 
@@ -288,7 +288,7 @@ def plot_multimodel_maps(models, output_dir, config):
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python multimodel_maps.py <models_csv> <output_dir>")
+        print("Usage: python make_multimodel_maps.py <models_csv> <output_dir>")
         return 1
 
     csv_file = Path(sys.argv[1])
@@ -300,7 +300,7 @@ def main():
     # Read models from CSV (columns: model_id, description, start_year, to_year, [location])
     # location column is optional - defaults to ~/scratch/ModelRuns if not provided
     import os
-    default_basedir = os.path.expanduser("~/scratch/ModelRuns")
+    default_model_dir = os.path.expanduser("~/scratch/ModelRuns")
 
     models = []
     with open(csv_file, 'r') as f:
@@ -310,12 +310,12 @@ def main():
 
         for row in reader:
             if len(row) >= 4:  # Need at least first 4 columns
-                basedir = row[4] if len(row) >= 5 and row[4].strip() else default_basedir
+                model_dir = row[4] if len(row) >= 5 and row[4].strip() else default_model_dir
                 models.append({
                     'name': row[0],      # model_id
                     'desc': row[1],      # description
                     'year': row[3],      # to_year
-                    'basedir': basedir   # location (or default)
+                    'model_dir': model_dir   # location (or default)
                 })
 
     print(f"Generating spatial comparison maps for {len(models)} models...")
@@ -323,7 +323,7 @@ def main():
 
     # Import transect functions
     try:
-        from multimodel_transects import (
+        from make_multimodel_transects import (
             plot_multimodel_nutrient_transects,
             plot_multimodel_pft_transects
         )
@@ -335,7 +335,7 @@ def main():
         plot_multimodel_pft_transects(models, output_dir, config)
     except ImportError as e:
         print(f"Warning: Could not import transect functions: {e}")
-        print("Skipping transect generation. Run multimodel_transects.py separately if needed.")
+        print("Skipping transect generation. Run make_multimodel_transects.py separately if needed.")
 
     return 0
 

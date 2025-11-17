@@ -12,16 +12,16 @@ export PATH=~/miniforge3/bin:$PATH
 
 # Source central directory where the files and scripts are located
 # Resolve symlinks to find the actual script location
-scriptPath="$0"
-if [ -L "$scriptPath" ]; then
-    scriptPath="$(readlink -f "$scriptPath" 2>/dev/null || readlink "$scriptPath")"
+script_path="$0"
+if [ -L "$script_path" ]; then
+    script_path="$(readlink -f "$script_path" 2>/dev/null || readlink "$script_path")"
 fi
-scriptDir="$(cd "$(dirname "$scriptPath")" && pwd)"
-srcDir="${scriptDir}/"
+script_dir="$(cd "$(dirname "$script_path")" && pwd)"
+src_dir="${script_dir}/"
 
-# Verify we found multimodel.py
-if [ ! -f "${srcDir}/multimodel.py" ]; then
-    echo "Error: Cannot find multimodel.py at ${srcDir}"
+# Verify we found make_multimodel_timeseries.py
+if [ ! -f "${src_dir}/make_multimodel_timeseries.py" ]; then
+    echo "Error: Cannot find make_multimodel_timeseries.py at ${src_dir}"
     exit 1
 fi
 
@@ -39,19 +39,19 @@ locs=( $( cut -f 5 -d , modelsToPlot.csv | tail -n +2 ) )
 
 # Create folder name from model runs (e.g., JRA3-JRA1)
 # Strip TOM12_RY_ prefix from each run name
-cleanRuns=()
+clean_runs=()
 for run in "${runs[@]}"; do
-    cleanRuns+=("${run#TOM12_RY_}")
+    clean_runs+=("${run#TOM12_RY_}")
 done
-folderName=$(IFS=- ; echo "${cleanRuns[*]}")
+folder_name=$(IFS=- ; echo "${clean_runs[*]}")
 
 # Create directory to save files to
-curDir=${PWD}
-saveDir=${curDir}/${folderName}/
+cur_dir=${PWD}
+save_dir=${cur_dir}/${folder_name}/
 
-mkdir -p ${saveDir}
-cp modelsToPlot.csv ${saveDir}
-cd ${saveDir}
+mkdir -p ${save_dir}
+cp modelsToPlot.csv ${save_dir}
+cd ${save_dir}
 
 length=${#runs[@]}
 if [ $length -gt 8 ]; then
@@ -60,35 +60,35 @@ if [ $length -gt 8 ]; then
 fi
 
 # Copy in the required files
-cp ${srcDir}/multimodel.py .
+cp ${src_dir}/make_multimodel_timeseries.py .
 
 # Copy Python map generation scripts from visualise directory
-# scriptDir is visualise/multimodel, so parent is visualise
-visualiseDir="$(cd "$(dirname "${scriptDir}")" && pwd)/"
+# script_dir is visualise/multimodel, so parent is visualise
+visualise_dir="$(cd "$(dirname "${script_dir}")" && pwd)/"
 
-if [ ! -f "${visualiseDir}/make_maps.py" ]; then
-    echo "Error: Cannot find make_maps.py at ${visualiseDir}"
+if [ ! -f "${visualise_dir}/make_maps.py" ]; then
+    echo "Error: Cannot find make_maps.py at ${visualise_dir}"
     exit 1
 fi
-cp ${visualiseDir}/make_maps.py .
-cp ${visualiseDir}/map_utils.py .
+cp ${visualise_dir}/make_maps.py .
+cp ${visualise_dir}/map_utils.py .
 
 # Export config path for Python scripts to find
-if [ -f "${visualiseDir}/visualise_config.toml" ]; then
-    export VISUALISE_CONFIG="${visualiseDir}/visualise_config.toml"
+if [ -f "${visualise_dir}/visualise_config.toml" ]; then
+    export VISUALISE_CONFIG="${visualise_dir}/visualise_config.toml"
 fi
 
 # Run the python script to generate the time series plots (with debug to see warnings)
-./multimodel.py ${saveDir} --debug
+./make_multimodel_timeseries.py ${save_dir} --debug
 
 # Generate spatial comparison maps (grid format with all models)
 echo "Generating spatial comparison maps..."
-python3 ${srcDir}/multimodel_maps.py modelsToPlot.csv ${saveDir}
+python3 ${src_dir}/make_multimodel_maps.py modelsToPlot.csv ${save_dir}
 
 # Copy observation images to save directory
-cp ${srcDir}/*.png .
+cp ${src_dir}/*.png .
 
 # Generate HTML using Quarto (replaces Python + Jinja2 system)
-${srcDir}/createMultimodelHTML.sh "${folderName}" 0
+${src_dir}/make_multimodel_html.sh "${folder_name}" 0
 
-echo "Finished: saved to" ${saveDir}
+echo "Finished: saved to" ${save_dir}

@@ -57,7 +57,7 @@ class ModelConfig:
     description: str
     start_year: int
     to_year: int
-    base_dir: str
+    model_dir: str
 
     @property
     def from_year(self):
@@ -427,18 +427,18 @@ class DataLoader:
     """Handles loading data from CSV files"""
 
     @staticmethod
-    def load_model_configs(csv_path, default_basedir=None):
+    def load_model_configs(csv_path, default_model_dir=None):
         """
         Load model configurations from CSV.
 
         Args:
             csv_path: Path to CSV file
-            default_basedir: Default base directory if 'location' column is missing or empty
+            default_model_dir: Default base directory if 'location' column is missing or empty
                            (defaults to ~/scratch/ModelRuns if not specified)
         """
         import os
-        if default_basedir is None:
-            default_basedir = os.path.expanduser("~/scratch/ModelRuns")
+        if default_model_dir is None:
+            default_model_dir = os.path.expanduser("~/scratch/ModelRuns")
 
         df = pd.read_csv(csv_path)
 
@@ -451,7 +451,7 @@ class DataLoader:
                 description=row["description"],
                 start_year=row["start_year"],
                 to_year=row["to_year"],
-                base_dir=row["location"] if has_location and pd.notna(row.get("location")) else default_basedir,
+                model_dir=row["location"] if has_location and pd.notna(row.get("location")) else default_model_dir,
             )
             for _, row in df.iterrows()
         ]
@@ -459,8 +459,8 @@ class DataLoader:
     @staticmethod
     def load_breakdown_data(model_config, data_type, frequency="annual"):
         # Try CSV format first (new format), fall back to TSV if not found
-        csv_path = f"/{model_config.base_dir}/{model_config.name}/breakdown.{data_type}.{frequency}.csv"
-        dat_path = f"/{model_config.base_dir}/{model_config.name}/breakdown.{data_type}.{frequency}.dat"
+        csv_path = f"/{model_config.model_dir}/{model_config.name}/breakdown.{data_type}.{frequency}.csv"
+        dat_path = f"/{model_config.model_dir}/{model_config.name}/breakdown.{data_type}.{frequency}.dat"
 
         try:
             # New CSV format - single header row, comma-separated
