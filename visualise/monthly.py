@@ -6,14 +6,11 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pathlib
-import sys
+import argparse
 import calendar
 
 # Script for creating monthly plots of variables using breakdowns created during the model run process
 # Will only be run at the end of the model run process
-
-model_id = sys.argv[1]
-modelOutputDir = sys.argv[2]
 
 
 def read_breakdown_monthly(file_path):
@@ -141,7 +138,7 @@ def makeSummaryFromBreakdowns(model_id, modBaseDir):
 			ax.grid(linestyle='--', linewidth=0.25)
 
 		plt.tight_layout()
-		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_Cflx.jpg')
+		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_Cflx.png', dpi=300)
 		print(f'Created CFLX monthly summary figure for {model_id}')
 
 		### Creating monthly region figures for TCHL
@@ -187,7 +184,7 @@ def makeSummaryFromBreakdowns(model_id, modBaseDir):
 			ax.grid(linestyle='--', linewidth=0.25)
 
 		plt.tight_layout()
-		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_TChl.jpg')
+		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_TChl.png', dpi=300)
 		print(f'Created TCHL monthly summary figure for {model_id}')
 
 		### Creating monthly region figures for pCO2
@@ -230,7 +227,7 @@ def makeSummaryFromBreakdowns(model_id, modBaseDir):
 			ax.grid(linestyle='--', linewidth=0.25)
 
 		plt.tight_layout()
-		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_pCO2.jpg')
+		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_pCO2.png', dpi=300)
 		print(f'Created pCO2 monthly summary figure for {model_id}')
 		
 		### Creating monthly region figures for pCO2 (normalised)
@@ -287,7 +284,7 @@ def makeSummaryFromBreakdowns(model_id, modBaseDir):
 			ax.grid(linestyle='--', linewidth=0.25)
 
 		plt.tight_layout()
-		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_pCO2_normalised.jpg')
+		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_pCO2_normalised.png', dpi=300)
 		print(f'Created normalised pCO2 monthly summary figure for {model_id}')
 
 		### Creating monthly region figures for SST
@@ -332,7 +329,7 @@ def makeSummaryFromBreakdowns(model_id, modBaseDir):
 			ax.grid(linestyle='--', linewidth=0.25)
 
 		plt.tight_layout()
-		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_SST.jpg')
+		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_SST.png', dpi=300)
 		print(f'Created SST monthly summary figure for {model_id}')
 
 		### Creating monthly region figures for MLD
@@ -377,11 +374,35 @@ def makeSummaryFromBreakdowns(model_id, modBaseDir):
 			ax.grid(linestyle='--', linewidth=0.25)
 
 		plt.tight_layout()
-		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_MLD.jpg')
+		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_MLD.png', dpi=300)
 		print(f'Created MLD monthly summary figure for {model_id}')
 
 	except:
 		print('Oops, something went awry')
 
-# Run summary on input model
-makeSummaryFromBreakdowns(model_id, modelOutputDir)
+def main():
+	parser = argparse.ArgumentParser(
+		description='Create monthly regional visualizations for ocean model output',
+		formatter_class=argparse.RawDescriptionHelpFormatter
+	)
+	parser.add_argument(
+		'--model-id',
+		required=True,
+		help='Model run identifier'
+	)
+	parser.add_argument(
+		'--model-dir',
+		default='~/scratch/ModelRuns',
+		help='Base directory for model outputs (default: %(default)s)'
+	)
+
+	args = parser.parse_args()
+
+	model_id = args.model_id
+	modelOutputDir = str(pathlib.Path(args.model_dir).expanduser())
+
+	# Run summary on input model
+	makeSummaryFromBreakdowns(model_id, modelOutputDir)
+
+if __name__ == "__main__":
+	main()

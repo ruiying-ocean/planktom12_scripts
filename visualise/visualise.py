@@ -7,6 +7,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pathlib
 import sys
+import argparse
 from dataclasses import dataclass
 
 # Import TOML parser (tomllib in Python 3.11+, tomli for earlier versions)
@@ -33,8 +34,9 @@ class ModelDataLoader:
         
     def _read_breakdown_file(self, file_type):
         # Try CSV format first (new format), fall back to TSV if not found
-        csv_path = f"{self.base_dir}/{self.model_name}/breakdown.{file_type}.annual.csv"
-        dat_path = f"{self.base_dir}/{self.model_name}/breakdown.{file_type}.annual.dat"
+        base_path = pathlib.Path(self.base_dir)
+        csv_path = base_path / self.model_name / f"breakdown.{file_type}.annual.csv"
+        dat_path = base_path / self.model_name / f"breakdown.{file_type}.annual.dat"
 
         try:
             # New CSV format - single header row, comma-separated
@@ -245,7 +247,7 @@ class FigureCreator:
             self._setup_axis(axes[i], data["year"], plot_data, color, title, ylabel,
                            obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
 
-        self._save_figure(fig, f"{self.model_name}_summary_global.jpg")
+        self._save_figure(fig, f"{self.model_name}_summary_global.png")
 
     def create_pft_summary(self, data):
         year_limits = self._get_global_year_limits(data)
@@ -281,7 +283,7 @@ class FigureCreator:
             self._setup_axis(axes[i], data["year"], data[var_name], color, title, ylabel,
                            obs_range, None, year_limits, add_xlabel=is_bottom_row)
 
-        self._save_figure(fig, f"{self.model_name}_summary_pfts.jpg")
+        self._save_figure(fig, f"{self.model_name}_summary_pfts.png")
 
     def create_nutrient_summary(self, data):
         year_limits = self._get_global_year_limits(data)
@@ -310,7 +312,7 @@ class FigureCreator:
             self._setup_axis(axes[i], data["year"], plot_data, color, title, ylabel,
                            obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
 
-        self._save_figure(fig, f"{self.model_name}_summary_nutrients.jpg")
+        self._save_figure(fig, f"{self.model_name}_summary_nutrients.png")
 
     def create_physics_summary(self, data):
         year_limits = self._get_global_year_limits(data)
@@ -334,23 +336,36 @@ class FigureCreator:
             self._setup_axis(axes[i], data["year"], plot_data, color, title, ylabel,
                            obs_range, obs_line, year_limits, add_xlabel=True)
 
-        self._save_figure(fig, f"{self.model_name}_summary_physics.jpg")
+        self._save_figure(fig, f"{self.model_name}_summary_physics.png")
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: visualize.py <model_name> <model_output_dir>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description='Create annual summary visualizations for ocean model output',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        '--model-id',
+        required=True,
+        help='Model run identifier'
+    )
+    parser.add_argument(
+        '--model-dir',
+        default='~/scratch/ModelRuns',
+        help='Base directory for model outputs (default: %(default)s)'
+    )
 
-    model_name = sys.argv[1]
-    model_output_dir = sys.argv[2]
-    
+    args = parser.parse_args()
+
+    model_name = args.model_id
+    model_output_dir = pathlib.Path(args.model_dir).expanduser()
+
     print(f"\n🌊 Ocean Model Visualization Tool")
     print(f"📊 Processing model: {model_name}")
     print(f"📁 Model output directory: {model_output_dir}")
     print("="*50)
 
-    save_dir = f"{model_output_dir}/monitor/{model_name}/"
-    pathlib.Path(save_dir).mkdir(parents=True, exist_ok=True)
+    save_dir = model_output_dir / "monitor" / model_name
+    save_dir.mkdir(parents=True, exist_ok=True)
     print(f"✓ Output directory ready: {save_dir}")
 
     try:

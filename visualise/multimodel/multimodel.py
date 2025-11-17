@@ -565,7 +565,7 @@ class PlotGenerator:
         """
         # Get DPI and format from config
         dpi = CONFIG.get("figure", {}).get("dpi", 300) if CONFIG else 300
-        fmt = CONFIG.get("figure", {}).get("format", "jpg") if CONFIG else "jpg"
+        fmt = CONFIG.get("figure", {}).get("format", "png") if CONFIG else "png"
 
         # Replace file extension with config format
         base_name = filename.rsplit(".", 1)[0]
@@ -614,7 +614,7 @@ class GlobalSummaryPlotter(PlotGenerator):
         self._add_observational_data(axes)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_global.jpg")
+        self.save_figure(fig, "multimodel_summary_global.png")
 
     def _plot_model(self, model, axes, color):
         sur_data = DataLoader.load_breakdown_data(model, "sur", "annual")
@@ -756,7 +756,7 @@ class CflxPlotter(RegionalPlotter):
         self.plot_all_models(fig, axes, self._plot_model)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_cflx.jpg")
+        self.save_figure(fig, "multimodel_summary_cflx.png")
 
     def _plot_model(self, model, axes, color):
         sur_annual = DataLoader.load_breakdown_data(model, "sur", "annual")
@@ -829,7 +829,7 @@ class PFTPlotter(PlotGenerator):
         self._add_observational_ranges(flat_axes)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_pfts.jpg")
+        self.save_figure(fig, "multimodel_summary_pfts.png")
 
     def _setup_pft_axes(self, axes):
         PlotConfig.setup_axes(axes)
@@ -945,7 +945,7 @@ class TChlPlotter(RegionalPlotter):
         self._add_observational_data(axes)  # MODIFICATION: This line was added
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_tchl.jpg")
+        self.save_figure(fig, "multimodel_summary_tchl.png")
 
     def _plot_model(self, model, axes, color):
         ave_annual = DataLoader.load_breakdown_data(model, "ave", "annual")
@@ -1046,7 +1046,7 @@ class NutrientPlotter(PlotGenerator):
         self._add_observational_data(flat_axes)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_nutrients.jpg")
+        self.save_figure(fig, "multimodel_summary_nutrients.png")
 
     def _plot_model(self, model, axes, color):
         ave_data = DataLoader.load_breakdown_data(model, "ave", "annual")
@@ -1141,7 +1141,7 @@ class PCO2Plotter(RegionalPlotter):
         self._add_observational_data(axes)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_pco2.jpg")
+        self.save_figure(fig, "multimodel_summary_pco2.png")
 
     def _plot_model(self, model, axes, color):
         ave_annual = DataLoader.load_breakdown_data(model, "ave", "annual")
@@ -1224,7 +1224,7 @@ class PhysicsPlotter(PlotGenerator):
         self.plot_all_models(fig, axes, self._plot_model)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_physics.jpg")
+        self.save_figure(fig, "multimodel_summary_physics.png")
 
     def _plot_model(self, model, axes, color):
         ave_data = DataLoader.load_breakdown_data(model, "ave", "annual")
