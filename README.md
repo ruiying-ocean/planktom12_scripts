@@ -47,7 +47,6 @@ PlankTomRunner/
 3. **Create visualizations**:
    ```bash
    python visualise/visualise.py <model_id> ~/scratch/ModelRuns
-   ./visualise/annualMaps_python.sh <model_id> <year>
    ```
 
 4. **Generate HTML report**:
