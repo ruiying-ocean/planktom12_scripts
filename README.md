@@ -51,9 +51,9 @@ PlankTomRunner/
 
 4. **Generate HTML report**:
    ```bash
-   ./visualise/createHTML.sh <model_id>
+   ./visualise/make_html.sh <model_id>
    # Or specify custom base directory:
-   # ./visualise/createHTML.sh <model_id> ~/scratch/ModelRuns
+   # ./visualise/make_html.sh <model_id> ~/scratch/ModelRuns
    ```
 
 ### Multi-Model Comparison Workflow
@@ -170,22 +170,22 @@ python verticalDepth.py <model_id> <model_dir> <year>
 
 #### Monthly Summaries
 
-**Script**: `monthly.py`
+**Script**: `make_monthly_plots.py`
 
 **Usage**:
 ```bash
-python monthly.py <model_id> <model_dir>
+python make_monthly_plots.py --model-id <model_id> --model-dir <model_dir>
 ```
 
 **Output**: Monthly climatology plots for key variables.
 
 #### HTML Report
 
-**Script**: `createHTML.sh`
+**Script**: `make_html.sh`
 
 **Usage**:
 ```bash
-./createHTML.sh <model_id> [base_dir]
+./make_html.sh <model_id> [base_dir]
 ```
 
 **Arguments**:
@@ -194,9 +194,9 @@ python monthly.py <model_id> <model_dir>
 
 **Example**:
 ```bash
-./createHTML.sh TOM12_RY_SPE2
+./make_html.sh TOM12_RY_SPE2
 # Or with custom base directory:
-./createHTML.sh TOM12_RY_SPE2 /custom/path/to/models
+./make_html.sh TOM12_RY_SPE2 /custom/path/to/models
 ```
 
 **Output**: Complete HTML report with all visualizations for a single model.

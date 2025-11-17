@@ -1,8 +1,8 @@
 #!/bin/sh
 
-# Usage: ./createHTML.sh <model_id> [base_dir]
-# Example: ./createHTML.sh TOM12_RY_SPE2
-#          ./createHTML.sh TOM12_RY_SPE2 ~/scratch/ModelRuns
+# Usage: ./make_html.sh <model_id> [base_dir]
+# Example: ./make_html.sh TOM12_RY_SPE2
+#          ./make_html.sh TOM12_RY_SPE2 ~/scratch/ModelRuns
 
 # Check for required argument
 if [ $# -lt 1 ]; then

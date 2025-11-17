@@ -164,12 +164,12 @@ if [[ $yearTo -eq $yearEnd ]]; then
 	cp breakdown* $baseDir$model_id
 
 	# run script to generate monthly regional plots
-	python3 monthly.py --model-id $model_id --model-dir $modelOutputDir
+	python3 make_monthly_plots.py --model-id $model_id --model-dir $modelOutputDir
 
 	# generate spatial maps
 	python3 make_maps.py $model_id $yearTo --basedir $modelOutputDir --output-dir $modelOutputDir/monitor/$model_id/
 
 	# run script to create html file
-	./createHTML.sh $model_id $modelOutputDir
+	./make_html.sh $model_id $modelOutputDir
 fi
 
