@@ -202,7 +202,7 @@ python monthly.py <model_id> <model_dir>
 
 **Output**: Complete HTML report with all visualizations for a single model.
 
-**Note**: The script reads metadata from `html_parms` file in the model directory if available, otherwise uses default values.
+**Note**: The script automatically detects the latest year from generated map files or breakdown data.
 
 ### Multi-Model Comparison
 
