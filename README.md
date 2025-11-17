@@ -38,7 +38,10 @@ PlankTomRunner/
 
 2. **Generate breakdown statistics**:
    ```bash
-   python breakdown/breakdown.py <model_id> ~/scratch/ModelRuns
+   cd ~/scratch/ModelRuns/<model_id>/
+   python /path/to/PlankTomRunner/breakdown/breakdown.py \
+       /path/to/PlankTomRunner/breakdown/breakdown_config.toml \
+       <start_year> <end_year>
    ```
 
 3. **Create visualizations**:
@@ -58,8 +61,13 @@ PlankTomRunner/
 
 2. **Generate breakdown files for each model**:
    ```bash
-   python breakdown/breakdown.py TOM12_RY_SPE2 ~/scratch/ModelRuns
-   python breakdown/breakdown.py TOM12_RY_SPE5 ~/scratch/ModelRuns
+   cd ~/scratch/ModelRuns/TOM12_RY_SPE2/
+   python /path/to/PlankTomRunner/breakdown/breakdown.py \
+       /path/to/PlankTomRunner/breakdown/breakdown_config.toml 1750 1790
+
+   cd ~/scratch/ModelRuns/TOM12_RY_SPE5/
+   python /path/to/PlankTomRunner/breakdown/breakdown.py \
+       /path/to/PlankTomRunner/breakdown/breakdown_config.toml 1750 1790
    ```
 
 3. **Create comparison configuration** (`modelsToPlot.csv`):
@@ -86,8 +94,11 @@ PlankTomRunner/
 
 **Usage**:
 ```bash
-python breakdown/breakdown.py <model_id> <model_dir> [--year YYYY]
+cd <model_output_directory>
+python /path/to/breakdown/breakdown.py <config_file.toml> <start_year> <end_year>
 ```
+
+**Important**: The breakdown script must be run from the model output directory where the NetCDF files are located (it looks for files in the current directory).
 
 **Output**: Creates CSV files in `<model_dir>/<model_id>/`:
 - `breakdown.sur.annual.csv` - Surface variables (e.g., air-sea carbon flux)
