@@ -61,6 +61,12 @@ Comparison of physical variables across models.
 
 ![](multimodel_summary_physics.png)
 
+# Derived Ecosystem Variables
+
+Comparison of derived ecosystem variables across models.
+
+${DERIVED_SECTION}
+
 ---
 
 # Spatial Maps
