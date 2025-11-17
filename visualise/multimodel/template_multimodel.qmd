@@ -21,7 +21,7 @@ format:
 
 Comparison of global ecosystem metrics across models.
 
-![](multimodel_summary_global.jpg)
+![](multimodel_summary_global.png)
 
 # Regional and Monthly Patterns
 
@@ -29,37 +29,37 @@ Comparison of global ecosystem metrics across models.
 
 Regional and monthly carbon flux comparison.
 
-![](multimodel_summary_cflx.jpg)
+![](multimodel_summary_cflx.png)
 
 ## Total Chlorophyll
 
 Regional and monthly total chlorophyll comparison.
 
-![](multimodel_summary_tchl.jpg)
+![](multimodel_summary_tchl.png)
 
 ## pCO₂
 
 Regional and monthly pCO₂ comparison.
 
-![](multimodel_summary_pco2.jpg)
+![](multimodel_summary_pco2.png)
 
 # Plankton Functional Types
 
 Comparison of phytoplankton and zooplankton biomass across models.
 
-![](multimodel_summary_pfts.jpg)
+![](multimodel_summary_pfts.png)
 
 # Nutrients
 
 Comparison of nutrient concentrations across models.
 
-![](multimodel_summary_nutrients.jpg)
+![](multimodel_summary_nutrients.png)
 
 # Physical Environment
 
 Comparison of physical variables across models.
 
-![](multimodel_summary_physics.jpg)
+![](multimodel_summary_physics.png)
 
 ---
 
@@ -75,21 +75,21 @@ ${MODEL_MAPS}
 
 ### Atlantic (35°W) - Nutrients
 
-![](multimodel_transect_atlantic_nutrients.jpg)
+![](multimodel_transect_atlantic_nutrients.png)
 
 ### Pacific (170°W) - Nutrients
 
-![](multimodel_transect_pacific_nutrients.jpg)
+![](multimodel_transect_pacific_nutrients.png)
 
 ## PFTs
 
 ### Atlantic (35°W) - PFTs
 
-![](multimodel_transect_atlantic_pfts.jpg)
+![](multimodel_transect_atlantic_pfts.png)
 
 ### Pacific (170°W) - PFTs
 
-![](multimodel_transect_pacific_pfts.jpg)
+![](multimodel_transect_pacific_pfts.png)
 
 ---
 

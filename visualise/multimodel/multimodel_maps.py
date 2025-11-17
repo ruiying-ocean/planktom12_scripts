@@ -89,10 +89,17 @@ def load_model_data(basedir, run_name, year, var_name, plotter):
         # Calculate annual mean
         data = ds[var_name].mean(dim='time_counter')
 
-        # Take surface level if 3D
+        # Take appropriate depth level if 3D
         if 'deptht' in data.dims or 'nav_lev' in data.dims:
             depth_dim = 'deptht' if 'deptht' in data.dims else 'nav_lev'
-            data = data.isel({depth_dim: 0})
+
+            # Check if variable has a specific depth_index in metadata
+            from map_utils import get_variable_metadata
+            meta = get_variable_metadata(var_name)
+            depth_index = meta.get('depth_index', 0)
+
+            # Use specified depth index (e.g., 10 for _EXP at 100m)
+            data = data.isel({depth_dim: depth_index})
 
         # Apply land mask
         data = plotter.apply_mask(data)
@@ -290,18 +297,25 @@ def main():
     # Load config
     config = load_config()
 
-    # Read models from CSV (columns: model_id, description, start_year, to_year, location)
+    # Read models from CSV (columns: model_id, description, start_year, to_year, [location])
+    # location column is optional - defaults to ~/scratch/ModelRuns if not provided
+    import os
+    default_basedir = os.path.expanduser("~/scratch/ModelRuns")
+
     models = []
     with open(csv_file, 'r') as f:
         reader = csv.reader(f)
-        next(reader, None)  # Skip header row
+        header = next(reader, None)  # Read header row
+        has_location = len(header) >= 5 and header[4].strip().lower() == 'location'
+
         for row in reader:
-            if len(row) >= 5:  # Ensure we have all columns
+            if len(row) >= 4:  # Need at least first 4 columns
+                basedir = row[4] if len(row) >= 5 and row[4].strip() else default_basedir
                 models.append({
                     'name': row[0],      # model_id
                     'desc': row[1],      # description
                     'year': row[3],      # to_year
-                    'basedir': row[4]    # location
+                    'basedir': basedir   # location (or default)
                 })
 
     print(f"Generating spatial comparison maps for {len(models)} models...")

@@ -427,15 +427,31 @@ class DataLoader:
     """Handles loading data from CSV files"""
 
     @staticmethod
-    def load_model_configs(csv_path):
+    def load_model_configs(csv_path, default_basedir=None):
+        """
+        Load model configurations from CSV.
+
+        Args:
+            csv_path: Path to CSV file
+            default_basedir: Default base directory if 'location' column is missing or empty
+                           (defaults to ~/scratch/ModelRuns if not specified)
+        """
+        import os
+        if default_basedir is None:
+            default_basedir = os.path.expanduser("~/scratch/ModelRuns")
+
         df = pd.read_csv(csv_path)
+
+        # Check if location column exists
+        has_location = "location" in df.columns
+
         return [
             ModelConfig(
                 name=row["model_id"],
                 description=row["description"],
                 start_year=row["start_year"],
                 to_year=row["to_year"],
-                base_dir=row["location"],
+                base_dir=row["location"] if has_location and pd.notna(row.get("location")) else default_basedir,
             )
             for _, row in df.iterrows()
         ]

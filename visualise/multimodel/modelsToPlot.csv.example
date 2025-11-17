@@ -1,3 +1,11 @@
 model_id,description,start_year,to_year,location
-TOM12_RY_SPE4,Control,2000,2010,/path/to/model/output
-TOM12_RY_EXP1,High CO2,2000,2010,/path/to/model/output
+TOM12_RY_SPE4,Control,2000,2010,
+TOM12_RY_EXP1,High CO2,2000,2010,
+
+# Note: The 'location' column is optional and can be left empty.
+# If empty or omitted, defaults to ~/scratch/ModelRuns
+# You can also completely omit the location column:
+#
+# model_id,description,start_year,to_year
+# TOM12_RY_SPE4,Control,2000,2010
+# TOM12_RY_EXP1,High CO2,2000,2010

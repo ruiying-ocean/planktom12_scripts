@@ -100,13 +100,32 @@ def load_transect_data(basedir, run_name, year, variable, plotter):
     try:
         ds = xr.open_dataset(ptrc_file, decode_times=False)
 
-        if variable not in ds:
-            print(f"Warning: Variable {variable} not found")
+        # Map derived variables (with underscore) to base variables and conversions
+        variable_map = {
+            '_NO3': ('NO3', 1e6),
+            '_PO4': ('PO4', 1e6 / 122),
+            '_Si': ('Si', 1e6),
+            '_Fer': ('Fer', 1e9),
+            '_O2': ('O2', 1e6),
+        }
+
+        # Determine the actual variable name and conversion factor
+        if variable in variable_map:
+            base_var, conversion = variable_map[variable]
+        else:
+            base_var = variable
+            conversion = 1.0
+
+        if base_var not in ds:
+            print(f"Warning: Variable {base_var} not found")
             ds.close()
             return None
 
         # Time average
-        data = ds[variable].mean(dim='time_counter')
+        data = ds[base_var].mean(dim='time_counter')
+
+        # Apply unit conversion
+        data = data * conversion
 
         # Remove bottom level if needed
         if 'deptht' in data.dims:
@@ -121,7 +140,7 @@ def load_transect_data(basedir, run_name, year, variable, plotter):
         return None
 
 
-def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=500.0):
+def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=None):
     """
     Create multi-model nutrient transect comparison plots.
     For 2 models: shows Model A, Model B, and Anomaly (B-A)
@@ -131,7 +150,7 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=500
         models: List of dicts with 'name', 'desc', 'year', 'basedir'
         output_dir: Output directory
         config: Configuration dict
-        max_depth: Maximum depth to plot in meters (default: 500m)
+        max_depth: Maximum depth to plot in meters (default: None for full depth)
     """
     n_models = len(models)
     has_anomaly = (n_models == 2)
@@ -195,8 +214,8 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=500
                 if data_3d is not None:
                     transect = get_longitude_transect(data_3d, nav_lon, target_lon, lat_values)
 
-                    # Limit depth to max_depth
-                    if 'deptht' in transect.coords:
+                    # Limit depth to max_depth if specified
+                    if max_depth is not None and 'deptht' in transect.coords:
                         depth_mask = transect.coords['deptht'] <= max_depth
                         transect = transect.where(depth_mask, drop=True)
 
@@ -222,7 +241,8 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=500
                     )
 
                     ax.invert_yaxis()
-                    ax.set_ylim(max_depth, 0)
+                    if max_depth is not None:
+                        ax.set_ylim(max_depth, 0)
 
                 # Title: First row shows model names, first column shows nutrient names
                 if i == 0:
@@ -254,7 +274,8 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=500
                 )
 
                 ax.invert_yaxis()
-                ax.set_ylim(max_depth, 0)
+                if max_depth is not None:
+                    ax.set_ylim(max_depth, 0)
 
                 if i == 0:
                     ax.set_title("Anomaly (B-A)", fontsize=12, fontweight='bold')
@@ -437,18 +458,25 @@ def main():
     # Load config
     config = load_config()
 
-    # Read models from CSV (columns: model_id, description, start_year, to_year, location)
+    # Read models from CSV (columns: model_id, description, start_year, to_year, [location])
+    # location column is optional - defaults to ~/scratch/ModelRuns if not provided
+    import os
+    default_basedir = os.path.expanduser("~/scratch/ModelRuns")
+
     models = []
     with open(csv_file, 'r') as f:
         reader = csv.reader(f)
-        next(reader, None)  # Skip header row
+        header = next(reader, None)  # Read header row
+        has_location = len(header) >= 5 and header[4].strip().lower() == 'location'
+
         for row in reader:
-            if len(row) >= 5:  # Ensure we have all columns
+            if len(row) >= 4:  # Need at least first 4 columns
+                basedir = row[4] if len(row) >= 5 and row[4].strip() else default_basedir
                 models.append({
                     'name': row[0],      # model_id
                     'desc': row[1],      # description
                     'year': row[3],      # to_year
-                    'basedir': row[4]    # location
+                    'basedir': basedir   # location (or default)
                 })
 
     print(f"Generating transect comparisons for {len(models)} models...")
