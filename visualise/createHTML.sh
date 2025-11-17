@@ -1,32 +1,64 @@
 #!/bin/sh
 
-# Read in parameters for creating html file
-read -r -a parms < html_parms
+# Usage: ./createHTML.sh <model_id> [base_dir]
+# Example: ./createHTML.sh TOM12_RY_SPE2
+#          ./createHTML.sh TOM12_RY_SPE2 ~/scratch/ModelRuns
 
-run=${parms[0]}
-version=${parms[1]}
-date=${parms[2]}
-start=${parms[3]}
-end=${parms[4]}
-co2=${parms[5]^}
-forcing=${parms[6]}
-type=${parms[7]^}
-
-if [[ ${parms[8]} -eq 0 ]]; then
-	temperature="No"
-else
-	temperature="Yes"
+# Check for required argument
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <model_id> [base_dir]"
+    echo "  model_id: Model run identifier"
+    echo "  base_dir: Base directory for model output (default: ~/scratch/ModelRuns)"
+    echo ""
+    echo "Example: $0 TOM12_RY_SPE2"
+    exit 1
 fi
 
-if [[ ${parms[9]} -eq 0 ]]; then
-	salinity="No"
+run=$1
+modelOutputDir=${2:-~/scratch/ModelRuns}
+
+# Expand tilde in modelOutputDir
+modelOutputDir="${modelOutputDir/#\~/$HOME}"
+
+# Read in parameters from html_parms if it exists
+if [ -f "${modelOutputDir}/${run}/html_parms" ]; then
+    read -r -a parms < "${modelOutputDir}/${run}/html_parms"
+
+    version=${parms[1]}
+    date=${parms[2]}
+    start=${parms[3]}
+    end=${parms[4]}
+    co2=${parms[5]^}
+    forcing=${parms[6]}
+    type=${parms[7]^}
+
+    if [[ ${parms[8]} -eq 0 ]]; then
+        temperature="No"
+    else
+        temperature="Yes"
+    fi
+
+    if [[ ${parms[9]} -eq 0 ]]; then
+        salinity="No"
+    else
+        salinity="Yes"
+    fi
 else
-	salinity="Yes"
+    echo "Warning: html_parms not found in ${modelOutputDir}/${run}/"
+    echo "Using default values..."
+    version="1.0"
+    date=$(date +%Y-%m-%d)
+    start="N/A"
+    end="N/A"
+    co2="N/A"
+    forcing="N/A"
+    type="Standard"
+    temperature="N/A"
+    salinity="N/A"
 fi
 
 # Set up save directory
 # Note: visualise.py saves to monitor/ not visualise/
-modelOutputDir=$1
 saveDir="${modelOutputDir}/monitor/${run}/"
 mkdir -p "${saveDir}"
 

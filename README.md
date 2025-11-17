@@ -52,7 +52,9 @@ PlankTomRunner/
 
 4. **Generate HTML report**:
    ```bash
-   ./visualise/createHTML.sh ~/scratch/ModelRuns <model_id>
+   ./visualise/createHTML.sh <model_id>
+   # Or specify custom base directory:
+   # ./visualise/createHTML.sh <model_id> ~/scratch/ModelRuns
    ```
 
 ### Multi-Model Comparison Workflow
@@ -184,10 +186,23 @@ python monthly.py <model_id> <model_dir>
 
 **Usage**:
 ```bash
-./createHTML.sh <model_output_dir> <run_name>
+./createHTML.sh <model_id> [base_dir]
+```
+
+**Arguments**:
+- `model_id`: Model run identifier (required)
+- `base_dir`: Base directory for model output (optional, defaults to `~/scratch/ModelRuns`)
+
+**Example**:
+```bash
+./createHTML.sh TOM12_RY_SPE2
+# Or with custom base directory:
+./createHTML.sh TOM12_RY_SPE2 /custom/path/to/models
 ```
 
 **Output**: Complete HTML report with all visualizations for a single model.
+
+**Note**: The script reads metadata from `html_parms` file in the model directory if available, otherwise uses default values.
 
 ### Multi-Model Comparison
 
