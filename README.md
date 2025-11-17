@@ -159,14 +159,31 @@ python make_maps.py <run_name> <start_year> <end_year> \
 
 #### Vertical Profiles
 
-**Script**: `verticalDepth.py`
+**Script**: `make_vertical_profiles.py`
 
 **Usage**:
 ```bash
-python verticalDepth.py <model_id> <model_dir> <year>
+# Single model
+python make_vertical_profiles.py <model_id> --year <year> --var <variable>
+
+# Compare multiple models
+python make_vertical_profiles.py <model_id1> <model_id2> --year <year> --var <variable>
+
+# With custom directories
+python make_vertical_profiles.py <model_id> --year <year> --var <variable> \
+    --model-dir <path> --output-dir <path>
 ```
 
-**Output**: Vertical depth profiles for nutrients, carbon fluxes, and ecological variables.
+**Arguments**:
+- One or more model IDs to compare
+- `--year`: Year to process
+- `--var`: Variable to plot (temp, sal, fe, no3, po4, si, o2, alk, dic)
+- `--model-dir`: Base directory for model output (default: `~/scratch/ModelRuns`)
+- `--output-dir`: Output directory (default: current directory)
+
+**Output**: Vertical depth profiles comparing model(s) with observations across 6 ocean basins (Atlantic, Indian, Pacific, Arctic, Southern Ocean, Global). Includes comparisons with WOA, GLODAP, and Huang2022 observational datasets.
+
+**Legacy Script**: `verticalDepth.py` (older single-model version, still available)
 
 #### Monthly Summaries
 
