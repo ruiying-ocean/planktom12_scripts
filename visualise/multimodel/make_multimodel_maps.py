@@ -58,7 +58,8 @@ def load_model_data(model_dir, model_id, year, var_name, plotter):
     # Determine which file type to use based on variable
     # Diagnostic variables are in diad_T.nc
     # Tracer variables (nutrients, PFTs) are in ptrc_T.nc
-    diagnostic_vars = ['Cflx', 'TChl', '_TChl', 'PPT', 'EXP', '_EXP', '_PPINT']
+    diagnostic_vars = ['Cflx', 'TChl', '_TChl', 'PPT', 'EXP', '_EXP', '_PPINT',
+                       '_SP', '_RECYCLE', '_eratio', '_Teff']
 
     if var_name in diagnostic_vars:
         file_type = 'diad_T'
