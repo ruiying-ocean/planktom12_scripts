@@ -69,6 +69,8 @@ class ModelDataLoader:
         volume_cols = ["PPT", "proara", "prococ", "probsi", "GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"]
         volume_data = self._extract_arrays(volume_df, volume_cols)
         volume_data["PROCACO3"] = volume_data["proara"] + volume_data["prococ"]
+        # SP (secondary production) = sum of all grazing terms
+        volume_data["SP"] = sum(volume_data[col] for col in ["GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"])
         volume_data["SPT"] = sum(volume_data[col] for col in ["GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"])
         data.update(volume_data)
         
@@ -77,6 +79,10 @@ class ModelDataLoader:
         level_data = self._extract_arrays(level_df, level_cols)
         level_data["EXPCACO3"] = level_data["ExpARA"] + level_data["ExpCO3"]
         level_data["SI_FLX"] = level_data["sinksil"]
+        # Derived variables: Teff (transfer efficiency), e-ratio (export ratio), and recycle
+        level_data["Teff"] = level_data["EXP"] / level_data["EXP1000"]
+        level_data["eratio"] = level_data["EXP"] / volume_data["PPT"]  # export100/NPP
+        level_data["recycle"] = volume_data["PPT"] - level_data["EXP"] - volume_data["SP"]  # NPP - EXP100 - SP
         data.update(level_data)
         
         average_df = self._read_breakdown_file("ave")
@@ -338,6 +344,34 @@ class FigureCreator:
 
         self._save_figure(fig, f"{self.model_name}_summary_physics.png")
 
+    def create_derived_summary(self, data):
+        """Create summary plots for derived ecosystem variables."""
+        year_limits = self._get_global_year_limits(data)
+        layout = {'rows': 2, 'cols': 2}
+        subplot_width = self.config['layout']['subplot_width']
+        subplot_height = self.config['layout']['subplot_height']
+
+        derived_configs = [
+            (data["SP"], self.colors[0], "Secondary Production", "PgC/yr", None, None),
+            (data["recycle"], self.colors[1], "Recycled Production", "PgC/yr", None, None),
+            (data["eratio"], self.colors[2], "Export Ratio (e-ratio)", "Dimensionless", None, None),
+            (data["Teff"], self.colors[3], "Transfer Efficiency", "Dimensionless", None, None),
+        ]
+
+        fig, axes = plt.subplots(
+            layout['rows'], layout['cols'],
+            figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
+            sharex=True, constrained_layout=self.config['layout']['use_constrained_layout']
+        )
+        axes = axes.flatten()
+
+        for i, (plot_data, color, title, ylabel, obs_range, obs_line) in enumerate(derived_configs):
+            is_bottom_row = i >= layout['cols']
+            self._setup_axis(axes[i], data["year"], plot_data, color, title, ylabel,
+                           obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
+
+        self._save_figure(fig, f"{self.model_name}_summary_derived.png")
+
 def main():
     parser = argparse.ArgumentParser(
         description='Create annual summary visualizations for ocean model output',
@@ -379,7 +413,8 @@ def main():
         creator.create_pft_summary(data)
         creator.create_nutrient_summary(data)
         creator.create_physics_summary(data)
-        
+        creator.create_derived_summary(data)
+
         print("\n🎉 All visualizations completed successfully!")
         print(f"📂 Files saved to: {save_dir}")
         

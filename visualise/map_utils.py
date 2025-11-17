@@ -124,9 +124,18 @@ class OceanMapPlotter:
             ds['_PHY'] = ds['PIC'] + ds['FIX'] + ds['COC'] + ds['DIA'] + ds['MIX'] + ds['PHA']
             ds['_ZOO'] = ds['BAC'] + ds['PRO'] + ds['MES'] + ds['PTE'] + ds['CRU'] + ds['GEL']
         elif suffix == 'diad':
+            # Secondary production (grazing) - sum of all grazing terms
             ds['_SP'] = ds['GRAPRO'] + ds['GRAMES'] + ds['GRAPTE'] + ds['GRACRU'] + ds['GRAGEL']
-            ds['_RECYCLE'] = ds['PPT'] - ds['_SP']
+
+            # NPP and derived variables
             ds['_NPP'] = ds['PPT']
+            ds['_RECYCLE'] = ds['PPT'] - ds['_SP']
+
+            # Transfer efficiency and export ratio
+            if 'EXP' in ds and 'EXP1000' in ds:
+                ds['_Teff'] = ds['EXP'] / ds['EXP1000']
+            if 'EXP' in ds and 'PPT' in ds:
+                ds['_eratio'] = ds['EXP'] / ds['PPT']
         return ds
 
     def _convert_units(self, ds: xr.Dataset, suffix: str = 'ptrc') -> xr.Dataset:
@@ -163,13 +172,19 @@ class OceanMapPlotter:
 
             ## also convert for new variables
             ## GRA* mol/m3/s => gC/m³/yr
-            others = ['GRAPRO', 'GRAMES', 'GRAPTE', 'GRACRU', 'GRAGEL', '_SP',
-                      '_RECYCLE', '_NPP']
+            others = ['GRAPRO', 'GRAMES', 'GRAPTE', 'GRACRU', 'GRAGEL',
+                      '_SP', '_RECYCLE', '_NPP']
 
             for var in others:
                 if var in ds:
                     new_name = self._new_varname(var, '')
                     ds[new_name] = ds[var] * second_to_year * mole_to_gC  # gC/m³/yr
+
+            ## Dimensionless ratios (no unit conversion needed, just copy with underscore prefix)
+            for var in ['_Teff', '_eratio']:
+                if var in ds:
+                    new_name = self._new_varname(var, '')
+                    ds[new_name] = ds[var]
 
             return ds
 
@@ -508,6 +523,36 @@ ECOSYSTEM_VARS = {
         'vmin': -100,
         'depth_index': None,
         'cmap': 'RdYlBu_r'
+    },
+    '_SP': {
+        'long_name': 'Secondary Production',
+        'units': 'g C m⁻³ yr⁻¹',
+        'vmax': 50,
+        'depth_index': None,
+        'cmap': 'viridis'
+    },
+    '_RECYCLE': {
+        'long_name': 'Recycled Production',
+        'units': 'g C m⁻³ yr⁻¹',
+        'vmax': 200,
+        'depth_index': None,
+        'cmap': 'viridis'
+    },
+    '_eratio': {
+        'long_name': 'Export Ratio (e-ratio)',
+        'units': 'dimensionless',
+        'vmax': 0.5,
+        'vmin': 0,
+        'depth_index': None,
+        'cmap': 'plasma'
+    },
+    '_Teff': {
+        'long_name': 'Transfer Efficiency',
+        'units': 'dimensionless',
+        'vmax': 1.0,
+        'vmin': 0,
+        'depth_index': None,
+        'cmap': 'plasma'
     }
 }
 

@@ -35,27 +35,9 @@ format:
 
 ![](${identifier}_summary_physics.${img_format})
 
-## Regional Monthly Patterns
+## Derived Ecosystem Variables
 
-### Carbon Flux
-
-![](${identifier}_summary_monthly_Cflx.${img_format})
-
-### Chlorophyll
-
-![](${identifier}_summary_monthly_TChl.${img_format})
-
-### pCO₂
-
-![](${identifier}_summary_monthly_pCO2.${img_format})
-
-### Sea Surface Temperature
-
-![](${identifier}_summary_monthly_SST.${img_format})
-
-### Mixed Layer Depth
-
-![](${identifier}_summary_monthly_MLD.${img_format})
+![](${identifier}_summary_derived.${img_format})
 
 ---
 
@@ -96,28 +78,6 @@ format:
 ### Pacific (170°W) - PFTs
 
 ![](${identifier}_${end_year}_transect_pacific_pfts.png)
-
-## Vertical Profiles
-
-### Ecosystem
-
-![](${identifier}_vertical_depth_ecosystem.png){width=75%}
-
-### Plankton Functional Types
-
-![](${identifier}_vertical_depth_pfts.png)
-
-### Nutrients
-
-![](${identifier}_vertical_depth_nutrients.png){width=75%}
-
-### Organic Carbon
-
-![](${identifier}_vertical_depth_orgcarbon.png){width=75%}
-
-### Physics
-
-![](${identifier}_vertical_depth_physics.png){width=60%}
 
 ---
 
