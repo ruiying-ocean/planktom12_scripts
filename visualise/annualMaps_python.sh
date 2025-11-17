@@ -4,7 +4,10 @@
 
 run=$1
 year=$2
-modelOutputDir=$3
+modelOutputDir=${3:-~/scratch/ModelRuns}
+
+# Expand tilde in modelOutputDir
+modelOutputDir="${modelOutputDir/#\~/$HOME}"
 
 # Save to monitor/ directory to match visualise.py output
 monitor="monitor/"

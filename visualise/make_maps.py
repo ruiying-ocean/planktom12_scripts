@@ -6,7 +6,7 @@ Creates publication-quality oceanographic maps from NEMO/PlankTom output.
 Based on plotting style from ~/tompy/code/OBio_state.ipynb and warming_map.ipynb
 
 Usage:
-    python make_maps.py <run_name> <year_start> <year_end> [--output-dir OUTPUT_DIR]
+    python make_maps.py <run_name> <year> [--basedir BASEDIR] [--output-dir OUTPUT_DIR]
 """
 
 import argparse
@@ -702,10 +702,9 @@ def main():
         description='Generate oceanographic maps from NEMO/PlankTom output'
     )
     parser.add_argument('run_name', help='Model run name (e.g., ORCA2_test)')
-    parser.add_argument('year_start', help='Start year (YYYY)')
-    parser.add_argument('year_end', help='End year (YYYY)')
-    parser.add_argument('--basedir', default='..',
-                       help='Base directory for model output')
+    parser.add_argument('year', help='Year to process (YYYY)')
+    parser.add_argument('--basedir', default='~/scratch/ModelRuns',
+                       help='Base directory for model output (default: %(default)s)')
     parser.add_argument('--output-dir', default='.',
                        help='Output directory for maps')
     parser.add_argument('--mask-path',
@@ -720,13 +719,13 @@ def main():
     args = parser.parse_args()
 
     # Setup paths
-    basedir = Path(args.basedir)
+    basedir = Path(args.basedir).expanduser()
     run_dir = basedir / args.run_name
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Construct file paths
-    date_str = f"{args.year_start}0101_{args.year_end}1231"
+    date_str = f"{args.year}0101_{args.year}1231"
     ptrc_file = run_dir / f"ORCA2_1m_{date_str}_ptrc_T.nc"
     diad_file = run_dir / f"ORCA2_1m_{date_str}_diad_T.nc"
 
@@ -739,7 +738,7 @@ def main():
         sys.exit(1)
 
     print(f"Loading data from {run_dir}")
-    print(f"Date range: {args.year_start}-{args.year_end}")
+    print(f"Processing year: {args.year}")
 
     # Initialize plotter
     plotter = OceanMapPlotter(mask_path=args.mask_path)
@@ -812,7 +811,7 @@ def main():
         plotter=plotter,
         diad_ds=diad_ds,
         sat_chl_path=chl_obs_file,
-        output_path=output_dir / f"{args.run_name}_{args.year_start}_diagnostics.png"
+        output_path=output_dir / f"{args.run_name}_{args.year}_diagnostics.png"
     )
 
     # 2. Phytoplankton PFTs
@@ -822,7 +821,7 @@ def main():
         ptrc_ds=ptrc_ds,
         pft_list=PHYTOS,
         pft_type='phyto',
-        output_path=output_dir / f"{args.run_name}_{args.year_start}_phytos.png",
+        output_path=output_dir / f"{args.run_name}_{args.year}_phytos.png",
         cmap='turbo'
     )
 
@@ -833,7 +832,7 @@ def main():
         ptrc_ds=ptrc_ds,
         pft_list=ZOOS,
         pft_type='zoo',
-        output_path=output_dir / f"{args.run_name}_{args.year_start}_zoos.png",
+        output_path=output_dir / f"{args.run_name}_{args.year}_zoos.png",
         cmap='turbo'
     )
 
@@ -877,7 +876,7 @@ def main():
             plotter=plotter,
             ptrc_ds=ptrc_ds,
             obs_datasets=obs_datasets,
-            output_path=output_dir / f"{args.run_name}_{args.year_start}_nutrients.png",
+            output_path=output_dir / f"{args.run_name}_{args.year}_nutrients.png",
             nutrients=['_NO3', '_PO4', '_Si', '_Fer']
         )
 
@@ -895,7 +894,7 @@ def main():
                 nav_lat=ptrc_file_full['nav_lat'],
                 output_dir=output_dir,
                 run_name=args.run_name,
-                year=args.year_start,
+                year=args.year,
                 nutrients=['_NO3', '_PO4', '_Si', '_Fer']
             )
 
@@ -908,7 +907,7 @@ def main():
                 nav_lat=ptrc_file_full['nav_lat'],
                 output_dir=output_dir,
                 run_name=args.run_name,
-                year=args.year_start,
+                year=args.year,
                 pfts=PHYTOS + ZOOS
             )
 
@@ -970,7 +969,7 @@ def main():
             ax.set_title(meta['long_name'], fontsize=11)
 
         # Save
-        output_path = output_dir / f"{args.run_name}_{args.year_start}_nutrients.png"
+        output_path = output_dir / f"{args.run_name}_{args.year}_nutrients.png"
         fig.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.close(fig)
         print(f"Saved: {output_path}")

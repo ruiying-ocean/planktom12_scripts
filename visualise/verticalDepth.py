@@ -6,15 +6,40 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from netCDF4 import Dataset
-import sys
+import argparse
 import pathlib
 
 # Script for creating vertical depth plots for given variables
 # Will only be run at the end of the model run process
 
-model_id = sys.argv[1]
-modelOutputDir = sys.argv[2]
-year = sys.argv[3]
+def parse_args():
+	parser = argparse.ArgumentParser(
+		description='Create vertical depth profile visualizations for ocean model output',
+		formatter_class=argparse.RawDescriptionHelpFormatter
+	)
+	parser.add_argument(
+		'--model-id',
+		required=True,
+		help='Model run identifier'
+	)
+	parser.add_argument(
+		'--model-dir',
+		default='~/scratch/ModelRuns',
+		help='Base directory for model outputs (default: %(default)s)'
+	)
+	parser.add_argument(
+		'--year',
+		required=True,
+		help='Year to process'
+	)
+
+	return parser.parse_args()
+
+args = parse_args()
+
+model_id = args.model_id
+modelOutputDir = str(pathlib.Path(args.model_dir).expanduser())
+year = args.year
 
 # Save to monitor/ directory to match visualise.py output
 saveDir = f'{modelOutputDir}/monitor/{model_id}/'
