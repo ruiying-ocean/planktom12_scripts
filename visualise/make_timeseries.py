@@ -80,7 +80,7 @@ class ModelDataLoader:
         level_data["EXPCACO3"] = level_data["ExpARA"] + level_data["ExpCO3"]
         level_data["SI_FLX"] = level_data["sinksil"]
         # Derived variables: Teff (transfer efficiency), e-ratio (export ratio), and recycle
-        level_data["Teff"] = level_data["EXP"] / level_data["EXP1000"]
+        level_data["Teff"] = level_data["EXP1000"] / level_data["EXP"]  # EXP1000/EXP
         level_data["eratio"] = level_data["EXP"] / volume_data["PPT"]  # export100/NPP
         level_data["recycle"] = volume_data["PPT"] - level_data["EXP"] - volume_data["SP"]  # NPP - EXP100 - SP
         data.update(level_data)

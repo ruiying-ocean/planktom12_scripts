@@ -133,7 +133,7 @@ class OceanMapPlotter:
 
             # Transfer efficiency and export ratio
             if 'EXP' in ds and 'EXP1000' in ds:
-                ds['_Teff'] = ds['EXP'] / ds['EXP1000']
+                ds['_Teff'] = ds['EXP1000'] / ds['EXP']  # EXP1000/EXP
             if 'EXP' in ds and 'PPT' in ds:
                 ds['_eratio'] = ds['EXP'] / ds['PPT']
         return ds
