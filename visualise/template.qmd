@@ -87,6 +87,16 @@ format:
 
 ![](${identifier}_${end_year}_transect_pacific.png)
 
+## PFT Vertical Transects
+
+### Atlantic (35°W) - PFTs
+
+![](${identifier}_${end_year}_transect_atlantic_pfts.png)
+
+### Pacific (170°W) - PFTs
+
+![](${identifier}_${end_year}_transect_pacific_pfts.png)
+
 ## Vertical Profiles
 
 ### Ecosystem

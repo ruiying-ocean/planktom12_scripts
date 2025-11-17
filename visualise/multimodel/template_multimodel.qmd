@@ -69,6 +69,30 @@ ${MODEL_MAPS}
 
 ---
 
+# Vertical Transects
+
+## Nutrients
+
+### Atlantic (35°W) - Nutrients
+
+![](multimodel_transect_atlantic_nutrients.jpg)
+
+### Pacific (170°W) - Nutrients
+
+![](multimodel_transect_pacific_nutrients.jpg)
+
+## PFTs
+
+### Atlantic (35°W) - PFTs
+
+![](multimodel_transect_atlantic_pfts.jpg)
+
+### Pacific (170°W) - PFTs
+
+![](multimodel_transect_pacific_pfts.jpg)
+
+---
+
 # Data Sources
 
 :::{.callout-note appearance="simple"}

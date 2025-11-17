@@ -307,6 +307,22 @@ def main():
     print(f"Generating spatial comparison maps for {len(models)} models...")
     plot_multimodel_maps(models, output_dir, config)
 
+    # Import transect functions
+    try:
+        from multimodel_transects import (
+            plot_multimodel_nutrient_transects,
+            plot_multimodel_pft_transects
+        )
+
+        print(f"\nGenerating nutrient transect comparisons...")
+        plot_multimodel_nutrient_transects(models, output_dir, config)
+
+        print(f"\nGenerating PFT transect comparisons...")
+        plot_multimodel_pft_transects(models, output_dir, config)
+    except ImportError as e:
+        print(f"Warning: Could not import transect functions: {e}")
+        print("Skipping transect generation. Run multimodel_transects.py separately if needed.")
+
     return 0
 
 
