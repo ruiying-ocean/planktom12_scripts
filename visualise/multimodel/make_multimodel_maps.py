@@ -147,6 +147,7 @@ def plot_multimodel_maps(models, output_dir, config):
         'nutrients': ['_PO4', '_NO3', '_Si', '_Fer'],
         'phytoplankton': ['_PICINT', '_FIXINT', '_COCINT', '_DIAINT', '_MIXINT', '_PHAINT'],
         'zooplankton': ['_BACINT', '_PROINT', '_MESINT', '_PTEINT', '_CRUINT', '_GELINT'],
+        'derived': ['_SP', '_RECYCLE', '_eratio', '_Teff'],
     }
 
     projection = ccrs.PlateCarree()
