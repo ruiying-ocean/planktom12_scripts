@@ -417,6 +417,74 @@ def plot_nutrient_comparison(
     print(f"Saved: {output_path}")
 
 
+def plot_carbon_chemistry(
+    plotter: OceanMapPlotter,
+    ptrc_ds: xr.Dataset,
+    output_path: Path,
+    variables: list = ['_ALK', '_DIC']
+):
+    """
+    Create multi-panel map of carbon chemistry variables.
+
+    Args:
+        plotter: OceanMapPlotter instance
+        ptrc_ds: Dataset with tracer variables
+        output_path: Where to save the figure
+        variables: List of variables to plot
+    """
+    # Create 1x2 subplot grid for ALK and DIC
+    fig, axs = plotter.create_subplot_grid(
+        nrows=1, ncols=2,
+        projection=ccrs.PlateCarree(),
+        figsize=(12, 4)
+    )
+
+    for idx, var_name in enumerate(variables):
+        ax = axs.flat[idx]
+
+        if var_name in ptrc_ds:
+            meta = get_variable_metadata(var_name)
+            data = ptrc_ds[var_name]
+
+            # Time average if needed
+            if 'time_counter' in data.dims:
+                data = data.mean(dim='time_counter')
+
+            # Get surface level
+            if 'deptht' in data.dims:
+                data = data.isel(deptht=0)
+
+            data = data.squeeze()
+            data = convert_units(data, var_name)
+            data = plotter.apply_mask(data)
+
+            # Plot
+            vmin = meta.get('vmin', None)
+            vmax = meta.get('vmax', None)
+
+            im = plotter.plot_variable(
+                ax=ax, data=data, cmap=meta['cmap'],
+                vmin=vmin, vmax=vmax, add_colorbar=False
+            )
+
+            ax.set_title(meta['long_name'], fontsize=12, fontweight='bold')
+
+            # Add colorbar
+            cbar = plt.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, shrink=0.8)
+            cbar.set_label(meta['units'], fontsize=10)
+            cbar.ax.tick_params(labelsize=8)
+        else:
+            ax.text(0.5, 0.5, f'{var_name}\nnot available',
+                   ha='center', va='center', transform=ax.transAxes)
+            ax.set_title(var_name, fontsize=12)
+
+    plt.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    print(f"Saved: {output_path}")
+
+
 def plot_derived_variables(
     plotter: OceanMapPlotter,
     diad_ds: xr.Dataset,
@@ -727,6 +795,14 @@ def main():
         plotter=plotter,
         diad_ds=diad_ds,
         output_path=output_dir / f"{args.run_name}_{args.year}_derived.png"
+    )
+
+    # 6. Carbon chemistry (ALK, DIC)
+    print("6. Carbon chemistry variables...")
+    plot_carbon_chemistry(
+        plotter=plotter,
+        ptrc_ds=ptrc_ds,
+        output_path=output_dir / f"{args.run_name}_{args.year}_carbon_chemistry.png"
     )
 
     print("\n=== All maps generated successfully ===")

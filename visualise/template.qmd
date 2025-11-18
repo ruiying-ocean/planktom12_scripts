@@ -69,6 +69,10 @@ ${SETUPDATA_SUMMARY}
 
 ![](${identifier}_${end_year}_derived.png)
 
+## Carbon Chemistry
+
+![](${identifier}_${end_year}_carbon_chemistry.png)
+
 ## Vertical Transects
 
 ### Atlantic (35°W)

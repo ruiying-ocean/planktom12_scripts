@@ -158,6 +158,8 @@ class OceanMapPlotter:
             ds['_Si'] = 1e6 * ds['Si']
             ds['_Fer'] = 1e9 * ds['Fer']
             ds['_O2'] = 1e6 * ds['O2']
+            ds['_ALK'] = 1e6 * ds['Alkalini']
+            ds['_DIC'] = 1e6 * ds['DIC']
             return ds
 
         elif suffix == 'diad':
@@ -618,6 +620,24 @@ NUTRIENT_VARS = {
     }
 }
 
+# Carbon chemistry variables
+CARBON_CHEMISTRY_VARS = {
+    '_ALK': {
+        'long_name': 'Alkalinity',
+        'units': 'µmol L⁻¹',
+        'vmax': 2400,
+        'vmin': 2200,
+        'cmap': 'RdYlBu_r'
+    },
+    '_DIC': {
+        'long_name': 'Dissolved Inorganic Carbon',
+        'units': 'µmol L⁻¹',
+        'vmax': 2200,
+        'vmin': 1900,
+        'cmap': 'RdYlBu_r'
+    }
+}
+
 # Physical variables
 PHYSICAL_VARS = {
     'tos': {
@@ -672,7 +692,7 @@ def get_variable_metadata(var_name: str) -> Dict:
     Returns:
         Dictionary with metadata (units, colormap, limits, etc.)
     """
-    for var_dict in [ECOSYSTEM_VARS, NUTRIENT_VARS, PHYSICAL_VARS]:
+    for var_dict in [ECOSYSTEM_VARS, NUTRIENT_VARS, CARBON_CHEMISTRY_VARS, PHYSICAL_VARS]:
         if var_name in var_dict:
             return var_dict[var_name]
 

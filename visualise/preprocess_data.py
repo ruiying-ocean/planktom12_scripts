@@ -74,6 +74,16 @@ def load_and_preprocess_ptrc(
                 ptrc_ds[var] = ptrc_ds[var].squeeze().compute()
             print(f"  Processed {var}")
 
+    # Process carbon chemistry variables
+    carbon_vars = ['_ALK', '_DIC']
+    for var in carbon_vars:
+        if var in ptrc_ds and (variables is None or var in variables):
+            if 'time_counter' in ptrc_ds[var].dims:
+                ptrc_ds[var] = ptrc_ds[var].mean(dim='time_counter').squeeze().compute()
+            else:
+                ptrc_ds[var] = ptrc_ds[var].squeeze().compute()
+            print(f"  Processed {var}")
+
     return ptrc_ds
 
 
