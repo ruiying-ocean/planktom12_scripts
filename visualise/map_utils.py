@@ -528,6 +528,13 @@ ECOSYSTEM_VARS = {
         'long_name': 'Secondary Production',
         'units': 'g C m⁻³ yr⁻¹',
         'vmax': 50,
+        'depth_index': 0,
+        'cmap': 'viridis'
+    },
+    '_SPINT': {
+        'long_name': 'Secondary Production',
+        'units': 'Tg C yr⁻¹',
+        'vmax': 20,
         'depth_index': None,
         'cmap': 'viridis'
     },
@@ -535,6 +542,13 @@ ECOSYSTEM_VARS = {
         'long_name': 'Recycled Production',
         'units': 'g C m⁻³ yr⁻¹',
         'vmax': 200,
+        'depth_index': 0,
+        'cmap': 'viridis'
+    },
+    '_RECYCLEINT': {
+        'long_name': 'Recycled Production',
+        'units': 'Tg C yr⁻¹',
+        'vmax': 10,
         'depth_index': None,
         'cmap': 'viridis'
     },
@@ -549,7 +563,7 @@ ECOSYSTEM_VARS = {
     '_Teff': {
         'long_name': 'Transfer Efficiency',
         'units': 'dimensionless',
-        'vmax': 1.0,
+        'vmax': 0.2,
         'vmin': 0,
         'depth_index': None,
         'cmap': 'plasma'

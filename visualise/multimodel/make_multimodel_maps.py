@@ -59,7 +59,7 @@ def load_model_data(model_dir, model_id, year, var_name, plotter):
     # Diagnostic variables are in diad_T.nc
     # Tracer variables (nutrients, PFTs) are in ptrc_T.nc
     diagnostic_vars = ['Cflx', 'TChl', '_TChl', 'PPT', 'EXP', '_EXP', '_PPINT',
-                       '_SP', '_RECYCLE', '_eratio', '_Teff']
+                       '_SPINT', '_RECYCLEINT', '_eratio', '_Teff']
 
     if var_name in diagnostic_vars:
         file_type = 'diad_T'
@@ -94,10 +94,12 @@ def load_model_data(model_dir, model_id, year, var_name, plotter):
             meta = get_variable_metadata(var_name)
             depth_index = meta.get('depth_index', 0)
 
-            # Use specified depth index (e.g., 10 for _EXP at 100m)
-            # Only apply if depth_index is not None (None means 2D variable)
-            if depth_index is not None:
-                data = data.isel({depth_dim: depth_index})
+            # Use specified depth index (e.g., 10 for _EXP at 100m, 0 for surface)
+            # If depth_index is None, take surface (index 0) as default
+            if depth_index is None:
+                depth_index = 0
+
+            data = data.isel({depth_dim: depth_index})
 
         # Apply land mask
         data = plotter.apply_mask(data)
@@ -145,7 +147,7 @@ def plot_multimodel_maps(models, output_dir, config):
         'nutrients': ['_PO4', '_NO3', '_Si', '_Fer', '_O2'],
         'phytoplankton': ['_PICINT', '_FIXINT', '_COCINT', '_DIAINT', '_MIXINT', '_PHAINT'],
         'zooplankton': ['_BACINT', '_PROINT', '_MESINT', '_PTEINT', '_CRUINT', '_GELINT'],
-        'derived': ['_SP', '_RECYCLE', '_eratio', '_Teff'],
+        'derived': ['_SPINT', '_RECYCLEINT', '_eratio', '_Teff'],
     }
 
     projection = ccrs.PlateCarree()

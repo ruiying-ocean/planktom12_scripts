@@ -417,6 +417,86 @@ def plot_nutrient_comparison(
     print(f"Saved: {output_path}")
 
 
+def plot_derived_variables(
+    plotter: OceanMapPlotter,
+    diad_ds: xr.Dataset,
+    output_path: Path,
+    variables: list = ['_SPINT', '_RECYCLEINT', '_eratio', '_Teff']
+):
+    """
+    Create multi-panel map of derived ecosystem variables.
+
+    Args:
+        plotter: OceanMapPlotter instance
+        diad_ds: Dataset with diagnostic variables
+        output_path: Where to save the figure
+        variables: List of variables to plot
+    """
+    # Create 2x2 subplot grid
+    fig, axs = plotter.create_subplot_grid(
+        nrows=2, ncols=2,
+        projection=ccrs.PlateCarree(),
+        figsize=(10, 6)
+    )
+
+    # Flatten axes for easier indexing
+    axs_flat = axs.flatten()
+
+    for idx, var_name in enumerate(variables):
+        if idx >= 4:  # Only plot first 4 variables
+            break
+
+        ax = axs_flat[idx]
+
+        if var_name in diad_ds:
+            meta = get_variable_metadata(var_name)
+            data = diad_ds[var_name]
+
+            # Time average if needed
+            if 'time_counter' in data.dims:
+                data = data.mean(dim='time_counter')
+
+            # Handle depth dimension if present
+            if 'deptht' in data.dims or 'nav_lev' in data.dims:
+                depth_dim = 'deptht' if 'deptht' in data.dims else 'nav_lev'
+                depth_index = meta.get('depth_index', 0)
+                if depth_index is not None:
+                    data = data.isel({depth_dim: depth_index})
+                else:
+                    # If depth_index is None, use surface
+                    data = data.isel({depth_dim: 0})
+
+            data = data.squeeze()
+            data = convert_units(data, var_name)
+            data = plotter.apply_mask(data)
+
+            # Plot
+            vmin = meta.get('vmin', 0)
+            vmax = meta.get('vmax', None)
+
+            im = plotter.plot_variable(
+                ax=ax, data=data, cmap=meta['cmap'],
+                vmin=vmin, vmax=vmax, add_colorbar=False
+            )
+
+            ax.set_title(meta['long_name'], fontsize=12, fontweight='bold')
+
+            # Add colorbar
+            cbar = plt.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, shrink=0.8)
+            cbar.set_label(meta['units'], fontsize=10)
+            cbar.ax.tick_params(labelsize=8)
+        else:
+            ax.text(0.5, 0.5, f'{var_name}\nnot available',
+                   ha='center', va='center', transform=ax.transAxes)
+            ax.set_title(var_name, fontsize=12)
+
+    plt.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    print(f"Saved: {output_path}")
+
+
 def main():
     """Main entry point for map generation."""
     parser = argparse.ArgumentParser(
@@ -640,6 +720,14 @@ def main():
         fig.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.close(fig)
         print(f"Saved: {output_path}")
+
+    # 5. Derived variables (SP, RECYCLE, e-ratio, Teff)
+    print("5. Derived ecosystem variables...")
+    plot_derived_variables(
+        plotter=plotter,
+        diad_ds=diad_ds,
+        output_path=output_dir / f"{args.run_name}_{args.year}_derived.png"
+    )
 
     print("\n=== All maps generated successfully ===")
     print(f"Output directory: {output_dir}")
