@@ -241,7 +241,7 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
 
                 # Title: First row shows model names, first column shows nutrient names
                 if i == 0:
-                    ax.set_title(f"{models[model_idx]['desc']}", fontsize=12, fontweight='bold')
+                    ax.set_title(f"{models[model_idx]['name']}", fontsize=12, fontweight='bold')
                 if model_idx == 0:
                     ax.set_ylabel(f"{nut_name}\nDepth (m)", fontsize=10)
                 else:
@@ -395,9 +395,9 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
                     ax.invert_yaxis()
                     ax.set_ylim(max_depth, 0)
 
-                # Title: First row shows model names, first column shows PFT names
+                # Title: First row shows model IDs, first column shows PFT names
                 if i == 0:
-                    ax.set_title(f"{models[model_idx]['desc']}", fontsize=10, fontweight='bold')
+                    ax.set_title(f"{models[model_idx]['name']}", fontsize=10, fontweight='bold')
                 if model_idx == 0:
                     ax.set_ylabel(f"{pft_name}\nDepth (m)", fontsize=9)
                 else:

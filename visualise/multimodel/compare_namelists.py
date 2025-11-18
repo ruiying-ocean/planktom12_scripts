@@ -372,7 +372,7 @@ def generate_sparse_diff(matrix1: np.ndarray, matrix2: np.ndarray,
     lines = []
     lines.append(f'**Changed elements: {num_changed} of {total_elements}**')
     lines.append('')
-    lines.append('*Showing actual effective values (heatmap uses relative scale per zooplankton)*')
+    lines.append('*Showing raw namelist values (heatmap above shows normalized/effective values with relative color scale)*')
     lines.append('')
 
     # List changed elements in a table
@@ -531,8 +531,8 @@ def generate_markdown_diff(model1_name: str, model2_name: str,
                         lines.append(f'![{display_param}]({heatmap_filename})')
                         lines.append('')
 
-                        # Show sparse diff
-                        lines.append(generate_sparse_diff(matrix1, matrix2, param, model1_name, model2_name))
+                        # Show sparse diff using RAW values (not normalized)
+                        lines.append(generate_sparse_diff(matrix1_raw, matrix2_raw, param, model1_name, model2_name))
                     else:
                         # Fallback to table format
                         lines.append(f'| **{format_param_name(param)}** | `{format_value(val1)}` | `{format_value(val2)}` |')
