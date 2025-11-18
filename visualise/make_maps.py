@@ -703,10 +703,10 @@ def main():
     )
     parser.add_argument('run_name', help='Model run name (e.g., ORCA2_test)')
     parser.add_argument('year', help='Year to process (YYYY)')
-    parser.add_argument('--basedir', default='~/scratch/ModelRuns',
-                       help='Base directory for model output (default: %(default)s)')
-    parser.add_argument('--output-dir', default='.',
-                       help='Output directory for maps')
+    parser.add_argument('--model-run-dir', default='~/scratch/ModelRuns',
+                       help='Directory containing model runs (default: %(default)s)')
+    parser.add_argument('--output-dir', default=None,
+                       help='Output directory for maps (default: <model-run-dir>/monitor/<run_name>)')
     parser.add_argument('--mask-path',
                        default='/gpfs/data/greenocean/software/resources/breakdown/basin_mask.nc',
                        help='Path to basin mask file')
@@ -719,9 +719,15 @@ def main():
     args = parser.parse_args()
 
     # Setup paths
-    basedir = Path(args.basedir).expanduser()
-    run_dir = basedir / args.run_name
-    output_dir = Path(args.output_dir)
+    model_run_dir = Path(args.model_run_dir).expanduser()
+    run_dir = model_run_dir / args.run_name
+
+    # Set default output directory to <model-run-dir>/monitor/<run_name> if not specified
+    if args.output_dir is None:
+        output_dir = model_run_dir / "monitor" / args.run_name
+    else:
+        output_dir = Path(args.output_dir).expanduser()
+
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Construct file paths
