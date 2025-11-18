@@ -19,6 +19,16 @@ except ImportError:
     print("Error: f90nml library not found. Install with: pip install f90nml", file=sys.stderr)
     sys.exit(1)
 
+try:
+    import numpy as np
+    import matplotlib
+    matplotlib.use('Agg')  # Non-interactive backend
+    import matplotlib.pyplot as plt
+    MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    MATPLOTLIB_AVAILABLE = False
+    print("Warning: matplotlib/numpy not available. Heatmaps will be disabled.", file=sys.stderr)
+
 
 def load_namelist(filepath: Path) -> Dict[str, Any]:
     """
@@ -131,6 +141,242 @@ def compare_namelists(nml1: Dict[str, Any], nml2: Dict[str, Any]) -> Tuple[List[
             only_in_2.append(key)
 
     return differences, only_in_1, only_in_2
+
+
+def is_matrix_param(param: str, value: Any) -> bool:
+    """
+    Check if a parameter is a matrix/array that should get special visualization.
+
+    Args:
+        param: Parameter name
+        value: Parameter value
+
+    Returns:
+        True if this is a matrix parameter
+    """
+    # Known matrix parameters
+    matrix_params = ['rn_prfzoo', 'rn_prfphy', 'rn_prfbac']
+    param_base = param.split('.')[-1] if '.' in param else param
+
+    # Check if it's a known matrix or a large array
+    if param_base.lower() in matrix_params:
+        return True
+
+    # Check if it's a list/array with many elements
+    if isinstance(value, (list, tuple)) and len(value) > 10:
+        return True
+
+    return False
+
+
+def calculate_normalized_prfzoo(rn_prfzoo: np.ndarray, rn_bmspft: np.ndarray) -> np.ndarray:
+    """
+    Calculate normalized/effective grazing preferences using biomass weighting.
+
+    This implements the PlankTOM formula:
+    prfzoo(jm,jl) = (totbio / biowprf) * rn_prfzoo(jm,jl)
+
+    where:
+    totbio  = Σ rn_bmspft(jl)  where rn_prfzoo(jm,jl) > 0
+    biowprf = Σ (rn_bmspft(jl) * rn_prfzoo(jm,jl))
+
+    Args:
+        rn_prfzoo: Raw preference matrix (15 food sources × 5 zooplankton)
+        rn_bmspft: Biomass array (15 food sources)
+
+    Returns:
+        Normalized preference matrix
+    """
+    if not MATPLOTLIB_AVAILABLE:
+        return rn_prfzoo
+
+    prfzoo = np.zeros_like(rn_prfzoo)
+
+    # Loop over each zooplankton type (columns)
+    for jm in range(rn_prfzoo.shape[1]):
+        # Calculate totbio and biowprf for this zooplankton
+        totbio = 0.0
+        biowprf = 0.0
+
+        for jl in range(rn_prfzoo.shape[0]):
+            if rn_prfzoo[jl, jm] > 1e-10:  # rtrn threshold
+                totbio += rn_bmspft[jl]
+                biowprf += rn_bmspft[jl] * rn_prfzoo[jl, jm]
+
+        # Calculate normalized preferences
+        if biowprf > 1e-10:
+            for jl in range(rn_prfzoo.shape[0]):
+                prfzoo[jl, jm] = (totbio / biowprf) * rn_prfzoo[jl, jm]
+
+    return prfzoo
+
+
+def parse_array_to_matrix(value: Any, param: str) -> np.ndarray:
+    """
+    Parse array value into numpy matrix.
+
+    Args:
+        value: Array value from namelist
+        param: Parameter name (to determine shape)
+
+    Returns:
+        Numpy array
+    """
+    if not isinstance(value, (list, tuple)):
+        value = [value]
+
+    arr = np.array(value, dtype=float)
+
+    # Known matrix shapes
+    param_base = param.split('.')[-1] if '.' in param else param
+    if param_base.lower() == 'rn_prfzoo':
+        # 15 food sources x 5 zooplankton
+        if len(arr) == 75:
+            arr = arr.reshape(15, 5)
+
+    return arr
+
+
+def create_matrix_heatmap(matrix1: np.ndarray, matrix2: np.ndarray,
+                          model1_name: str, model2_name: str,
+                          param: str, output_path: str) -> bool:
+    """
+    Create side-by-side heatmap comparison of two matrices.
+
+    Args:
+        matrix1: First matrix
+        matrix2: Second matrix
+        model1_name: Name of first model
+        model2_name: Name of second model
+        param: Parameter name
+        output_path: Path to save figure
+
+    Returns:
+        True if successful
+    """
+    if not MATPLOTLIB_AVAILABLE:
+        return False
+
+    try:
+        fig, axes = plt.subplots(1, 3, figsize=(16, 7))
+
+        # Determine color scale
+        vmin = min(matrix1.min(), matrix2.min())
+        vmax = max(matrix1.max(), matrix2.max())
+
+        # Define axis labels for rn_prfzoo
+        param_base = param.split('/')[-1].strip() if '/' in param else param
+        if 'rn_prfzoo' in param_base.lower():
+            food_sources = ['POC', 'GOC', 'HOC', 'BAC', 'PRO', 'PTE', 'MES', 'GEL',
+                           'MAC', 'DIA', 'MIX', 'COC', 'PIC', 'PHA', 'FIX']
+            zooplankton = ['PRO', 'PTE', 'MES', 'GEL', 'CRU']
+        else:
+            food_sources = [str(i) for i in range(matrix1.shape[0])]
+            zooplankton = [str(i) for i in range(matrix1.shape[1])]
+
+        # Model 1
+        im1 = axes[0].imshow(matrix1, cmap='Blues', vmin=vmin, vmax=vmax, aspect='auto')
+        axes[0].set_title(f'{model1_name}', fontsize=12, fontweight='bold')
+        axes[0].set_ylabel('Food Source', fontsize=10)
+        axes[0].set_xlabel('Zooplankton Type', fontsize=10)
+        axes[0].set_yticks(range(len(food_sources)))
+        axes[0].set_yticklabels(food_sources, fontsize=8)
+        axes[0].set_xticks(range(len(zooplankton)))
+        axes[0].set_xticklabels(zooplankton, fontsize=8)
+        plt.colorbar(im1, ax=axes[0], fraction=0.046, pad=0.04)
+
+        # Model 2
+        im2 = axes[1].imshow(matrix2, cmap='Blues', vmin=vmin, vmax=vmax, aspect='auto')
+        axes[1].set_title(f'{model2_name}', fontsize=12, fontweight='bold')
+        axes[1].set_xlabel('Zooplankton Type', fontsize=10)
+        axes[1].set_yticks(range(len(food_sources)))
+        axes[1].set_yticklabels(food_sources, fontsize=8)
+        axes[1].set_xticks(range(len(zooplankton)))
+        axes[1].set_xticklabels(zooplankton, fontsize=8)
+        plt.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04)
+
+        # Difference
+        diff = matrix2 - matrix1
+        max_abs_diff = np.abs(diff).max()
+        im3 = axes[2].imshow(diff, cmap='RdBu_r', vmin=-max_abs_diff, vmax=max_abs_diff, aspect='auto')
+        axes[2].set_title('Difference (Model2 - Model1)', fontsize=12, fontweight='bold')
+        axes[2].set_xlabel('Zooplankton Type', fontsize=10)
+        axes[2].set_yticks(range(len(food_sources)))
+        axes[2].set_yticklabels(food_sources, fontsize=8)
+        axes[2].set_xticks(range(len(zooplankton)))
+        axes[2].set_xticklabels(zooplankton, fontsize=8)
+        plt.colorbar(im3, ax=axes[2], fraction=0.046, pad=0.04)
+
+        plt.suptitle(f'{param}', fontsize=14, fontweight='bold', y=0.98)
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=100, bbox_inches='tight')
+        plt.close()
+
+        return True
+    except Exception as e:
+        print(f"Warning: Failed to create heatmap: {e}", file=sys.stderr)
+        return False
+
+
+def generate_sparse_diff(matrix1: np.ndarray, matrix2: np.ndarray,
+                        param: str) -> str:
+    """
+    Generate sparse diff listing showing only changed elements.
+
+    Args:
+        matrix1: First matrix
+        matrix2: Second matrix
+        param: Parameter name
+
+    Returns:
+        HTML string with sparse diff
+    """
+    # Find differences
+    diff_mask = matrix1 != matrix2
+    num_changed = np.sum(diff_mask)
+    total_elements = matrix1.size
+
+    if num_changed == 0:
+        return '<p style="color: #2da44e; font-style: italic;">All values identical</p>'
+
+    # Get row/col labels if known
+    param_base = param.split('.')[-1] if '.' in param else param
+    row_labels = None
+    col_labels = None
+
+    if param_base.lower() == 'rn_prfzoo':
+        row_labels = ['POC', 'GOC', 'HOC', 'BAC', 'PRO', 'PTE', 'MES', 'GEL',
+                     'MAC', 'DIA', 'MIX', 'COC', 'PIC', 'PHA', 'FIX']
+        col_labels = ['PRO(zoo)', 'PTE', 'MES', 'GEL', 'CRU']
+
+    html_parts = []
+    html_parts.append(f'<p style="margin: 8px 0;"><strong>Changed elements: {num_changed} of {total_elements}</strong></p>')
+    html_parts.append('<ul style="margin: 8px 0; padding-left: 20px; font-family: monospace; font-size: 12px;">')
+
+    # List changed elements
+    rows, cols = np.where(diff_mask)
+    for i, (row, col) in enumerate(zip(rows, cols)):
+        if i >= 20:  # Limit to first 20 changes
+            html_parts.append(f'<li style="margin: 4px 0;">... and {num_changed - 20} more</li>')
+            break
+
+        val1 = matrix1[row, col]
+        val2 = matrix2[row, col]
+
+        # Format with labels if available
+        if row_labels and col_labels:
+            row_label = row_labels[row] if row < len(row_labels) else f'Row {row}'
+            col_label = col_labels[col] if col < len(col_labels) else f'Col {col}'
+            location = f'{row_label} → {col_label}'
+        else:
+            location = f'[{row}, {col}]'
+
+        html_parts.append(f'<li style="margin: 4px 0;">{location}: <span style="color: #cf222e;">{val1:.3f}</span> → <span style="color: #2da44e;">{val2:.3f}</span></li>')
+
+    html_parts.append('</ul>')
+    html_parts.append(f'<p style="margin: 8px 0; color: #57606a; font-size: 12px; font-style: italic;">({total_elements - num_changed} values unchanged)</p>')
+
+    return '\n'.join(html_parts)
 
 
 def format_param_name(param: str) -> str:
@@ -424,25 +670,106 @@ def generate_modern_diff_html(model1_name: str, model2_name: str,
                 html_parts.append('<div class="diff-file">')
                 html_parts.append(f'<div class="diff-file-header">{html.escape(format_param_name(param))}</div>')
 
-                html_parts.append('<div class="diff-split">')
+                # Check if this is a matrix parameter
+                if MATPLOTLIB_AVAILABLE and is_matrix_param(param, val1):
+                    try:
+                        # Parse matrices
+                        matrix1_raw = parse_array_to_matrix(val1, param)
+                        matrix2_raw = parse_array_to_matrix(val2, param)
 
-                # Left side (model 1)
-                html_parts.append('<div class="diff-split-side">')
-                html_parts.append(f'<div class="diff-line diff-line-changed" style="width: 100%;">')
-                html_parts.append(f'<div class="diff-line-num">{html.escape(model1_name)}</div>')
-                html_parts.append(f'<div class="diff-line-content">{html.escape(format_value(val1))}</div>')
-                html_parts.append('</div>')
-                html_parts.append('</div>')
+                        # For rn_prfzoo, calculate normalized values
+                        param_base = param.split('.')[-1] if '.' in param else param
+                        if param_base.lower() == 'rn_prfzoo':
+                            # Get rn_bmspft from namelists
+                            bmspft1 = flat1.get('natpre.rn_bmspft')
+                            bmspft2 = flat2.get('natpre.rn_bmspft')
 
-                # Right side (model 2)
-                html_parts.append('<div class="diff-split-side">')
-                html_parts.append(f'<div class="diff-line diff-line-changed" style="width: 100%;">')
-                html_parts.append(f'<div class="diff-line-num">{html.escape(model2_name)}</div>')
-                html_parts.append(f'<div class="diff-line-content">{html.escape(format_value(val2))}</div>')
-                html_parts.append('</div>')
-                html_parts.append('</div>')
+                            if bmspft1 is not None and bmspft2 is not None:
+                                bmspft1_arr = np.array(bmspft1, dtype=float) if isinstance(bmspft1, (list, tuple)) else np.array([bmspft1], dtype=float)
+                                bmspft2_arr = np.array(bmspft2, dtype=float) if isinstance(bmspft2, (list, tuple)) else np.array([bmspft2], dtype=float)
 
-                html_parts.append('</div>')
+                                # Calculate normalized (effective) preferences
+                                matrix1 = calculate_normalized_prfzoo(matrix1_raw, bmspft1_arr)
+                                matrix2 = calculate_normalized_prfzoo(matrix2_raw, bmspft2_arr)
+                                display_param = format_param_name(param) + " (normalized/effective)"
+                            else:
+                                # Fallback to raw values if rn_bmspft not found
+                                matrix1 = matrix1_raw
+                                matrix2 = matrix2_raw
+                                display_param = format_param_name(param)
+                        else:
+                            matrix1 = matrix1_raw
+                            matrix2 = matrix2_raw
+                            display_param = format_param_name(param)
+
+                        # Generate heatmap
+                        heatmap_filename = f'heatmap_{param.replace(".", "_")}.png'
+                        if create_matrix_heatmap(matrix1, matrix2, model1_name, model2_name,
+                                                display_param, heatmap_filename):
+                            # Show heatmap
+                            html_parts.append('<div style="padding: 16px;">')
+                            html_parts.append(f'<img src="{heatmap_filename}" style="max-width: 100%; height: auto;" />')
+                            html_parts.append('</div>')
+
+                            # Show sparse diff
+                            html_parts.append('<div style="padding: 0 16px 16px 16px;">')
+                            html_parts.append(generate_sparse_diff(matrix1, matrix2, param))
+                            html_parts.append('</div>')
+                        else:
+                            # Fallback to regular display
+                            html_parts.append('<div class="diff-split">')
+                            html_parts.append('<div class="diff-split-side">')
+                            html_parts.append(f'<div class="diff-line diff-line-changed" style="width: 100%;">')
+                            html_parts.append(f'<div class="diff-line-num">{html.escape(model1_name)}</div>')
+                            html_parts.append(f'<div class="diff-line-content">{html.escape(format_value(val1))}</div>')
+                            html_parts.append('</div>')
+                            html_parts.append('</div>')
+                            html_parts.append('<div class="diff-split-side">')
+                            html_parts.append(f'<div class="diff-line diff-line-changed" style="width: 100%;">')
+                            html_parts.append(f'<div class="diff-line-num">{html.escape(model2_name)}</div>')
+                            html_parts.append(f'<div class="diff-line-content">{html.escape(format_value(val2))}</div>')
+                            html_parts.append('</div>')
+                            html_parts.append('</div>')
+                            html_parts.append('</div>')
+                    except Exception as e:
+                        print(f"Warning: Matrix visualization failed for {param}: {e}", file=sys.stderr)
+                        # Fallback to regular display
+                        html_parts.append('<div class="diff-split">')
+                        html_parts.append('<div class="diff-split-side">')
+                        html_parts.append(f'<div class="diff-line diff-line-changed" style="width: 100%;">')
+                        html_parts.append(f'<div class="diff-line-num">{html.escape(model1_name)}</div>')
+                        html_parts.append(f'<div class="diff-line-content">{html.escape(format_value(val1))}</div>')
+                        html_parts.append('</div>')
+                        html_parts.append('</div>')
+                        html_parts.append('<div class="diff-split-side">')
+                        html_parts.append(f'<div class="diff-line diff-line-changed" style="width: 100%;">')
+                        html_parts.append(f'<div class="diff-line-num">{html.escape(model2_name)}</div>')
+                        html_parts.append(f'<div class="diff-line-content">{html.escape(format_value(val2))}</div>')
+                        html_parts.append('</div>')
+                        html_parts.append('</div>')
+                        html_parts.append('</div>')
+                else:
+                    # Regular parameter - side-by-side view
+                    html_parts.append('<div class="diff-split">')
+
+                    # Left side (model 1)
+                    html_parts.append('<div class="diff-split-side">')
+                    html_parts.append(f'<div class="diff-line diff-line-changed" style="width: 100%;">')
+                    html_parts.append(f'<div class="diff-line-num">{html.escape(model1_name)}</div>')
+                    html_parts.append(f'<div class="diff-line-content">{html.escape(format_value(val1))}</div>')
+                    html_parts.append('</div>')
+                    html_parts.append('</div>')
+
+                    # Right side (model 2)
+                    html_parts.append('<div class="diff-split-side">')
+                    html_parts.append(f'<div class="diff-line diff-line-changed" style="width: 100%;">')
+                    html_parts.append(f'<div class="diff-line-num">{html.escape(model2_name)}</div>')
+                    html_parts.append(f'<div class="diff-line-content">{html.escape(format_value(val2))}</div>')
+                    html_parts.append('</div>')
+                    html_parts.append('</div>')
+
+                    html_parts.append('</div>')
+
                 html_parts.append('</div>')
 
         # Removed parameters (only in model 1)
