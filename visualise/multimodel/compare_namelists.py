@@ -262,7 +262,7 @@ def create_matrix_heatmap(matrix1: np.ndarray, matrix2: np.ndarray,
         fig, axes = plt.subplots(1, 3, figsize=(16, 7))
 
         # Define axis labels for rn_prfzoo
-        param_base = param.split('/')[-1].strip() if '/' in param else param
+        param_base = param.split('.')[-1] if '.' in param else param
         if 'rn_prfzoo' in param_base.lower():
             food_sources = ['POC', 'GOC', 'HOC', 'BAC', 'PRO', 'PTE', 'MES', 'GEL',
                            'MAC', 'DIA', 'MIX', 'COC', 'PIC', 'PHA', 'FIX']
@@ -324,7 +324,6 @@ def create_matrix_heatmap(matrix1: np.ndarray, matrix2: np.ndarray,
         cbar3 = plt.colorbar(im3, ax=axes[2], fraction=0.046, pad=0.04)
         cbar3.set_label('Absolute difference', fontsize=8)
 
-        plt.suptitle(f'{param}', fontsize=14, fontweight='bold', y=0.98)
         plt.tight_layout()
         plt.savefig(output_path, dpi=100, bbox_inches='tight')
         plt.close()
@@ -523,7 +522,7 @@ def generate_markdown_diff(model1_name: str, model2_name: str,
                     # Generate heatmap
                     heatmap_filename = f'heatmap_{param.replace(".", "_")}.png'
                     if create_matrix_heatmap(matrix1, matrix2, model1_name, model2_name,
-                                            display_param, heatmap_filename):
+                                            param, heatmap_filename):
                         # Add subheading for this matrix parameter
                         lines.append(f'#### {display_param}')
                         lines.append('')
