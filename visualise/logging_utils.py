@@ -65,16 +65,15 @@ def print_step(current: int, total: int, description: str):
     Example:
         print_step(1, 5, "Ecosystem diagnostics (TChl, EXP, PPINT)")
         # With rich:
-        #   [1/5] Ecosystem diagnostics (TChl, EXP, PPINT)...  (in cyan)
+        #   [1/5] Ecosystem diagnostics (TChl, EXP, PPINT)...  (formatted with colors)
         # Without rich:
         #   [1/5] Ecosystem diagnostics (TChl, EXP, PPINT)...
     """
-    message = f"  [{current}/{total}] {description}..."
-
     if HAS_RICH:
-        _console.print(message, style="cyan")
+        # Use rich markup for better formatting
+        _console.print(f"  [bold cyan]\\[{current}/{total}][/bold cyan] {description}...")
     else:
-        print(message)
+        print(f"  [{current}/{total}] {description}...")
 
 
 def print_success(message: str):
@@ -88,13 +87,55 @@ def print_success(message: str):
     Example:
         print_success("Spatial maps complete")
         # With rich:
-        #   ✓ Spatial maps complete  (in green)
+        #   ✓ Spatial maps complete  (in green with emoji)
         # Without rich:
         #   ✓ Spatial maps complete
     """
-    full_message = f"✓ {message}"
-
     if HAS_RICH:
-        _console.print(full_message, style="green")
+        # Use rich markup with emoji
+        _console.print(f":white_check_mark: {message}", style="green")
     else:
-        print(full_message)
+        # Fallback to Unicode checkmark
+        print(f"✓ {message}")
+
+
+def print_info(message: str):
+    """
+    Print an informational message.
+    Uses rich formatting if available, otherwise falls back to simple format.
+
+    Args:
+        message: Info message to display
+
+    Example:
+        print_info("Loading data from /path/to/file")
+        # With rich:
+        #   ℹ Loading data...  (in blue)
+        # Without rich:
+        #   Loading data...
+    """
+    if HAS_RICH:
+        _console.print(f"[blue]ℹ[/blue] {message}")
+    else:
+        print(f"  {message}")
+
+
+def print_warning(message: str):
+    """
+    Print a warning message.
+    Uses rich formatting if available, otherwise falls back to simple format.
+
+    Args:
+        message: Warning message to display
+
+    Example:
+        print_warning("File not found, using default")
+        # With rich:
+        #   ⚠ File not found...  (in yellow)
+        # Without rich:
+        #   Warning: File not found...
+    """
+    if HAS_RICH:
+        _console.print(f":warning: {message}", style="yellow")
+    else:
+        print(f"Warning: {message}")

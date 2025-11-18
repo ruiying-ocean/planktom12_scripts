@@ -29,7 +29,7 @@ from make_maps import (
 )
 from make_transects import plot_basin_transects, plot_pft_transects
 from difference_utils import plot_comparison_panel
-from logging_utils import print_header, print_step, print_success
+from logging_utils import print_header, print_step, print_success, print_warning
 
 
 def main():
@@ -288,7 +288,7 @@ def main():
             print_success("Transects complete\n")
 
         except ValueError as e:
-            print(f"  Warning: {e}")
+            print_warning(f"{e}")
             print(f"  Skipping transects\n")
 
     # ========================================================================
