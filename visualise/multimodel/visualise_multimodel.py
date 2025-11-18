@@ -133,7 +133,7 @@ def main():
 
     # Parse models
     print("╔═══════════════════════════════════════════════════════════════╗")
-    print("║  Multi-Model Comparison Visualization                        ║")
+    print("║  Multi-Model Comparison Visualization                         ║")
     print("╚═══════════════════════════════════════════════════════════════╝")
 
     models = parse_models_csv(csv_path)
@@ -170,7 +170,7 @@ def main():
     # ========================================================================
     if not args.skip_timeseries:
         print("╔═══════════════════════════════════════════════════════════════╗")
-        print("║  Step 1: Timeseries Comparison                               ║")
+        print("║  Step 1: Timeseries Comparison                                ║")
         print("╚═══════════════════════════════════════════════════════════════╝")
 
         script_dir = Path(__file__).parent
@@ -195,7 +195,7 @@ def main():
     # ========================================================================
     if not args.skip_maps:
         print("╔═══════════════════════════════════════════════════════════════╗")
-        print("║  Step 2: Spatial Comparison Maps                             ║")
+        print("║  Step 2: Spatial Comparison Maps                              ║")
         print("╚═══════════════════════════════════════════════════════════════╝")
 
         script_dir = Path(__file__).parent
@@ -220,7 +220,7 @@ def main():
     # ========================================================================
     if not args.skip_transects:
         print("╔═══════════════════════════════════════════════════════════════╗")
-        print("║  Step 3: Vertical Transect Comparisons                       ║")
+        print("║  Step 3: Vertical Transect Comparisons                        ║")
         print("╚═══════════════════════════════════════════════════════════════╝")
 
         script_dir = Path(__file__).parent
@@ -245,7 +245,7 @@ def main():
     # ========================================================================
     if not args.skip_config_comparison and n_models == 2:
         print("╔═══════════════════════════════════════════════════════════════╗")
-        print("║  Step 4: Configuration Comparison                            ║")
+        print("║  Step 4: Configuration Comparison                             ║")
         print("╚═══════════════════════════════════════════════════════════════╝")
 
         script_dir = Path(__file__).parent
@@ -255,9 +255,13 @@ def main():
         setupdata_script = script_dir / 'compare_setupdata.py'
         if setupdata_script.exists():
             import subprocess
+            # Construct full model run directory paths
+            model1_run_dir = Path(models[0]['model_dir']) / models[0]['name']
+            model2_run_dir = Path(models[1]['model_dir']) / models[1]['name']
+
             cmd = [sys.executable, str(setupdata_script),
-                   models[0]['model_dir'],
-                   models[1]['model_dir'],
+                   str(model1_run_dir),
+                   str(model2_run_dir),
                    models[0]['name'],
                    models[1]['name'],
                    '--output', str(output_dir / 'setupdata_comparison.md')]
@@ -269,9 +273,13 @@ def main():
         namelist_script = script_dir / 'compare_namelists.py'
         if namelist_script.exists():
             import subprocess
+            # Construct full model run directory paths
+            model1_run_dir = Path(models[0]['model_dir']) / models[0]['name']
+            model2_run_dir = Path(models[1]['model_dir']) / models[1]['name']
+
             cmd = [sys.executable, str(namelist_script),
-                   models[0]['model_dir'],
-                   models[1]['model_dir'],
+                   str(model1_run_dir),
+                   str(model2_run_dir),
                    models[0]['name'],
                    models[1]['name'],
                    '--output', str(output_dir / 'namelist_comparison.md'),
@@ -286,7 +294,7 @@ def main():
     # ========================================================================
     if not args.skip_html:
         print("╔═══════════════════════════════════════════════════════════════╗")
-        print("║  Step 5: HTML Report Generation                              ║")
+        print("║  Step 5: HTML Report Generation                               ║")
         print("╚═══════════════════════════════════════════════════════════════╝")
 
         script_dir = Path(__file__).parent
@@ -309,7 +317,7 @@ def main():
     # Summary
     # ========================================================================
     print("╔═══════════════════════════════════════════════════════════════╗")
-    print("║  Multi-Model Visualization Complete!                         ║")
+    print("║  Multi-Model Visualization Complete!                          ║")
     print("╚═══════════════════════════════════════════════════════════════╝")
     print(f"  Output directory: {output_dir}")
     print()

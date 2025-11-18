@@ -17,6 +17,14 @@ import matplotlib.pyplot as plt
 # Import map utilities from parent directory
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from map_utils import OceanMapPlotter, get_variable_metadata
+from difference_utils import (
+    calculate_difference,
+    calculate_surface_difference,
+    calculate_rmse,
+    calculate_bias,
+    plot_difference_map,
+    get_symmetric_colorbar_limits
+)
 
 
 def load_annual_mean(model_dir, model_id, year, var_name, file_type='ptrc_T'):

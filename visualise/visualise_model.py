@@ -27,6 +27,7 @@ from make_maps import (
     plot_nutrient_comparison
 )
 from make_transects import plot_basin_transects, plot_pft_transects
+from difference_utils import plot_comparison_panel
 
 
 def main():
@@ -52,6 +53,8 @@ def main():
                        help='Skip generating transects')
     parser.add_argument('--skip-observations', action='store_true',
                        help='Skip loading and comparing with observations')
+    parser.add_argument('--with-difference-maps', action='store_true',
+                       help='Generate detailed model-observation difference maps')
     parser.add_argument('--max-depth', type=float, default=500.0,
                        help='Maximum depth for PFT transects in meters (default: 500)')
 
@@ -178,6 +181,37 @@ def main():
                 output_path=output_dir / f"{args.run_name}_{args.year}_nutrients.png",
                 nutrients=nutrients
             )
+
+            # 2.5 Detailed difference maps (optional)
+            if args.with_difference_maps:
+                print("  [Bonus] Generating detailed model-observation difference maps...")
+                for nutrient in nutrients:
+                    if nutrient in ptrc_ds and nutrient in obs_datasets and obs_datasets[nutrient] is not None:
+                        # Extract surface data
+                        model_data = ptrc_ds[nutrient]
+                        if 'deptht' in model_data.dims:
+                            model_data = model_data.isel(deptht=0)
+                        model_data = model_data.squeeze()
+
+                        obs_data = obs_datasets[nutrient]
+                        if 'depth' in obs_data.dims:
+                            obs_data = obs_data.isel(depth=0)
+                        elif 'deptht' in obs_data.dims:
+                            obs_data = obs_data.isel(deptht=0)
+                        obs_data = obs_data.squeeze()
+
+                        # Create comparison panel
+                        plot_comparison_panel(
+                            plotter=plotter,
+                            data1=model_data,
+                            data2=obs_data,
+                            variable=nutrient,
+                            label1=args.run_name,
+                            label2="Observations",
+                            output_path=output_dir / f"{args.run_name}_{args.year}_diff{nutrient}.png",
+                            show_difference=True,
+                            show_stats=True
+                        )
         else:
             # Model-only nutrient plots (simplified version)
             print("        (Skipping observations - model only)")
