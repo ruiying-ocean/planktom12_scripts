@@ -363,6 +363,9 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
                 if data_3d is not None:
                     transect = get_longitude_transect(data_3d, nav_lon, target_lon, lat_values)
 
+                    # Convert from mmol C/m³ to µmol C/L (multiply by 1e6)
+                    transect = transect * 1e6
+
                     # Limit depth to max_depth
                     if 'deptht' in transect.coords:
                         depth_mask = transect.coords['deptht'] <= max_depth

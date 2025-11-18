@@ -299,6 +299,9 @@ def plot_pft_transects(
                 # Extract transect
                 model_transect = get_longitude_transect(model_data, nav_lon, target_lon, lat_values)
 
+                # Convert from mmol C/m³ to µmol C/L (multiply by 1e6)
+                model_transect = model_transect * 1e6
+
                 # Limit depth to max_depth
                 if 'deptht' in model_transect.coords:
                     depth_mask = model_transect.coords['deptht'] <= max_depth
