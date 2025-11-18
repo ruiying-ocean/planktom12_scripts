@@ -87,15 +87,15 @@ def print_success(message: str):
     Example:
         print_success("Spatial maps complete")
         # With rich:
-        #   ✓ Spatial maps complete  (in green with emoji)
+        #   ✓ Spatial maps complete  (in green, bold checkmark)
         # Without rich:
         #   ✓ Spatial maps complete
     """
     if HAS_RICH:
-        # Use rich markup with emoji
-        _console.print(f":white_check_mark: {message}", style="green")
+        # Use rich markup - green text with bold checkmark
+        _console.print(f"[bold green]✓[/bold green] [green]{message}[/green]")
     else:
-        # Fallback to Unicode checkmark
+        # Fallback to simple Unicode checkmark
         print(f"✓ {message}")
 
 
@@ -110,12 +110,12 @@ def print_info(message: str):
     Example:
         print_info("Loading data from /path/to/file")
         # With rich:
-        #   ℹ Loading data...  (in blue)
+        #   → Loading data...  (in blue/cyan)
         # Without rich:
         #   Loading data...
     """
     if HAS_RICH:
-        _console.print(f"[blue]ℹ[/blue] {message}")
+        _console.print(f"[cyan]→[/cyan] {message}")
     else:
         print(f"  {message}")
 
@@ -131,11 +131,11 @@ def print_warning(message: str):
     Example:
         print_warning("File not found, using default")
         # With rich:
-        #   ⚠ File not found...  (in yellow)
+        #   ! File not found...  (in yellow, bold exclamation)
         # Without rich:
         #   Warning: File not found...
     """
     if HAS_RICH:
-        _console.print(f":warning: {message}", style="yellow")
+        _console.print(f"[bold yellow]![/bold yellow] [yellow]{message}[/yellow]")
     else:
         print(f"Warning: {message}")
