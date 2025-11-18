@@ -25,10 +25,12 @@ except ModuleNotFoundError:
 def load_config():
     """Load configuration from visualise_config.toml"""
     # Try environment variable first (set by shell script)
-    config_path_env = pathlib.Path(os.environ.get("VISUALISE_CONFIG", ""))
-    if config_path_env and config_path_env.exists():
-        with open(config_path_env, "rb") as f:
-            return tomllib.load(f)
+    config_path_str = os.environ.get("VISUALISE_CONFIG", "")
+    if config_path_str:
+        config_path_env = pathlib.Path(config_path_str)
+        if config_path_env.exists() and config_path_env.is_file():
+            with open(config_path_env, "rb") as f:
+                return tomllib.load(f)
 
     # Try current directory (for when script is copied to output dir)
     config_path = pathlib.Path("visualise_config.toml")
