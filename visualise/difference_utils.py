@@ -516,28 +516,51 @@ def plot_three_panel_transect(
 
     # Panel 3: Difference
     if model_data is not None and obs_data is not None:
-        # Ensure both datasets have the same dimension names for proper subtraction
-        # Model typically has 'deptht', obs might have 'depth'
-        model_for_diff = model_data.copy()
-        obs_for_diff = obs_data.copy()
+        try:
+            # Interpolate observation data to model's depth levels
+            model_for_diff = model_data.copy()
+            obs_for_diff = obs_data.copy()
 
-        # Rename depth dimensions to match
-        if 'depth' in obs_for_diff.dims and 'deptht' in model_for_diff.dims:
-            obs_for_diff = obs_for_diff.rename({'depth': 'deptht'})
-        elif 'deptht' in obs_for_diff.dims and 'depth' in model_for_diff.dims:
-            model_for_diff = model_for_diff.rename({'depth': 'deptht'})
+            # Determine which is the depth dimension for each dataset
+            model_depth_dim = 'deptht' if 'deptht' in model_for_diff.dims else 'depth'
+            obs_depth_dim = 'depth' if 'depth' in obs_for_diff.dims else 'deptht'
 
-        diff = model_for_diff - obs_for_diff
-        plot_transect_difference(
-            ax=ax_diff,
-            diff_data=diff,
-            title=f"Difference\n({label_model} - {label_obs})",
-            variable=variable,
-            cmap='RdBu_r',
-            symmetric=True,
-            add_colorbar=True,
-            max_depth=max_depth
-        )
+            # If they have different depth dimensions, interpolate obs to model levels
+            if model_depth_dim != obs_depth_dim or not np.array_equal(
+                model_for_diff[model_depth_dim].values,
+                obs_for_diff[obs_depth_dim].values
+            ):
+                # Interpolate observation to model depth levels
+                obs_for_diff = obs_for_diff.interp(
+                    {obs_depth_dim: model_for_diff[model_depth_dim].values},
+                    method='linear',
+                    kwargs={"fill_value": "extrapolate"}
+                )
+                # Rename to match model
+                if obs_depth_dim != model_depth_dim:
+                    obs_for_diff = obs_for_diff.rename({obs_depth_dim: model_depth_dim})
+
+            diff = model_for_diff - obs_for_diff
+
+            # Check if we have valid data
+            if diff.count() > 0:
+                plot_transect_difference(
+                    ax=ax_diff,
+                    diff_data=diff,
+                    title=f"Difference\n({label_model} - {label_obs})",
+                    variable=variable,
+                    cmap='RdBu_r',
+                    symmetric=True,
+                    add_colorbar=True,
+                    max_depth=max_depth
+                )
+            else:
+                ax_diff.text(0.5, 0.5, 'No overlapping\ndata',
+                           ha='center', va='center', transform=ax_diff.transAxes)
+        except Exception as e:
+            print(f"Warning: Could not compute difference: {e}")
+            ax_diff.text(0.5, 0.5, 'Cannot compute\ndifference',
+                       ha='center', va='center', transform=ax_diff.transAxes)
     else:
         ax_diff.text(0.5, 0.5, 'Cannot compute\ndifference',
                      ha='center', va='center', transform=ax_diff.transAxes)
