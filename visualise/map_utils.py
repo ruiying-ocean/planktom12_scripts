@@ -585,8 +585,9 @@ NUTRIENT_VARS = {
     '_O2': {
         'long_name': 'Oxygen',
         'units': 'µmol L⁻¹',
-        'vmax': 400,
-        'vmin': 200,
+        'vmax': 250,
+        'vmin': 0,
+        'depth_index': 17,  # ~300m depth
         'cmap': 'turbo'
     }
 }

@@ -95,7 +95,9 @@ def load_model_data(model_dir, model_id, year, var_name, plotter):
             depth_index = meta.get('depth_index', 0)
 
             # Use specified depth index (e.g., 10 for _EXP at 100m)
-            data = data.isel({depth_dim: depth_index})
+            # Only apply if depth_index is not None (None means 2D variable)
+            if depth_index is not None:
+                data = data.isel({depth_dim: depth_index})
 
         # Apply land mask
         data = plotter.apply_mask(data)
