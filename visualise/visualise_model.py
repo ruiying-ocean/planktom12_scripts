@@ -29,7 +29,7 @@ from make_maps import (
 )
 from make_transects import plot_basin_transects, plot_pft_transects
 from difference_utils import plot_comparison_panel
-from logging_utils import print_header
+from logging_utils import print_header, print_step, print_success
 
 
 def main():
@@ -116,7 +116,7 @@ def main():
         plotter=plotter
     )
 
-    print("✓ Data preprocessing complete\n")
+    print_success("Data preprocessing complete\n")
 
     # ========================================================================
     # STEP 2: Generate Spatial Maps
@@ -125,7 +125,7 @@ def main():
         print_header("Step 2: Generating Spatial Maps")
 
         # 2.1 Ecosystem diagnostics with satellite chlorophyll
-        print("  [1/5] Ecosystem diagnostics (TChl, EXP, PPINT)...")
+        print_step(1, 5, "Ecosystem diagnostics (TChl, EXP, PPINT)")
         obs_dir = Path(args.obs_dir)
         chl_obs_file = obs_dir / 'occi_chla_monthly_climatology.nc'
         if not chl_obs_file.exists():
@@ -141,7 +141,7 @@ def main():
         )
 
         # 2.2 Phytoplankton maps
-        print("  [2/5] Phytoplankton functional types...")
+        print_step(2, 5, "Phytoplankton functional types")
         plot_pft_maps(
             plotter=plotter,
             ptrc_ds=ptrc_ds,
@@ -152,7 +152,7 @@ def main():
         )
 
         # 2.3 Zooplankton maps
-        print("  [3/5] Zooplankton functional types...")
+        print_step(3, 5, "Zooplankton functional types")
         plot_pft_maps(
             plotter=plotter,
             ptrc_ds=ptrc_ds,
@@ -163,7 +163,7 @@ def main():
         )
 
         # 2.4 Nutrient maps
-        print("  [4/5] Nutrient distributions...")
+        print_step(4, 5, "Nutrient distributions")
         nutrients = ['_NO3', '_PO4', '_Si', '_Fer']
 
         if not args.skip_observations:
@@ -214,7 +214,7 @@ def main():
             # Could call a simplified nutrient plotting function here if needed
 
         # 2.5 Carbon chemistry maps
-        print("  [5/5] Carbon chemistry (ALK, DIC)...")
+        print_step(5, 5, "Carbon chemistry (ALK, DIC)")
         carbon_vars = ['_ALK', '_DIC']
 
         if not args.skip_observations:
@@ -239,7 +239,7 @@ def main():
                 variables=carbon_vars
             )
 
-        print("✓ Spatial maps complete\n")
+        print_success("Spatial maps complete\n")
 
     # ========================================================================
     # STEP 3: Generate Transects
@@ -253,7 +253,7 @@ def main():
 
             # 3.1 Nutrient transects
             if not args.skip_observations:
-                print("  [1/2] Nutrient transects (Atlantic 35°W, Pacific 170°W)...")
+                print_step(1, 2, "Nutrient transects (Atlantic 35°W, Pacific 170°W)")
                 nutrients = ['_NO3', '_PO4', '_Si', '_Fer']
                 obs_datasets = load_observations(obs_dir, nutrients=nutrients)
 
@@ -272,7 +272,7 @@ def main():
                 print("  [1/2] Nutrient transects (skipped - no observations)")
 
             # 3.2 PFT transects
-            print("  [2/2] PFT transects (Atlantic 35°W, Pacific 170°W)...")
+            print_step(2, 2, "PFT transects (Atlantic 35°W, Pacific 170°W)")
             plot_pft_transects(
                 plotter=plotter,
                 ptrc_ds=ptrc_ds,
@@ -285,7 +285,7 @@ def main():
                 max_depth=args.max_depth
             )
 
-            print("✓ Transects complete\n")
+            print_success("Transects complete\n")
 
         except ValueError as e:
             print(f"  Warning: {e}")

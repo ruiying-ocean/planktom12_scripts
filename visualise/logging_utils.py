@@ -1,6 +1,6 @@
 """
 Logging utilities for consistent formatting across visualization scripts.
-Uses rich library if available, otherwise falls back to simple box drawing.
+Uses rich library if available, otherwise falls back to simple formatting.
 """
 
 # Try to import rich for enhanced formatting
@@ -50,3 +50,51 @@ def print_header(text: str, width: int = 63):
         print(top)
         print(middle)
         print(bottom)
+
+
+def print_step(current: int, total: int, description: str):
+    """
+    Print a step progress indicator.
+    Uses rich formatting if available, otherwise falls back to simple format.
+
+    Args:
+        current: Current step number (1-indexed)
+        total: Total number of steps
+        description: Description of the current step
+
+    Example:
+        print_step(1, 5, "Ecosystem diagnostics (TChl, EXP, PPINT)")
+        # With rich:
+        #   [1/5] Ecosystem diagnostics (TChl, EXP, PPINT)...  (in cyan)
+        # Without rich:
+        #   [1/5] Ecosystem diagnostics (TChl, EXP, PPINT)...
+    """
+    message = f"  [{current}/{total}] {description}..."
+
+    if HAS_RICH:
+        _console.print(message, style="cyan")
+    else:
+        print(message)
+
+
+def print_success(message: str):
+    """
+    Print a success message.
+    Uses rich formatting if available, otherwise falls back to simple format.
+
+    Args:
+        message: Success message to display
+
+    Example:
+        print_success("Spatial maps complete")
+        # With rich:
+        #   ✓ Spatial maps complete  (in green)
+        # Without rich:
+        #   ✓ Spatial maps complete
+    """
+    full_message = f"✓ {message}"
+
+    if HAS_RICH:
+        _console.print(full_message, style="green")
+    else:
+        print(full_message)
