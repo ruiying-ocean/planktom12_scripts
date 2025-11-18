@@ -40,11 +40,17 @@ class ModelDataLoader:
 
         try:
             # New CSV format - single header row, comma-separated
-            return pd.read_csv(csv_path)
+            df = pd.read_csv(csv_path)
         except FileNotFoundError:
             # Legacy TSV format - 3 header rows, tab-separated
             # Read with header=2 to skip first 2 rows (units and keys)
-            return pd.read_csv(dat_path, sep="\t", header=2)
+            df = pd.read_csv(dat_path, sep="\t", header=2)
+
+        # Sort by year if year column exists
+        if 'year' in df.columns:
+            df = df.sort_values('year').reset_index(drop=True)
+
+        return df
 
     def _extract_arrays(self, df, columns, skip_rows=0):
         """Extract columns as numpy arrays.

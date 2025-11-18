@@ -18,11 +18,19 @@ def read_breakdown_monthly(file_path):
     # Try CSV format first
     csv_path = file_path.replace('.dat', '.csv')
     try:
-        return pd.read_csv(csv_path)
+        df = pd.read_csv(csv_path)
     except FileNotFoundError:
         # Fall back to TSV with 3-header format
         # header=2 skips the units and keys rows
-        return pd.read_csv(file_path, sep='\t', header=2)
+        df = pd.read_csv(file_path, sep='\t', header=2)
+
+    # Sort by year and month if columns exist
+    if 'year' in df.columns and 'month' in df.columns:
+        df = df.sort_values(['year', 'month']).reset_index(drop=True)
+    elif 'month' in df.columns:
+        df = df.sort_values('month').reset_index(drop=True)
+
+    return df
 
 
 def makeSummaryFromBreakdowns(model_id, modBaseDir):

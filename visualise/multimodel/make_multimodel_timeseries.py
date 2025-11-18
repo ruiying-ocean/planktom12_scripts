@@ -471,7 +471,6 @@ class DataLoader:
                 print(f"Warning: Empty dataframe loaded from {csv_path}")
                 return None
             print(f"Loaded CSV {csv_path}")
-            return df
         except FileNotFoundError:
             try:
                 # Legacy TSV format - 3 header rows, tab-separated
@@ -482,7 +481,6 @@ class DataLoader:
                     print(f"Warning: Empty dataframe loaded from {dat_path}")
                     return None
                 print(f"Loaded TSV {dat_path}")
-                return df
             except FileNotFoundError:
                 print(f"Warning: File not found - tried both {csv_path} and {dat_path}")
                 return None
@@ -492,6 +490,19 @@ class DataLoader:
         except Exception as e:
             print(f"Warning: Error loading {csv_path}: {e}")
             return None
+
+        # Sort by year if year column exists
+        if 'year' in df.columns:
+            df = df.sort_values('year').reset_index(drop=True)
+        # For monthly data, sort by year and month if both exist
+        elif 'month' in df.columns or 'Month' in df.columns:
+            month_col = 'month' if 'month' in df.columns else 'Month'
+            if 'year' in df.columns:
+                df = df.sort_values(['year', month_col]).reset_index(drop=True)
+            else:
+                df = df.sort_values(month_col).reset_index(drop=True)
+
+        return df
 
     @staticmethod
     def safe_load_column(df, column, indices, validate_length=True):
