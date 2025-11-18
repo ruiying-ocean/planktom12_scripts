@@ -286,7 +286,7 @@ def plot_nutrient_comparison(
     fig, axs = plotter.create_subplot_grid(
         nrows=nnuts, ncols=3,
         projection=ccrs.PlateCarree(),
-        figsize=(15, 4 * nnuts)
+        figsize=(12, 3 * nnuts)
     )
 
     for i, nut in enumerate(nutrients):
@@ -354,7 +354,7 @@ def plot_nutrient_comparison(
             add_colorbar=False
         )
 
-        ax_model.set_title(f"{meta['long_name']} - Model", fontsize=10)
+        ax_model.set_title(f"{meta['long_name']} - Model", fontsize=12)
         cbar = fig.colorbar(im, ax=ax_model, orientation='horizontal', pad=0.05, shrink=0.8)
         cbar.set_label(meta['units'], fontsize=10)
 
@@ -368,7 +368,7 @@ def plot_nutrient_comparison(
                 vmax=vmax,
                 add_colorbar=False
             )
-            ax_obs.set_title(f"{meta['long_name']} - Observations", fontsize=10)
+            ax_obs.set_title(f"{meta['long_name']} - Observations", fontsize=12)
             cbar_obs = fig.colorbar(im, ax=ax_obs, orientation='horizontal', pad=0.05, shrink=0.8)
             cbar_obs.set_label(meta['units'], fontsize=10)
         else:
@@ -381,6 +381,14 @@ def plot_nutrient_comparison(
             from difference_utils import calculate_difference, get_symmetric_colorbar_limits
 
             diff = calculate_difference(model_data, obs_data)
+
+            # Ensure nav_lon and nav_lat are preserved in difference
+            if 'nav_lon' in model_data.coords and 'nav_lat' in model_data.coords:
+                diff = diff.assign_coords({
+                    'nav_lon': model_data.coords['nav_lon'],
+                    'nav_lat': model_data.coords['nav_lat']
+                })
+
             diff = plotter.apply_mask(diff)
 
             # Get symmetric colorbar limits
@@ -395,7 +403,7 @@ def plot_nutrient_comparison(
                 add_colorbar=False
             )
 
-            ax_diff.set_title(f"Difference (Model - Obs)", fontsize=10)
+            ax_diff.set_title(f"Difference (Model - Obs)", fontsize=12)
             cbar_diff = fig.colorbar(im_diff, ax=ax_diff, orientation='horizontal', pad=0.05, shrink=0.8)
             cbar_diff.set_label(f'Δ {meta["units"]}', fontsize=10)
         else:
@@ -620,7 +628,7 @@ def main():
             cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, shrink=0.8)
             cbar.set_label(meta['units'], fontsize=10)
 
-            ax.set_title(meta['long_name'], fontsize=11)
+            ax.set_title(meta['long_name'], fontsize=13)
 
         # Hide unused subplot (6th position)
         if len(nutrients) < len(axs.flat):

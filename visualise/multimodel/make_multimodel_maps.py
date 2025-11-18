@@ -169,7 +169,7 @@ def plot_multimodel_maps(models, output_dir, config):
         n_rows = len(var_names)
 
         # Create figure with subplots using constrained_layout
-        fig = plt.figure(figsize=(5 * n_cols, 4 * n_rows), constrained_layout=True)
+        fig = plt.figure(figsize=(4 * n_cols, 3 * n_rows), constrained_layout=True)
         gs = gridspec.GridSpec(n_rows, n_cols, figure=fig)
 
         print(f"Generating {group_name} comparison map...")

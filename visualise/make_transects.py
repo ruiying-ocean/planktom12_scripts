@@ -251,7 +251,7 @@ def plot_pft_transects(
                 else:
                     pft_name = pft
 
-                ax.set_title(f"{pft_name}", fontsize=10)
+                ax.set_title(f"{pft_name}", fontsize=12)
                 ax.invert_yaxis()
                 ax.set_ylim(max_depth, 0)
 

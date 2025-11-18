@@ -200,7 +200,7 @@ def plot_difference_map(
         add_colorbar=False
     )
 
-    ax.set_title(title, fontsize=10)
+    ax.set_title(title, fontsize=12)
 
     if add_colorbar:
         # Get units from metadata if variable name provided
@@ -420,7 +420,7 @@ def plot_transect_difference(
         cbar_kwargs={'label': f'Δ', 'shrink': 0.8, 'pad': 0.02} if add_colorbar else None
     )
 
-    ax.set_title(title, fontsize=10)
+    ax.set_title(title, fontsize=12)
     ax.invert_yaxis()
 
     if max_depth is not None:
@@ -490,7 +490,7 @@ def plot_three_panel_transect(
             add_colorbar=True,
             cbar_kwargs={'label': var_unit, 'shrink': 0.8, 'pad': 0.02}
         )
-        ax_model.set_title(f"{var_name}\n{label_model}", fontsize=10)
+        ax_model.set_title(f"{var_name}\n{label_model}", fontsize=12)
         ax_model.invert_yaxis()
         if max_depth is not None:
             ax_model.set_ylim(max_depth, 0)
@@ -507,7 +507,7 @@ def plot_three_panel_transect(
             add_colorbar=True,
             cbar_kwargs={'label': var_unit, 'shrink': 0.8, 'pad': 0.02}
         )
-        ax_obs.set_title(f"{label_obs}", fontsize=10)
+        ax_obs.set_title(f"{label_obs}", fontsize=12)
         ax_obs.invert_yaxis()
         if max_depth is not None:
             ax_obs.set_ylim(max_depth, 0)
@@ -650,7 +650,7 @@ def plot_multimodel_transect_row(
                 ax.set_ylim(max_depth, 0)
 
             # First row gets model name as title, otherwise just variable name
-            ax.set_title(f"{label}", fontsize=10, fontweight='bold')
+            ax.set_title(f"{label}", fontsize=12, fontweight='bold')
         else:
             ax.text(0.5, 0.5, 'No data', ha='center', va='center', transform=ax.transAxes)
 
