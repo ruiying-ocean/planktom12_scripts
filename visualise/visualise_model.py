@@ -29,6 +29,7 @@ from make_maps import (
 )
 from make_transects import plot_basin_transects, plot_pft_transects
 from difference_utils import plot_comparison_panel
+from logging_utils import print_header
 
 
 def main():
@@ -98,9 +99,7 @@ def main():
     # ========================================================================
     # STEP 1: Data Preprocessing (load once, use everywhere)
     # ========================================================================
-    print("╔═══════════════════════════════════════════════════════════════╗")
-    print("║  Step 1: Data Preprocessing                                  ║")
-    print("╚═══════════════════════════════════════════════════════════════╝")
+    print_header("Step 1: Data Preprocessing")
 
     # Initialize plotter
     plotter = OceanMapPlotter(mask_path=args.mask_path)
@@ -125,9 +124,7 @@ def main():
     # STEP 2: Generate Spatial Maps
     # ========================================================================
     if not args.skip_maps:
-        print("╔═══════════════════════════════════════════════════════════════╗")
-        print("║  Step 2: Generating Spatial Maps                             ║")
-        print("╚═══════════════════════════════════════════════════════════════╝")
+        print_header("Step 2: Generating Spatial Maps")
 
         # 2.1 Ecosystem diagnostics with satellite chlorophyll
         print("  [1/5] Ecosystem diagnostics (TChl, EXP, PPINT)...")
@@ -250,9 +247,7 @@ def main():
     # STEP 3: Generate Transects
     # ========================================================================
     if not args.skip_transects:
-        print("╔═══════════════════════════════════════════════════════════════╗")
-        print("║  Step 3: Generating Vertical Transects                       ║")
-        print("╚═══════════════════════════════════════════════════════════════╝")
+        print_header("Step 3: Generating Vertical Transects")
 
         # Get navigation coordinates
         try:
@@ -301,9 +296,7 @@ def main():
     # ========================================================================
     # Summary
     # ========================================================================
-    print("╔═══════════════════════════════════════════════════════════════╗")
-    print("║  Visualization Complete!                                      ║")
-    print("╚═══════════════════════════════════════════════════════════════╝")
+    print_header("Visualization Complete!")
     print(f"  Output directory: {output_dir}")
     print()
     print("Generated files:")

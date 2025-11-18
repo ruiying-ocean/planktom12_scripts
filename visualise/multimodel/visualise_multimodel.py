@@ -24,6 +24,7 @@ except ModuleNotFoundError:
 # Import from parent visualise directory
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from map_utils import OceanMapPlotter
+from logging_utils import print_header
 
 # Import multimodel-specific modules
 from preprocess_multimodel import get_nav_coordinates
@@ -132,9 +133,7 @@ def main():
         sys.exit(1)
 
     # Parse models
-    print("╔═══════════════════════════════════════════════════════════════╗")
-    print("║  Multi-Model Comparison Visualization                         ║")
-    print("╚═══════════════════════════════════════════════════════════════╝")
+    print_header("Multi-Model Comparison Visualization")
 
     models = parse_models_csv(csv_path)
     n_models = len(models)
@@ -169,9 +168,7 @@ def main():
     # STEP 1: Timeseries Comparison
     # ========================================================================
     if not args.skip_timeseries:
-        print("╔═══════════════════════════════════════════════════════════════╗")
-        print("║  Step 1: Timeseries Comparison                                ║")
-        print("╚═══════════════════════════════════════════════════════════════╝")
+        print_header("Step 1: Timeseries Comparison")
 
         script_dir = Path(__file__).parent
         timeseries_script = script_dir / 'make_multimodel_timeseries.py'
@@ -194,9 +191,7 @@ def main():
     # STEP 2: Spatial Comparison Maps
     # ========================================================================
     if not args.skip_maps:
-        print("╔═══════════════════════════════════════════════════════════════╗")
-        print("║  Step 2: Spatial Comparison Maps                              ║")
-        print("╚═══════════════════════════════════════════════════════════════╝")
+        print_header("Step 2: Spatial Comparison Maps")
 
         script_dir = Path(__file__).parent
         maps_script = script_dir / 'make_multimodel_maps.py'
@@ -219,9 +214,7 @@ def main():
     # STEP 3: Transect Comparisons
     # ========================================================================
     if not args.skip_transects:
-        print("╔═══════════════════════════════════════════════════════════════╗")
-        print("║  Step 3: Vertical Transect Comparisons                        ║")
-        print("╚═══════════════════════════════════════════════════════════════╝")
+        print_header("Step 3: Vertical Transect Comparisons")
 
         script_dir = Path(__file__).parent
         transects_script = script_dir / 'make_multimodel_transects.py'
@@ -244,9 +237,7 @@ def main():
     # STEP 4: Configuration Comparison (2-model only)
     # ========================================================================
     if not args.skip_config_comparison and n_models == 2:
-        print("╔═══════════════════════════════════════════════════════════════╗")
-        print("║  Step 4: Configuration Comparison                             ║")
-        print("╚═══════════════════════════════════════════════════════════════╝")
+        print_header("Step 4: Configuration Comparison")
 
         script_dir = Path(__file__).parent
 
@@ -295,9 +286,7 @@ def main():
     # STEP 5: HTML Report Generation
     # ========================================================================
     if not args.skip_html:
-        print("╔═══════════════════════════════════════════════════════════════╗")
-        print("║  Step 5: HTML Report Generation                               ║")
-        print("╚═══════════════════════════════════════════════════════════════╝")
+        print_header("Step 5: HTML Report Generation")
 
         script_dir = Path(__file__).parent
         html_script = script_dir / 'make_multimodel_html.sh'
@@ -318,9 +307,7 @@ def main():
     # ========================================================================
     # Summary
     # ========================================================================
-    print("╔═══════════════════════════════════════════════════════════════╗")
-    print("║  Multi-Model Visualization Complete!                          ║")
-    print("╚═══════════════════════════════════════════════════════════════╝")
+    print_header("Multi-Model Visualization Complete!")
     print(f"  Output directory: {output_dir}")
     print()
 
