@@ -26,6 +26,7 @@ from map_utils import (
     PHYTOS, ZOOS,
     PHYTO_NAMES, ZOO_NAMES
 )
+from logging_utils import print_header, print_info, print_warning, print_error, print_success
 
 # Import configuration
 try:
@@ -91,7 +92,7 @@ def load_transect_data(model_dir, model_id, year, variable, plotter):
     ptrc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc"
 
     if not ptrc_file.exists():
-        print(f"Warning: File not found: {ptrc_file}")
+        print_warning(f"File not found: {ptrc_file}")
         return None
 
     try:
@@ -114,7 +115,7 @@ def load_transect_data(model_dir, model_id, year, variable, plotter):
             conversion = 1.0
 
         if base_var not in ds:
-            print(f"Warning: Variable {base_var} not found")
+            print_warning(f"Variable {base_var} not found")
             ds.close()
             return None
 
@@ -133,7 +134,7 @@ def load_transect_data(model_dir, model_id, year, variable, plotter):
 
         return data
     except Exception as e:
-        print(f"Error loading {variable} from {ptrc_file}: {e}")
+        print_error(f"Loading {variable} from {ptrc_file}: {e}")
         return None
 
 
@@ -174,7 +175,7 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
             break
 
     if nav_lon is None:
-        print("Error: Could not load navigation from any model files")
+        print_error("Could not load navigation from any model files")
         return
 
     lat_values = get_central_latitude(nav_lat.values)
@@ -186,7 +187,7 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
     ]
 
     for basin_name, target_lon, lon_label in transects:
-        print(f"Generating {basin_name} nutrient transect comparison...")
+        print_info(f"Generating {basin_name} nutrient transect comparison...")
 
         # Create figure: 5 nutrients (including O2) in rows, models+anomaly in columns
         n_nutrients = len(nutrients)
@@ -240,7 +241,7 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
         # Save
         output_file = output_dir / f"multimodel_transect_{basin_name.lower()}_nutrients.{fmt}"
         fig.savefig(output_file, dpi=dpi, bbox_inches='tight')
-        print(f"Created {output_file}")
+        print_success(f"Created {output_file}")
         plt.close(fig)
 
 
@@ -281,7 +282,7 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
             break
 
     if nav_lon is None:
-        print("Error: Could not load navigation from any model files")
+        print_error("Could not load navigation from any model files")
         return
 
     lat_values = get_central_latitude(nav_lat.values)
@@ -293,7 +294,7 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
     ]
 
     for basin_name, target_lon, lon_label in transects:
-        print(f"Generating {basin_name} PFT transect comparison...")
+        print_info(f"Generating {basin_name} PFT transect comparison...")
 
         # Create figure: 12 PFTs in rows, models+anomaly in columns
         n_pfts = len(pfts)
@@ -350,13 +351,13 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
         # Save
         output_file = output_dir / f"multimodel_transect_{basin_name.lower()}_pfts.{fmt}"
         fig.savefig(output_file, dpi=dpi, bbox_inches='tight')
-        print(f"Created {output_file}")
+        print_success(f"Created {output_file}")
         plt.close(fig)
 
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python make_multimodel_transects.py <models_csv> <output_dir>")
+        print_error("Usage: python make_multimodel_transects.py <models_csv> <output_dir>")
         return 1
 
     csv_file = Path(sys.argv[1])
@@ -386,12 +387,12 @@ def main():
                     'model_dir': model_dir   # location (or default)
                 })
 
-    print(f"Generating transect comparisons for {len(models)} models...")
+    print_header(f"Generating transect comparisons for {len(models)} models")
 
-    print(f"\nGenerating nutrient transect comparisons...")
+    print_header("Generating nutrient transect comparisons")
     plot_multimodel_nutrient_transects(models, output_dir, config)
 
-    print(f"\nGenerating PFT transect comparisons...")
+    print_header("Generating PFT transect comparisons")
     plot_multimodel_pft_transects(models, output_dir, config)
 
     return 0

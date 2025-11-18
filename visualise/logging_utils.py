@@ -40,12 +40,14 @@ def print_header(text: str, width: int = 63):
         _console.print(panel)
     else:
         # Fallback to simple Unicode box drawing
-        content_width = width - 4  # Account for "║  " and "  ║"
-        padded_text = f"  {text}".ljust(content_width)
+        # Calculate content width: total width minus 2 for box chars (║)
+        content_width = width - 2  # Just the inner width between the box characters
+        # Center the text with padding on both sides
+        padded_text = text.center(content_width)
 
-        top = "╔" + "═" * (width - 2) + "╗"
+        top = "╔" + "═" * content_width + "╗"
         middle = f"║{padded_text}║"
-        bottom = "╚" + "═" * (width - 2) + "╝"
+        bottom = "╚" + "═" * content_width + "╝"
 
         print(top)
         print(middle)
@@ -139,3 +141,24 @@ def print_warning(message: str):
         _console.print(f"[bold yellow]![/bold yellow] [yellow]{message}[/yellow]")
     else:
         print(f"Warning: {message}")
+
+
+def print_error(message: str):
+    """
+    Print an error message.
+    Uses rich formatting if available, otherwise falls back to simple format.
+
+    Args:
+        message: Error message to display
+
+    Example:
+        print_error("Could not load required data file")
+        # With rich:
+        #   ✗ Could not load required data file  (in red, bold X)
+        # Without rich:
+        #   Error: Could not load required data file
+    """
+    if HAS_RICH:
+        _console.print(f"[bold red]✗[/bold red] [red]{message}[/red]")
+    else:
+        print(f"Error: {message}")

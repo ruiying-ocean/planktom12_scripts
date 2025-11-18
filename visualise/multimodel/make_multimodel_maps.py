@@ -23,6 +23,7 @@ import cartopy.feature as cfeature
 # Import map utilities from parent directory
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from map_utils import OceanMapPlotter, get_variable_metadata
+from logging_utils import print_header, print_info, print_warning, print_error, print_success
 
 # Import configuration
 try:
@@ -70,7 +71,7 @@ def load_model_data(model_dir, model_id, year, var_name, plotter):
     nc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_{file_type}.nc"
 
     if not nc_file.exists():
-        print(f"Warning: File not found: {nc_file}")
+        print_warning(f"File not found: {nc_file}")
         return None
 
     try:
@@ -79,7 +80,7 @@ def load_model_data(model_dir, model_id, year, var_name, plotter):
         ds = plotter.load_data(str(nc_file), volume=plotter.volume)
 
         if var_name not in ds:
-            print(f"Warning: Variable {var_name} not found after preprocessing")
+            print_warning(f"Variable {var_name} not found after preprocessing")
             return None
 
         # Calculate annual mean
@@ -107,7 +108,7 @@ def load_model_data(model_dir, model_id, year, var_name, plotter):
         return data
 
     except Exception as e:
-        print(f"Error loading {var_name} from {nc_file}: {e}")
+        print_error(f"Loading {var_name} from {nc_file}: {e}")
         return None
 
 
@@ -166,7 +167,7 @@ def plot_multimodel_maps(models, output_dir, config):
             break
 
     if nav_lon is None:
-        print("Error: Could not load navigation from any model files")
+        print_error("Could not load navigation from any model files")
         return
 
     for group_name, var_names in var_groups.items():
@@ -179,7 +180,7 @@ def plot_multimodel_maps(models, output_dir, config):
         fig = plt.figure(figsize=(subplot_width * n_cols, subplot_height * n_rows), constrained_layout=True)
         gs = gridspec.GridSpec(n_rows, n_cols, figure=fig)
 
-        print(f"Generating {group_name} comparison map...")
+        print_info(f"Generating {group_name} comparison map...")
 
         for row_idx, var_name in enumerate(var_names):
             # Get variable metadata from map_utils
@@ -200,7 +201,7 @@ def plot_multimodel_maps(models, output_dir, config):
 
             # Skip if no data loaded
             if all(d is None for d in model_data):
-                print(f"  Skipping {var_name}: no data available")
+                print_warning(f"Skipping {var_name}: no data available")
                 continue
 
             # Determine color range
@@ -288,13 +289,13 @@ def plot_multimodel_maps(models, output_dir, config):
         # Save figure
         output_file = output_dir / f"multimodel_spatial_{group_name}.{fmt}"
         fig.savefig(output_file, dpi=dpi)
-        print(f"Created {output_file}")
+        print_success(f"Created {output_file}")
         plt.close(fig)
 
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python make_multimodel_maps.py <models_csv> <output_dir>")
+        print_error("Usage: python make_multimodel_maps.py <models_csv> <output_dir>")
         return 1
 
     csv_file = Path(sys.argv[1])
@@ -324,7 +325,7 @@ def main():
                     'model_dir': model_dir   # location (or default)
                 })
 
-    print(f"Generating spatial comparison maps for {len(models)} models...")
+    print_header(f"Generating spatial comparison maps for {len(models)} models")
     plot_multimodel_maps(models, output_dir, config)
 
     # Import transect functions
@@ -334,14 +335,14 @@ def main():
             plot_multimodel_pft_transects
         )
 
-        print(f"\nGenerating nutrient transect comparisons...")
+        print_header("Generating nutrient transect comparisons")
         plot_multimodel_nutrient_transects(models, output_dir, config)
 
-        print(f"\nGenerating PFT transect comparisons...")
+        print_header("Generating PFT transect comparisons")
         plot_multimodel_pft_transects(models, output_dir, config)
     except ImportError as e:
-        print(f"Warning: Could not import transect functions: {e}")
-        print("Skipping transect generation. Run make_multimodel_transects.py separately if needed.")
+        print_warning(f"Could not import transect functions: {e}")
+        print_info("Skipping transect generation. Run make_multimodel_transects.py separately if needed.")
 
     return 0
 
