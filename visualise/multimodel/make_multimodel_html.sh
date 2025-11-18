@@ -93,6 +93,26 @@ if [ -f "multimodel_spatial_derived.${img_format}" ]; then
     model_maps_section="${model_maps_section}---\n\n"
 fi
 
+# Build the setupdata comparison section
+setupdata_section=""
+
+# Check if setupdata comparison HTML exists
+if [ -f "setupdata_comparison.html" ]; then
+    setupdata_section=$(cat setupdata_comparison.html)
+else
+    setupdata_section="No setUpData comparison available.\n\n"
+fi
+
+# Build the namelist comparison section
+namelist_section=""
+
+# Check if namelist comparison HTML exists
+if [ -f "namelist_comparison.html" ]; then
+    namelist_section=$(cat namelist_comparison.html)
+else
+    namelist_section="No namelist comparison available.\n\n"
+fi
+
 # Build the derived variables section
 derived_section=""
 
@@ -117,12 +137,14 @@ fi
 # Use printf with -e to interpret escape sequences properly
 printf "%b" "$model_maps_section" > temp_model_maps.txt
 printf "%b" "$derived_section" > temp_derived_section.txt
+printf "%b" "$setupdata_section" > temp_setupdata_section.txt
+printf "%b" "$namelist_section" > temp_namelist_section.txt
 
 # Use sed to substitute the timestamp and model maps section
 sed -e "s/\${timestamp}/${timestamp}/g" \
     temp_template.qmd > temp_with_timestamp.qmd
 
-# Replace the MODEL_MAPS and DERIVED_SECTION placeholders with the actual content
+# Replace the MODEL_MAPS, DERIVED_SECTION, SETUPDATA_COMPARISON, and NAMELIST_COMPARISON placeholders with the actual content
 # Using a multi-line approach with awk for better handling
 awk '
 /\$\{MODEL_MAPS\}/ {
@@ -137,6 +159,18 @@ awk '
     }
     next
 }
+/\$\{SETUPDATA_COMPARISON\}/ {
+    while ((getline line < "temp_setupdata_section.txt") > 0) {
+        print line
+    }
+    next
+}
+/\$\{NAMELIST_COMPARISON\}/ {
+    while ((getline line < "temp_namelist_section.txt") > 0) {
+        print line
+    }
+    next
+}
 {print}
 ' temp_with_timestamp.qmd > multimodel.qmd
 
@@ -145,7 +179,7 @@ echo "Rendering Quarto document..."
 quarto render multimodel.qmd --output multimodel.html
 
 # Clean up temporary files
-rm temp_template.qmd temp_with_timestamp.qmd temp_model_maps.txt temp_derived_section.txt multimodel.qmd custom.scss
+rm temp_template.qmd temp_with_timestamp.qmd temp_model_maps.txt temp_derived_section.txt temp_setupdata_section.txt temp_namelist_section.txt multimodel.qmd custom.scss
 
 if [ -f "multimodel.html" ]; then
     echo "✓ Multi-model HTML report generated: $(pwd)/multimodel.html"

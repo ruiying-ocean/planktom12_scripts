@@ -99,6 +99,20 @@ ${MODEL_MAPS}
 
 ---
 
+# Configuration Comparison
+
+Differences in model configuration files.
+
+## SetUpData Configuration
+
+${SETUPDATA_COMPARISON}
+
+## Namelist Comparison (namelist.trc.sms)
+
+${NAMELIST_COMPARISON}
+
+---
+
 # Data Sources
 
 :::{.callout-note appearance="simple"}

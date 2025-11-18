@@ -88,6 +88,34 @@ python3 ${src_dir}/make_multimodel_maps.py modelsToPlot.csv ${save_dir}
 # Copy observation images to save directory
 cp ${src_dir}/*.png .
 
+# Generate configuration comparisons (for 2-model comparisons)
+if [ $length -eq 2 ]; then
+    echo "Generating configuration comparisons..."
+
+    # Get model directories
+    model1_dir="${locs[0]:-$HOME/scratch/ModelRuns/${runs[0]}}"
+    model2_dir="${locs[1]:-$HOME/scratch/ModelRuns/${runs[1]}}"
+
+    # Compare setUpData files
+    echo "  - Comparing setUpData configuration..."
+    python3 ${src_dir}/compare_setupdata.py \
+        "${model1_dir}" \
+        "${model2_dir}" \
+        "${runs[0]}" \
+        "${runs[1]}" \
+        --output setupdata_comparison.html
+
+    # Compare namelist files
+    echo "  - Comparing namelist.trc.sms..."
+    python3 ${src_dir}/compare_namelists.py \
+        "${model1_dir}" \
+        "${model2_dir}" \
+        "${runs[0]}" \
+        "${runs[1]}" \
+        --output namelist_comparison.html \
+        --namelist-name namelist.trc.sms
+fi
+
 # Generate HTML using Quarto (replaces Python + Jinja2 system)
 ${src_dir}/make_multimodel_html.sh "${folder_name}" 0
 

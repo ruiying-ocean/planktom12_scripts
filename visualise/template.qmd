@@ -17,6 +17,12 @@ format:
     link-external-newwindow: true
 ---
 
+# Model Configuration
+
+${SETUPDATA_SUMMARY}
+
+---
+
 # Time Series
 
 ## Global Ecosystem Metrics

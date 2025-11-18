@@ -61,17 +61,37 @@ else
     echo "Using time slice year: $latest_year"
 fi
 
+# Generate setUpData summary
+echo "Generating model configuration summary..."
+python3 "${scriptDir}/extract_setupdata.py" \
+    "${modelOutputDir}/${model_id}" \
+    --output "${saveDir}/setupdata_summary.md" 2>/dev/null || echo "*SetUpData not available*" > "${saveDir}/setupdata_summary.md"
+
+# Read the summary content
+setupdata_summary=$(cat "${saveDir}/setupdata_summary.md")
+
 # Copy template and custom.scss to save directory
 cp "${scriptDir}/template.qmd" "${saveDir}/temp_template.qmd"
 cp "${scriptDir}/custom.scss" "${saveDir}/"
 
-# Substitute variables in the template
+# Substitute variables in the template - first pass with sed
 sed -e "s/IDENTIFIER_PLACEHOLDER/${model_id}/g" \
     -e "s/\${identifier}/${model_id}/g" \
     -e "s/\${start_year}/${start}/g" \
     -e "s/\${end_year}/${latest_year}/g" \
     -e "s/\${img_format}/${img_format}/g" \
-    "${saveDir}/temp_template.qmd" > "${saveDir}/${model_id}.qmd"
+    "${saveDir}/temp_template.qmd" > "${saveDir}/temp_with_vars.qmd"
+
+# Second pass - substitute setupdata summary using awk
+awk -v summary_file="${saveDir}/setupdata_summary.md" '
+/\$\{SETUPDATA_SUMMARY\}/ {
+    while ((getline line < summary_file) > 0) {
+        print line
+    }
+    next
+}
+{print}
+' "${saveDir}/temp_with_vars.qmd" > "${saveDir}/${model_id}.qmd"
 
 # Change to save directory and render there
 cd "${saveDir}"
@@ -80,6 +100,6 @@ cd "${saveDir}"
 quarto render "${model_id}.qmd" --output "${model_id}.html"
 
 # Clean up template files
-rm temp_template.qmd "${model_id}.qmd" custom.scss
+rm temp_template.qmd temp_with_vars.qmd "${model_id}.qmd" custom.scss setupdata_summary.md
 
 echo "✓ HTML report generated: ${saveDir}${model_id}.html"
