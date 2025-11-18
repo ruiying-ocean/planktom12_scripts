@@ -1,0 +1,89 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+
+# NEMO/Model outputs
+*.nc
+*.nc4
+*.dat
+*.restart
+ocean.output
+run.stat
+timing.output
+output.namelist.*
+solver.stat
+tracer.stat
+
+# Model run directories (keep structure, ignore data)
+scratch/
+output/
+restart/
+monitor/
+
+# Logs
+*.log
+*.out
+*.err
+slurm-*.out
+
+# Temporary files
+*.tmp
+*.bak
+*~
+.*.swp
