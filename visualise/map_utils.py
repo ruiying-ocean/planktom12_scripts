@@ -131,14 +131,16 @@ class OceanMapPlotter:
             ds['_NPP'] = ds['PPT']
             ds['_RECYCLE'] = ds['PPT'] - ds['_SP']
 
-            # Transfer efficiency
+            # Extract EXP at specific depths for transfer efficiency and export ratio
             if 'EXP' in ds:
-                # Extract EXP at 100m (depth index 10) and 1000m (depth index ~24)
                 depth_dim = 'deptht' if 'deptht' in ds['EXP'].dims else 'nav_lev'
                 if depth_dim in ds['EXP'].dims and len(ds[depth_dim]) > 24:
-                    exp_100m = ds['EXP'].isel({depth_dim: 10})  # ~100m
+                    # Store EXP at 100m for export ratio calculation
+                    ds['EXP100'] = ds['EXP'].isel({depth_dim: 10})  # ~100m
+
+                    # Calculate transfer efficiency: EXP@1000m / EXP@100m
                     exp_1000m = ds['EXP'].isel({depth_dim: 24})  # ~1000m
-                    ds['_Teff'] = exp_1000m / exp_100m  # Transfer efficiency
+                    ds['_Teff'] = exp_1000m / ds['EXP100']
 
             # Note: e-ratio will be calculated after unit conversion when _PPINT is available
         return ds
@@ -166,7 +168,14 @@ class OceanMapPlotter:
             ## PPINT: mol/m2/s => gC/m2/yr
             second_to_year = 60 * 60 * 24 * 365
             mole_to_gC = 12.01
-            ds['_EXP'] = ds['EXP'] * second_to_year * mole_to_gC
+
+            # Convert EXP at 100m (for export ratio calculation)
+            if 'EXP100' in ds:
+                ds['_EXP'] = ds['EXP100'] * second_to_year * mole_to_gC
+            elif 'EXP' in ds:
+                # Fallback: use full EXP if EXP100 not available
+                ds['_EXP'] = ds['EXP'] * second_to_year * mole_to_gC
+
             ds['_PPINT'] = ds['PPINT'] * second_to_year * mole_to_gC
 
             ## PPT for each phytoplankton PFT
@@ -558,7 +567,7 @@ ECOSYSTEM_VARS = {
     '_eratio': {
         'long_name': 'Export Ratio',
         'units': 'dimensionless',
-        'vmax': 0.2,
+        'vmax': 0.4,
         'vmin': 0,
         'depth_index': None,
         'cmap': 'plasma'
