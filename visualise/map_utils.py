@@ -131,11 +131,16 @@ class OceanMapPlotter:
             ds['_NPP'] = ds['PPT']
             ds['_RECYCLE'] = ds['PPT'] - ds['_SP']
 
-            # Transfer efficiency and export ratio
-            if 'EXP' in ds and 'EXP1000' in ds:
-                ds['_Teff'] = ds['EXP1000'] / ds['EXP']  # EXP1000/EXP
-            if 'EXP' in ds and 'PPT' in ds:
-                ds['_eratio'] = ds['EXP'] / ds['PPT']
+            # Transfer efficiency
+            if 'EXP' in ds:
+                # Extract EXP at 100m (depth index 10) and 1000m (depth index ~24)
+                depth_dim = 'deptht' if 'deptht' in ds['EXP'].dims else 'nav_lev'
+                if depth_dim in ds['EXP'].dims and len(ds[depth_dim]) > 24:
+                    exp_100m = ds['EXP'].isel({depth_dim: 10})  # ~100m
+                    exp_1000m = ds['EXP'].isel({depth_dim: 24})  # ~1000m
+                    ds['_Teff'] = exp_1000m / exp_100m  # Transfer efficiency
+
+            # Note: e-ratio will be calculated after unit conversion when _PPINT is available
         return ds
 
     def _convert_units(self, ds: xr.Dataset, suffix: str = 'ptrc') -> xr.Dataset:
@@ -180,11 +185,9 @@ class OceanMapPlotter:
                     new_name = self._new_varname(var, '')
                     ds[new_name] = ds[var] * second_to_year * mole_to_gC  # gC/m³/yr
 
-            ## Dimensionless ratios (no unit conversion needed, just copy with underscore prefix)
-            for var in ['_Teff', '_eratio']:
-                if var in ds:
-                    new_name = self._new_varname(var, '')
-                    ds[new_name] = ds[var]
+            ## Calculate export ratio: EXP@100m / PPINT
+            if '_EXP' in ds and '_PPINT' in ds:
+                ds['_eratio'] = ds['_EXP'] / ds['_PPINT']
 
             return ds
 
@@ -534,7 +537,7 @@ ECOSYSTEM_VARS = {
     '_SPINT': {
         'long_name': 'Secondary Production',
         'units': 'Tg C yr⁻¹',
-        'vmax': 20,
+        'vmax': 10,
         'depth_index': None,
         'cmap': 'viridis'
     },
@@ -548,14 +551,14 @@ ECOSYSTEM_VARS = {
     '_RECYCLEINT': {
         'long_name': 'Recycled Production',
         'units': 'Tg C yr⁻¹',
-        'vmax': 10,
+        'vmax': 5,
         'depth_index': None,
         'cmap': 'viridis'
     },
     '_eratio': {
-        'long_name': 'Export Ratio (e-ratio)',
+        'long_name': 'Export Ratio',
         'units': 'dimensionless',
-        'vmax': 0.5,
+        'vmax': 0.2,
         'vmin': 0,
         'depth_index': None,
         'cmap': 'plasma'
@@ -563,7 +566,7 @@ ECOSYSTEM_VARS = {
     '_Teff': {
         'long_name': 'Transfer Efficiency',
         'units': 'dimensionless',
-        'vmax': 0.2,
+        'vmax': 0.5,
         'vmin': 0,
         'depth_index': None,
         'cmap': 'plasma'
@@ -625,6 +628,27 @@ PHYSICAL_VARS = {
         'units': 'm',
         'vmax': 500,
         'cmap': 'cmocean:deep'
+    },
+    'rsntds': {
+        'long_name': 'Solar Radiation',
+        'units': 'W m⁻²',
+        'vmax': 300,
+        'vmin': 0,
+        'cmap': 'cmocean:solar'
+    },
+    'taum': {
+        'long_name': 'Wind Stress',
+        'units': 'N m⁻²',
+        'vmax': 0.2,
+        'vmin': 0,
+        'cmap': 'cmocean:amp'
+    },
+    'sowindsp': {
+        'long_name': 'Wind Speed',
+        'units': 'm s⁻¹',
+        'vmax': 15,
+        'vmin': 0,
+        'cmap': 'cmocean:speed'
     }
 }
 
