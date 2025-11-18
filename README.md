@@ -18,6 +18,7 @@ PlankTomRunner/
 ├── breakdown/          # Statistics extraction from NetCDF output
 ├── visualise/          # Single model visualization tools
 │   └── multimodel/     # Multi-model comparison tools
+├── configs/            # Model setup configuration files
 ├── setUpRun.sh         # Model run setup script
 ├── setup_spin.sh       # Spin-up run setup script
 └── README.md
@@ -347,10 +348,15 @@ lat_range = [-90, 90]
 
 **Usage**:
 ```bash
-./setUpRun.sh <setup_file.dat>
+./setUpRun.sh <setup_file.dat> <Full Run ID>
 ```
 
-**Setup file format**: See `setUpData_*.dat` examples in the repository.
+**Example**:
+```bash
+./setUpRun.sh configs/setUpData_MT_JRA.dat TOM12_RY_SPE2
+```
+
+**Setup file format**: See `configs/setUpData_*.dat` examples in the repository.
 
 ### Spin-up Run
 

@@ -1,4 +1,4 @@
-#!/bin/sh 
+#!/bin/sh
 
 date
 echo "To use: setUpRun <setUpData.dat> <Full Run ID>"
@@ -7,9 +7,20 @@ if [ "$#" -ne 2 ]; then
 	exit 1
 fi
 
+# Detect the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 # Input variables read from command line
 setUpDatafile=$1
 id=$2
+
+# If setUpDatafile doesn't exist as-is, try looking in configs/ directory
+if [ ! -f "$setUpDatafile" ]; then
+	if [ -f "${SCRIPT_DIR}/configs/$(basename $setUpDatafile)" ]; then
+		setUpDatafile="${SCRIPT_DIR}/configs/$(basename $setUpDatafile)"
+		echo "Using config file: $setUpDatafile"
+	fi
+fi
 
 # ----- Meta variables -----
 version=$(echo $id | awk -F'_' '{print $1}')
@@ -267,17 +278,17 @@ codeVersion=$( grep "opa_*$Model" $setUpDatafile | awk -F'/' '{print$(NF-5)}' )
 # ----- Create copies of files used for run -----
 # Get NEMO job file
 if [ ! -f nemo.job ]; then
-	cp /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/nemo.job nemo.job
+	cp ${SCRIPT_DIR}/nemo.job nemo.job
 fi
 
 # Get tidying up scripts
-cp -n /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/tidyup.sh .
-cp -n /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/tidyup.job .
+ln -fs ${SCRIPT_DIR}/tidyup.sh tidyup.sh
+ln -fs ${SCRIPT_DIR}/tidyup.job tidyup.job
 
 # Get breakdown scripts
-cp /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/breakdown/breakdown*.py .
-cp /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/breakdown/breakdown_config.toml .
-cp /gpfs/home/vhf24tbu/EXP00/iodef_tom12piicc14.xml .
+cp ${SCRIPT_DIR}/breakdown/breakdown*.py .
+cp ${SCRIPT_DIR}/breakdown/breakdown_config.toml .
+cp ${SCRIPT_DIR}/iodef_tom12piicc14.xml .
 
 # If breakdown_config.toml does not exist (as specified in setUpData file) copy in default
 if [ ! -f breakdown_config.toml ]; then
@@ -286,13 +297,15 @@ if [ ! -f breakdown_config.toml ]; then
 fi
 
 # Get visualise scripts and files
-cp /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/visualise/* .
+for file in ${SCRIPT_DIR}/visualise/*; do
+	ln -fs $file $(basename $file)
+done
 
 # Save parameters needed for creating html file
 echo $id $codeVersion $(date '+%d-%b-%Y') $yearStart $yearEnd ${CO2,,} $forcing ${type,,} $TR $SR > html_parms
 
 # Get setUpRun script
-cp /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/setUpRun.sh .
+cp ${SCRIPT_DIR}/setUpRun.sh .
 
 # ----- Export parameters the nemo.job file will need -----
 yearToRun=$yearStart
@@ -307,4 +320,4 @@ sbatch -J${simulation}${yearToRun} < nemo.job
 echo "To check status of job 'squeue | grep <you user name>' "
 
 # ----- Save model details -----
-echo $2 "("$(date '+%a %d %b %T %Z %Y')")" >> /gpfs/home/vhf24tbu/scratch/ModelRuns/modelRuns.txt
+echo $2 "("$(date '+%a %d %b %T %Z %Y')")" >> ${HOME}/scratch/ModelRuns/modelRuns.txt
