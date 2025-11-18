@@ -31,7 +31,12 @@ echo "Setting up:                  " $version $initials $simulation
 echo "Reading run parameters from: " $setUpDatafile
 
 # ----- Read setup data -----
-dataFileFullPath=$(pwd)"/"$setUpDatafile
+# Check if setUpDatafile is already an absolute path
+if [[ "$setUpDatafile" = /* ]]; then
+	dataFileFullPath=$setUpDatafile
+else
+	dataFileFullPath=$(pwd)"/"$setUpDatafile
+fi
 
 while IFS= read -r line; do
 	if [ ! ${line:0:1} == "#" ]; then
@@ -288,7 +293,9 @@ ln -fs ${SCRIPT_DIR}/tidyup.job tidyup.job
 # Get breakdown scripts
 cp ${SCRIPT_DIR}/breakdown/breakdown*.py .
 cp ${SCRIPT_DIR}/breakdown/breakdown_config.toml .
-cp ${SCRIPT_DIR}/iodef_tom12piicc14.xml .
+if [ -f ${SCRIPT_DIR}/iodef_tom12piicc14.xml ]; then
+	cp ${SCRIPT_DIR}/iodef_tom12piicc14.xml .
+fi
 
 # If breakdown_config.toml does not exist (as specified in setUpData file) copy in default
 if [ ! -f breakdown_config.toml ]; then
