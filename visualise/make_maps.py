@@ -25,332 +25,16 @@ from map_utils import (
     get_variable_metadata, convert_units
 )
 
-
-def get_longitude_transect(data, nav_lon, target_lon, lat_values):
-    """
-    Extract data along a specific longitude transect.
-
-    Args:
-        data: xarray.DataArray to extract from
-        nav_lon: 2D longitude array
-        target_lon: Target longitude in degrees (-180 to 180, negative for W, positive for E)
-        lat_values: Latitude values for the y dimension
-
-    Returns:
-        Data along the longitude transect
-    """
-    # Find the x-index closest to the target longitude for each y
-    lon_diff = np.abs(nav_lon - target_lon)
-    x_indices = lon_diff.argmin(dim='x')
-
-    # Extract data along this transect
-    transect_data = data.isel(x=x_indices)
-
-    # Assign latitude coordinates
-    transect_data['y'] = lat_values
-
-    # Sort by latitude
-    transect_data = transect_data.sortby('y')
-
-    return transect_data
-
-
-def get_central_latitude(nav_lat):
-    """Extract latitude from the central meridian of a 2D nav_lat array"""
-    mid_x = nav_lat.shape[1] // 2
-    central_lat = nav_lat[:, mid_x]
-    return central_lat
-
-
-def plot_basin_transects(
-    plotter: OceanMapPlotter,
-    ptrc_ds: xr.Dataset,
-    obs_datasets: dict,
-    nav_lon: xr.DataArray,
-    nav_lat: xr.DataArray,
-    output_dir: Path,
-    run_name: str,
-    year: str,
-    nutrients: list = ['_NO3', '_PO4', '_Si', '_Fer']
-):
-    """
-    Create Atlantic and Pacific nutrient transect plots with observations.
-
-    Args:
-        plotter: OceanMapPlotter instance
-        ptrc_ds: Model dataset with tracer variables
-        obs_datasets: Dict mapping nutrient names to observational datasets
-        nav_lon: 2D longitude array
-        nav_lat: 2D latitude array
-        output_dir: Output directory for plots
-        run_name: Model run name
-        year: Year string
-        nutrients: List of nutrients to plot
-    """
-    # Get latitude values for transect
-    lat_values = get_central_latitude(nav_lat)
-
-    # Define transect longitudes
-    atlantic_lon = -35.0  # 35W
-    pacific_lon = -170.0  # 170W
-
-    transects = [
-        ('Atlantic', atlantic_lon, '35W'),
-        ('Pacific', pacific_lon, '170W')
-    ]
-
-    for basin_name, target_lon, lon_label in transects:
-        # Create 2x4 grid: model top, obs bottom
-        fig = plt.figure(figsize=(16, 8))
-        gs = fig.add_gridspec(3, 4, height_ratios=[1, 1, 0.1], hspace=0.3, wspace=0.3)
-
-        # Store mappables and vmin/vmax for colorbars
-        mappables = []
-        vranges = []
-
-        for i, nut in enumerate(nutrients):
-            ax_model = fig.add_subplot(gs[0, i])
-            ax_obs = fig.add_subplot(gs[1, i])
-
-            meta = get_variable_metadata(nut)
-
-            # Initialize vmin/vmax
-            vmin = 0
-            vmax = None
-            im_model = None
-            im_obs = None
-
-            # Model transect
-            if nut in ptrc_ds:
-                model_data = ptrc_ds[nut]
-
-                # Time average if needed
-                if 'time_counter' in model_data.dims:
-                    model_data = model_data.mean(dim='time_counter')
-
-                # Remove bottom level if needed
-                if 'deptht' in model_data.dims:
-                    model_data = model_data.isel(deptht=slice(None, -1))
-
-                model_data = model_data.squeeze()
-
-                # Extract transect
-                model_transect = get_longitude_transect(model_data, nav_lon, target_lon, lat_values)
-
-                # Mask land values (0 or very close to 0)
-                model_transect_masked = model_transect.where(model_transect > 1e-10)
-
-                # Calculate dynamic vmax from 95th percentile of model data
-                vmax = float(np.nanpercentile(model_transect_masked.values, 95))
-
-                # Plot model
-                im_model = model_transect_masked.plot(
-                    ax=ax_model,
-                    cmap=meta['cmap'],
-                    vmin=vmin,
-                    vmax=vmax,
-                    add_colorbar=False
-                )
-
-                ax_model.set_title(f"{meta['long_name']}\nModel", fontsize=10)
-                ax_model.invert_yaxis()
-
-            # Observation transect
-            if nut in obs_datasets and obs_datasets[nut] is not None:
-                obs_data = obs_datasets[nut]
-
-                # Get surface and depth if present
-                if 'depth' in obs_data.dims:
-                    obs_data = obs_data.isel(depth=slice(None, -1))
-
-                obs_data = obs_data.squeeze()
-
-                # Get obs nav_lon (should be in the dataset)
-                if 'nav_lon' in obs_data.coords:
-                    obs_nav_lon = obs_data.coords['nav_lon']
-                else:
-                    obs_nav_lon = nav_lon  # Use model nav_lon
-
-                # Extract transect
-                obs_transect = get_longitude_transect(obs_data, obs_nav_lon, target_lon, lat_values)
-
-                # If vmax not set from model, calculate from obs
-                if vmax is None:
-                    vmax = float(np.nanpercentile(obs_transect.values, 95))
-
-                # Plot observations
-                im_obs = obs_transect.plot(
-                    ax=ax_obs,
-                    cmap=meta['cmap'],
-                    vmin=vmin,
-                    vmax=vmax,
-                    add_colorbar=False
-                )
-
-                ax_obs.set_title(f"Observations", fontsize=10)
-                ax_obs.invert_yaxis()
-            else:
-                ax_obs.text(0.5, 0.5, 'No observations',
-                           ha='center', va='center', transform=ax_obs.transAxes)
-
-            # Store mappable and vrange for colorbar
-            mappables.append(im_model if im_model is not None else im_obs)
-            vranges.append((vmin, vmax if vmax is not None else meta['vmax']))
-
-            # Set labels only on edge subplots
-            if i == 0:
-                ax_model.set_ylabel('Depth (m)', fontsize=10)
-                ax_obs.set_ylabel('Depth (m)', fontsize=10)
-            else:
-                ax_model.set_ylabel('')
-                ax_obs.set_ylabel('')
-
-            ax_obs.set_xlabel('Latitude (°N)', fontsize=10)
-            ax_model.set_xlabel('')
-
-        # Add colorbars at bottom
-        for i, nut in enumerate(nutrients):
-            if mappables[i] is not None:
-                cax = fig.add_subplot(gs[2, i])
-                meta = get_variable_metadata(nut)
-                cbar = fig.colorbar(mappables[i], cax=cax, orientation='horizontal')
-                cbar.set_label(meta['units'], fontsize=9)
-                cbar.ax.tick_params(labelsize=8)
-
-        # Overall title
-        fig.suptitle(f'{basin_name} Transect ({lon_label})', fontsize=12)
-
-        # Save
-        output_path = output_dir / f"{run_name}_{year}_transect_{basin_name.lower()}.png"
-        fig.savefig(output_path, dpi=300, bbox_inches='tight')
-        plt.close(fig)
-        print(f"Saved: {output_path}")
-
-
-def plot_pft_transects(
-    plotter: OceanMapPlotter,
-    ptrc_ds: xr.Dataset,
-    nav_lon: xr.DataArray,
-    nav_lat: xr.DataArray,
-    output_dir: Path,
-    run_name: str,
-    year: str,
-    pfts: list = None,
-    max_depth: float = 500.0
-):
-    """
-    Create Atlantic and Pacific PFT transect plots (model only).
-
-    Args:
-        plotter: OceanMapPlotter instance
-        ptrc_ds: Model dataset with tracer variables
-        nav_lon: 2D longitude array
-        nav_lat: 2D latitude array
-        output_dir: Output directory for plots
-        run_name: Model run name
-        year: Year string
-        pfts: List of PFTs to plot (default: all 12 PFTs)
-        max_depth: Maximum depth to plot in meters (default: 500m)
-    """
-    if pfts is None:
-        pfts = PHYTOS + ZOOS
-
-    # Get latitude values for transect
-    lat_values = get_central_latitude(nav_lat)
-
-    # Define transect longitudes
-    atlantic_lon = -35.0  # 35W
-    pacific_lon = -170.0  # 170W
-
-    transects = [
-        ('Atlantic', atlantic_lon, '35W'),
-        ('Pacific', pacific_lon, '170W')
-    ]
-
-    for basin_name, target_lon, lon_label in transects:
-        # Create 4x3 subplots for 12 PFTs
-        fig, axs = plt.subplots(4, 3, figsize=(12, 13), sharex=True, sharey=True)
-        fig.subplots_adjust(hspace=0.3, wspace=0.3)
-
-        for i, pft in enumerate(pfts):
-            # Calculate subplot position (4 rows x 3 columns)
-            row = i // 3
-            col = i % 3
-            ax = axs[row, col]
-
-            # Initialize
-            vmin = 0
-            vmax = None
-
-            # Model transect
-            if pft in ptrc_ds:
-                model_data = ptrc_ds[pft]
-
-                # Time average if needed
-                if 'time_counter' in model_data.dims:
-                    model_data = model_data.mean(dim='time_counter')
-
-                # Remove bottom level if needed
-                if 'deptht' in model_data.dims:
-                    model_data = model_data.isel(deptht=slice(None, -1))
-
-                model_data = model_data.squeeze()
-
-                # Extract transect
-                model_transect = get_longitude_transect(model_data, nav_lon, target_lon, lat_values)
-
-                # Convert from mmol C/m³ to µmol C/L (multiply by 1e6)
-                model_transect = model_transect * 1e6
-
-                # Limit depth to max_depth
-                if 'deptht' in model_transect.coords:
-                    depth_mask = model_transect.coords['deptht'] <= max_depth
-                    model_transect = model_transect.where(depth_mask, drop=True)
-
-                # Mask land values (0 or very close to 0)
-                model_transect_masked = model_transect.where(model_transect > 1e-10)
-
-                # Calculate dynamic vmax from 95th percentile of model data
-                vmax = float(np.nanpercentile(model_transect_masked.values, 95))
-
-                # Plot model
-                im = model_transect_masked.plot(
-                    ax=ax,
-                    cmap='turbo',
-                    vmin=vmin,
-                    vmax=vmax,
-                    add_colorbar=True,
-                    cbar_kwargs={'label': 'µmol C L⁻¹', 'shrink': 0.8}
-                )
-
-                # Get PFT name for title
-                if pft in PHYTO_NAMES:
-                    pft_name = PHYTO_NAMES[pft]
-                elif pft in ZOO_NAMES:
-                    pft_name = ZOO_NAMES[pft]
-                else:
-                    pft_name = pft
-
-                ax.set_title(f"{pft_name}", fontsize=10)
-                ax.invert_yaxis()
-                ax.set_ylim(max_depth, 0)
-
-            # Set labels only on edge subplots
-            if col == 0:
-                ax.set_ylabel('Depth (m)', fontsize=10)
-            else:
-                ax.set_ylabel('')
-
-            if row == 3:  # Bottom row (4 rows, so row 3 is the last)
-                ax.set_xlabel('Latitude (°N)', fontsize=10)
-            else:
-                ax.set_xlabel('')
-
-        # Save
-        output_path = output_dir / f"{run_name}_{year}_transect_{basin_name.lower()}_pfts.png"
-        fig.savefig(output_path, dpi=300, bbox_inches='tight')
-        plt.close(fig)
-        print(f"Saved: {output_path}")
+# Import transect plotting functions
+from make_transects import plot_basin_transects, plot_pft_transects
+
+# Import preprocessing utilities
+from preprocess_data import (
+    load_and_preprocess_ptrc,
+    load_and_preprocess_diad,
+    load_observations,
+    get_nav_coordinates
+)
 
 
 def plot_pft_maps(
@@ -752,54 +436,18 @@ def main():
     # Initialize plotter
     plotter = OceanMapPlotter(mask_path=args.mask_path)
 
-    # Load datasets with volume integration using chunked/lazy loading
-    # This is memory efficient - data is only loaded when needed
-    print("Loading ptrc_T dataset (lazy loading with dask)...")
-    ptrc_ds = plotter.load_data(
-        str(ptrc_file),
-        volume=plotter.volume,
-        chunks={'time_counter': 1}  # Load one time step at a time
+    # Load and preprocess datasets using preprocessing module
+    ptrc_ds = load_and_preprocess_ptrc(
+        ptrc_file=ptrc_file,
+        plotter=plotter,
+        compute_integrated=True,  # Need integrated vars for PFT maps
+        compute_concentrations=True  # Need concentration vars for transects
     )
 
-    print("Loading diad_T dataset (lazy loading with dask)...")
-    diad_ds = plotter.load_data(
-        str(diad_file),
-        volume=plotter.volume,
-        chunks={'time_counter': 1}  # Load one time step at a time
+    diad_ds = load_and_preprocess_diad(
+        diad_file=diad_file,
+        plotter=plotter
     )
-
-    # Compute only the variables we need for plotting (triggers dask computation)
-    # This processes data in chunks and releases memory as it goes
-    print("Computing time averages (this may take a moment)...")
-
-    # For PFT maps, we only need the integrated variables
-    # Note: Vertical integration should already be done by _vint() in ocean_maps.py
-    pft_vars = [f'_{pft}INT' for pft in PHYTOS + ZOOS]
-    for var in pft_vars:
-        if var in ptrc_ds:
-            # Compute time average immediately to reduce memory
-            # Squeeze to remove any singleton dimensions
-            if 'time_counter' in ptrc_ds[var].dims:
-                ptrc_ds[var] = ptrc_ds[var].mean(dim='time_counter').squeeze().compute()
-            else:
-                ptrc_ds[var] = ptrc_ds[var].squeeze().compute()
-
-    # For PFT transects, we also need the raw concentration variables (not integrated)
-    # These are stored without the underscore prefix in the raw file
-    pft_concentration_vars = PHYTOS + ZOOS
-    for var in pft_concentration_vars:
-        if var in ptrc_ds:
-            # Time average the concentration data for transects
-            if 'time_counter' in ptrc_ds[var].dims:
-                ptrc_ds[var] = ptrc_ds[var].mean(dim='time_counter').squeeze().compute()
-            else:
-                ptrc_ds[var] = ptrc_ds[var].squeeze().compute()
-
-    # For diagnostics, we only need these variables
-    diag_vars = ['_TChl', '_EXP', '_PPINT']
-    for var in diag_vars:
-        if var in diad_ds:
-            diad_ds[var] = diad_ds[var].mean(dim='time_counter').squeeze().compute()
 
     print("Data processing complete.")
 
@@ -849,36 +497,10 @@ def main():
     if not args.no_nutrient_comparison:
         print("4. Nutrients (model vs observations)...")
 
-        # Load observational datasets
+        # Load observational datasets using preprocessing module
         obs_dir = Path(args.obs_dir)
-        obs_datasets = {}
-
-        # Try to load WOA data for NO3, PO4, Si
-        woa_file = obs_dir / 'woa_orca_bil.nc'
-        if woa_file.exists():
-            print(f"  Loading WOA data from {woa_file}")
-            woa_ds = xr.open_dataset(woa_file, decode_times=False)
-            print(f"  WOA variables: {list(woa_ds.data_vars)}")
-            # Map WOA variables to our naming convention
-            if 'no3' in woa_ds:
-                obs_datasets['_NO3'] = woa_ds['no3']
-            if 'po4' in woa_ds:
-                obs_datasets['_PO4'] = woa_ds['po4']
-            if 'si' in woa_ds:
-                obs_datasets['_Si'] = woa_ds['si']
-        else:
-            print(f"  Warning: WOA file not found at {woa_file}")
-
-        # Try to load Fe data from Huang2022
-        fe_file = obs_dir / 'Huang2022_orca.nc'
-        if fe_file.exists():
-            print(f"  Loading Fe data from {fe_file}")
-            fe_ds = xr.open_dataset(fe_file, decode_times=False)
-            print(f"  Fe variables: {list(fe_ds.data_vars)}")
-            if 'fe' in fe_ds:
-                obs_datasets['_Fer'] = fe_ds['fe']
-        else:
-            print(f"  Warning: Fe file not found at {fe_file}")
+        nutrients = ['_NO3', '_PO4', '_Si', '_Fer']
+        obs_datasets = load_observations(obs_dir, nutrients=nutrients)
 
         # Generate comparison plot
         plot_nutrient_comparison(
@@ -886,25 +508,24 @@ def main():
             ptrc_ds=ptrc_ds,
             obs_datasets=obs_datasets,
             output_path=output_dir / f"{args.run_name}_{args.year}_nutrients.png",
-            nutrients=['_NO3', '_PO4', '_Si', '_Fer']
+            nutrients=nutrients
         )
 
         # Generate basin transects
         print("  Generating Atlantic and Pacific transects...")
-        # Get nav_lon/nav_lat from the model output file (ptrc_ds should have it)
-        ptrc_file_full = xr.open_dataset(str(ptrc_file), decode_times=False)
+        try:
+            nav_lon, nav_lat = get_nav_coordinates(ptrc_file)
 
-        if 'nav_lon' in ptrc_file_full.coords and 'nav_lat' in ptrc_file_full.coords:
             plot_basin_transects(
                 plotter=plotter,
                 ptrc_ds=ptrc_ds,
                 obs_datasets=obs_datasets,
-                nav_lon=ptrc_file_full['nav_lon'],
-                nav_lat=ptrc_file_full['nav_lat'],
+                nav_lon=nav_lon,
+                nav_lat=nav_lat,
                 output_dir=output_dir,
                 run_name=args.run_name,
                 year=args.year,
-                nutrients=['_NO3', '_PO4', '_Si', '_Fer']
+                nutrients=nutrients
             )
 
             # Generate PFT transects
@@ -912,18 +533,15 @@ def main():
             plot_pft_transects(
                 plotter=plotter,
                 ptrc_ds=ptrc_ds,
-                nav_lon=ptrc_file_full['nav_lon'],
-                nav_lat=ptrc_file_full['nav_lat'],
+                nav_lon=nav_lon,
+                nav_lat=nav_lat,
                 output_dir=output_dir,
                 run_name=args.run_name,
                 year=args.year,
                 pfts=PHYTOS + ZOOS
             )
-
-            ptrc_file_full.close()
-        else:
-            print("  Warning: nav_lon/nav_lat not found in model file, skipping transects")
-            ptrc_file_full.close()
+        except ValueError as e:
+            print(f"  Warning: {e}, skipping transects")
     else:
         print("4. Nutrients (model only)...")
 

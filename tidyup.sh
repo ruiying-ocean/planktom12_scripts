@@ -166,8 +166,8 @@ if [[ $yearTo -eq $yearEnd ]]; then
 	# run script to generate monthly regional plots
 	python3 make_monthly_plots.py --model-id $model_id --model-dir $modelOutputDir
 
-	# generate spatial maps
-	python3 make_maps.py $model_id $yearTo --model-run-dir $modelOutputDir --output-dir $modelOutputDir/monitor/$model_id/
+	# generate complete visualization suite (maps + transects)
+	python3 visualise_model.py $model_id $yearTo --model-run-dir $modelOutputDir --output-dir $modelOutputDir/monitor/$model_id/
 
 	# run script to create html file
 	./make_html.sh $model_id $modelOutputDir
