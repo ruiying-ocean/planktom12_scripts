@@ -611,13 +611,20 @@ def plot_multimodel_transect_row(
     Returns:
         List of axes used
     """
-    from map_utils import get_variable_metadata
+    from map_utils import get_variable_metadata, PHYTO_NAMES, ZOO_NAMES
 
     n_models = len(model_transects)
 
     # Get metadata
     meta = get_variable_metadata(variable)
     var_name = meta.get('long_name', variable)
+
+    # Override with PFT names if this is a PFT variable
+    if variable in PHYTO_NAMES:
+        var_name = PHYTO_NAMES[variable]
+    elif variable in ZOO_NAMES:
+        var_name = ZOO_NAMES[variable]
+
     var_unit = meta.get('units', '')
     cmap = meta.get('cmap', 'Spectral_r')
 
@@ -649,14 +656,17 @@ def plot_multimodel_transect_row(
             if max_depth is not None:
                 ax.set_ylim(max_depth, 0)
 
-            # First row gets model name as title, otherwise just variable name
-            ax.set_title(f"{label}", fontsize=12, fontweight='bold')
+            # Only show model name as title in first row (when show_ylabel=True)
+            if show_ylabel:
+                ax.set_title(f"{label}", fontsize=12, fontweight='bold')
+            else:
+                ax.set_title('')
         else:
             ax.text(0.5, 0.5, 'No data', ha='center', va='center', transform=ax.transAxes)
 
-        # Y-label only on first column
-        if show_ylabel and model_idx == 0:
-            ax.set_ylabel(f"{var_name}\nDepth (m)", fontsize=10)
+        # Y-label only on first column - show variable name and depth
+        if model_idx == 0:
+            ax.set_ylabel(f"{var_name}\nDepth (m)", fontsize=10, fontweight='bold')
         else:
             ax.set_ylabel('')
 

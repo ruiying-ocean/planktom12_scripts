@@ -488,7 +488,7 @@ BIOMASS_RANGES = {
 # Ecosystem diagnostics
 ECOSYSTEM_VARS = {
     '_TChl': {
-        'long_name': 'Total Surface Chlorophyll',
+        'long_name': 'Chl',
         'units': 'µg Chl L⁻¹',
         'vmax': 1.2,
         'depth_index': 0,
@@ -503,14 +503,14 @@ ECOSYSTEM_VARS = {
         'cmap': 'RdYlBu_r'
     },
     '_PPINT': {
-        'long_name': 'Integrated Primary Production',
+        'long_name': 'NPP',
         'units': 'g C m⁻² yr⁻¹',
         'vmax': 400,
         'depth_index': None,
         'cmap': 'viridis'
     },
     '_EXP': {
-        'long_name': 'Export at 100m',
+        'long_name': 'EXP',
         'units': 'g C m⁻² yr⁻¹',
         'vmax': 80,
         'depth_index': 10,  # ~100m depth
@@ -587,7 +587,7 @@ NUTRIENT_VARS = {
         'units': 'µmol L⁻¹',
         'vmax': 400,
         'vmin': 200,
-        'cmap': 'viridis'
+        'cmap': 'turbo'
     }
 }
 

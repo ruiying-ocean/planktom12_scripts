@@ -169,7 +169,10 @@ def plot_multimodel_maps(models, output_dir, config):
         n_rows = len(var_names)
 
         # Create figure with subplots using constrained_layout
-        fig = plt.figure(figsize=(4 * n_cols, 3 * n_rows), constrained_layout=True)
+        # Use consistent per-subplot size: 4 inches wide × 2.5 inches tall
+        subplot_width = 4
+        subplot_height = 2.5
+        fig = plt.figure(figsize=(subplot_width * n_cols, subplot_height * n_rows), constrained_layout=True)
         gs = gridspec.GridSpec(n_rows, n_cols, figure=fig)
 
         print(f"Generating {group_name} comparison map...")
@@ -239,8 +242,8 @@ def plot_multimodel_maps(models, output_dir, config):
                 if row_idx == 0:
                     ax.set_title(model['name'], fontsize=14, fontweight='bold')
                 if col_idx == 0:
-                    ax.text(-0.1, 0.5, var_label, transform=ax.transAxes,
-                           fontsize=14, fontweight='bold', rotation=90,
+                    ax.text(-0.15, 0.5, var_label, transform=ax.transAxes,
+                           fontsize=12, fontweight='bold', rotation=90,
                            va='center', ha='right')
 
             # Add anomaly column if 2 models

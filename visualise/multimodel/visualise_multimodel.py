@@ -266,7 +266,8 @@ def main():
                    models[1]['name'],
                    '--output', str(output_dir / 'setupdata_comparison.md')]
 
-            subprocess.run(cmd)
+            # Run in output_dir for consistency
+            subprocess.run(cmd, cwd=output_dir)
 
         # Compare namelists
         print("  [2/2] Comparing namelist.trc.sms...")
@@ -285,7 +286,8 @@ def main():
                    '--output', str(output_dir / 'namelist_comparison.md'),
                    '--namelist-name', 'namelist.trc.sms']
 
-            subprocess.run(cmd)
+            # Run in output_dir so heatmap PNG files are saved there
+            subprocess.run(cmd, cwd=output_dir)
 
         print("✓ Configuration comparison complete\n")
 
