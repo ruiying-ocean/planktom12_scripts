@@ -570,7 +570,7 @@ ECOSYSTEM_VARS = {
         'vmax': 0.4,
         'vmin': 0,
         'depth_index': None,
-        'cmap': 'plasma'
+        'cmap': 'viridis'
     },
     '_Teff': {
         'long_name': 'Transfer Efficiency',
@@ -578,7 +578,7 @@ ECOSYSTEM_VARS = {
         'vmax': 0.5,
         'vmin': 0,
         'depth_index': None,
-        'cmap': 'plasma'
+        'cmap': 'viridis'
     }
 }
 

@@ -262,6 +262,10 @@ def plot_multimodel_maps(models, output_dir, config):
                 if len(diff_vals) > 0:
                     # Use 95th percentile of absolute values for symmetric range
                     diff_max = np.percentile(np.abs(diff_vals), 95)
+
+                    # For dimensionless variables (ratios), cap difference at reasonable value
+                    if var_unit == 'dimensionless':
+                        diff_max = min(diff_max, 1.0)  # Cap at ±1 for ratios
                 else:
                     diff_max = 1.0  # Fallback
 
