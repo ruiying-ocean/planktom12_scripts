@@ -87,9 +87,7 @@ def main():
         print(f"Error: {diad_file} not found")
         sys.exit(1)
 
-    print(f"╔═══════════════════════════════════════════════════════════════╗")
-    print(f"║  NEMO/PlankTom Model Visualization                           ║")
-    print(f"╚═══════════════════════════════════════════════════════════════╝")
+    print_header("NEMO/PlankTom Model Visualization")
     print(f"  Run:         {args.run_name}")
     print(f"  Year:        {args.year}")
     print(f"  Data dir:    {run_dir}")
