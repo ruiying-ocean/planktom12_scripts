@@ -103,7 +103,7 @@ if [ $length -eq 2 ]; then
         "${model2_dir}" \
         "${runs[0]}" \
         "${runs[1]}" \
-        --output setupdata_comparison.html
+        --output setupdata_comparison.md
 
     # Compare namelist files
     echo "  - Comparing namelist.trc.sms..."
@@ -112,7 +112,7 @@ if [ $length -eq 2 ]; then
         "${model2_dir}" \
         "${runs[0]}" \
         "${runs[1]}" \
-        --output namelist_comparison.html \
+        --output namelist_comparison.md \
         --namelist-name namelist.trc.sms
 fi
 

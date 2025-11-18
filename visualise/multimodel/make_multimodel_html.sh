@@ -96,9 +96,9 @@ fi
 # Build the setupdata comparison section
 setupdata_section=""
 
-# Check if setupdata comparison HTML exists
-if [ -f "setupdata_comparison.html" ]; then
-    setupdata_section=$(cat setupdata_comparison.html)
+# Check if setupdata comparison markdown exists
+if [ -f "setupdata_comparison.md" ]; then
+    setupdata_section=$(cat setupdata_comparison.md)
 else
     setupdata_section="No setUpData comparison available.\n\n"
 fi
@@ -106,9 +106,9 @@ fi
 # Build the namelist comparison section
 namelist_section=""
 
-# Check if namelist comparison HTML exists
-if [ -f "namelist_comparison.html" ]; then
-    namelist_section=$(cat namelist_comparison.html)
+# Check if namelist comparison markdown exists
+if [ -f "namelist_comparison.md" ]; then
+    namelist_section=$(cat namelist_comparison.md)
 else
     namelist_section="No namelist comparison available.\n\n"
 fi
