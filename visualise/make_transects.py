@@ -28,41 +28,8 @@ from preprocess_data import (
     get_nav_coordinates
 )
 
-
-def get_longitude_transect(data, nav_lon, target_lon, lat_values):
-    """
-    Extract data along a specific longitude transect.
-
-    Args:
-        data: xarray.DataArray to extract from
-        nav_lon: 2D longitude array
-        target_lon: Target longitude in degrees (-180 to 180, negative for W, positive for E)
-        lat_values: Latitude values for the y dimension
-
-    Returns:
-        Data along the longitude transect
-    """
-    # Find the x-index closest to the target longitude for each y
-    lon_diff = np.abs(nav_lon - target_lon)
-    x_indices = lon_diff.argmin(dim='x')
-
-    # Extract data along this transect
-    transect_data = data.isel(x=x_indices)
-
-    # Assign latitude coordinates
-    transect_data['y'] = lat_values
-
-    # Sort by latitude
-    transect_data = transect_data.sortby('y')
-
-    return transect_data
-
-
-def get_central_latitude(nav_lat):
-    """Extract latitude from the central meridian of a 2D nav_lat array"""
-    mid_x = nav_lat.shape[1] // 2
-    central_lat = nav_lat[:, mid_x]
-    return central_lat
+# Import shared transect utilities
+from transect_utils import get_longitude_transect, get_central_latitude
 
 
 def plot_basin_transects(
