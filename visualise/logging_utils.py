@@ -133,12 +133,12 @@ def print_warning(message: str):
     Example:
         print_warning("File not found, using default")
         # With rich:
-        #   ! File not found...  (in yellow, bold exclamation)
+        #   ! File not found...  (in red, bold exclamation)
         # Without rich:
         #   Warning: File not found...
     """
     if HAS_RICH:
-        _console.print(f"[bold yellow]![/bold yellow] [yellow]{message}[/yellow]")
+        _console.print(f"[bold red]![/bold red] [red]{message}[/red]")
     else:
         print(f"Warning: {message}")
 

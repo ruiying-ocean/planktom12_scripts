@@ -15,6 +15,10 @@ from matplotlib import gridspec
 # Use a backend that doesn't require a display
 matplotlib.use("Agg")
 
+# Import logging utilities from parent directory
+sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
+from logging_utils import print_header, print_info, print_warning, print_error, print_success
+
 # Load configuration
 try:
     import tomllib
@@ -45,7 +49,7 @@ def load_config():
         with open(config_path, "rb") as f:
             return tomllib.load(f)
 
-    print(f"Warning: Config file not found, using defaults")
+    print_warning("Config file not found, using defaults")
     return None
 
 CONFIG = load_config()
@@ -104,7 +108,7 @@ class ModelConfig:
 
                     return from_idx, to_idx
             except Exception as e:
-                print(f"Warning: Error calculating indices from actual years: {e}")
+                print_warning(f"Error calculating indices from actual years: {e}")
 
         a = 2 + (self.from_year - self.start_year)
         b = a + (self.to_year - self.from_year) + 1
@@ -468,9 +472,9 @@ class DataLoader:
             # New CSV format - single header row, comma-separated
             df = pd.read_csv(csv_path)
             if df.empty:
-                print(f"Warning: Empty dataframe loaded from {csv_path}")
+                print_warning(f"Empty dataframe loaded from {csv_path}")
                 return None
-            print(f"Loaded CSV {csv_path}")
+            print_info(f"Loaded CSV {csv_path}")
         except FileNotFoundError:
             try:
                 # Legacy TSV format - 3 header rows, tab-separated
@@ -478,17 +482,17 @@ class DataLoader:
                 # Use header=0 to get the variable names
                 df = pd.read_csv(dat_path, sep="\t", header=0, skiprows=[1, 2])
                 if df.empty:
-                    print(f"Warning: Empty dataframe loaded from {dat_path}")
+                    print_warning(f"Empty dataframe loaded from {dat_path}")
                     return None
-                print(f"Loaded TSV {dat_path}")
+                print_info(f"Loaded TSV {dat_path}")
             except FileNotFoundError:
-                print(f"Warning: File not found - tried both {csv_path} and {dat_path}")
+                print_warning(f"File not found - tried both {csv_path} and {dat_path}")
                 return None
             except Exception as e:
-                print(f"Warning: Error loading {dat_path}: {e}")
+                print_warning(f"Error loading {dat_path}: {e}")
                 return None
         except Exception as e:
-            print(f"Warning: Error loading {csv_path}: {e}")
+            print_warning(f"Error loading {csv_path}: {e}")
             return None
 
         # Sort by year if year column exists
@@ -586,7 +590,7 @@ class PlotGenerator:
 
         filepath = f"{self.save_dir}/{filename}"
         fig.savefig(filepath, dpi=dpi, bbox_inches="tight")
-        print(f"Created {filename}")
+        print_success(f"Created {filename}")
         plt.close(fig)
 
     def plot_all_models(self, fig, axes, plot_func):
@@ -597,18 +601,18 @@ class PlotGenerator:
                 plot_func(model, axes, color)
                 successful_plots += 1
             except Exception as e:
-                print(f"Error plotting {model.name}: {e}")
+                print_error(f"Plotting {model.name}: {e}")
                 import traceback
 
                 if hasattr(self, "debug") and self.debug:
                     traceback.print_exc()
 
         if successful_plots == 0:
-            print(
-                f"Warning: No models were successfully plotted for {self.__class__.__name__}"
+            print_warning(
+                f"No models were successfully plotted for {self.__class__.__name__}"
             )
         else:
-            print(f"Successfully plotted {successful_plots}/{len(self.models)} models")
+            print_info(f"Successfully plotted {successful_plots}/{len(self.models)} models")
 
 
 class GlobalSummaryPlotter(PlotGenerator):
@@ -1296,7 +1300,7 @@ class MultiModelPlotter:
         self.save_dir = save_dir
         self.debug = debug
 
-        print(f"Loaded {len(self.models)} models:")
+        print_info(f"Loaded {len(self.models)} models:")
         for model in self.models:
             print(f"  - {model.name}: {model.description}")
 
@@ -1315,10 +1319,10 @@ class MultiModelPlotter:
             if self.debug:
                 plotter.debug = True
             try:
-                print(f"\nGenerating {plotter.__class__.__name__}...")
+                print_header(f"Generating {plotter.__class__.__name__}")
                 plotter.generate()
             except Exception as e:
-                print(f"Error generating {plotter.__class__.__name__}: {e}")
+                print_error(f"Generating {plotter.__class__.__name__}: {e}")
                 if self.debug:
                     import traceback
 
@@ -1327,7 +1331,7 @@ class MultiModelPlotter:
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python script.py <save_directory> [--debug]")
+        print_error("Usage: python script.py <save_directory> [--debug]")
         sys.exit(1)
 
     model_csv = "modelsToPlot.csv"
