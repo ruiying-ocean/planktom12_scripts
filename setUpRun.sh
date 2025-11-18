@@ -272,7 +272,7 @@ fi
 
 # Get tidying up scripts
 cp -n /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/tidyup.sh .
-cp -n /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/tidyupJob .
+cp -n /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/tidyup.job .
 
 # Get breakdown scripts
 cp /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/breakdown/breakdown*.py .
