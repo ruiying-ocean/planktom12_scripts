@@ -41,10 +41,12 @@ def plot_basin_transects(
     output_dir: Path,
     run_name: str,
     year: str,
-    nutrients: list = ['_NO3', '_PO4', '_Si', '_Fer']
+    nutrients: list = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
 ):
     """
-    Create Atlantic and Pacific nutrient transect plots with observations.
+    Create Atlantic and Pacific nutrient transect plots with observations and differences.
+
+    Creates a 3-column layout: Model | Observations | Difference
 
     Args:
         plotter: OceanMapPlotter instance
@@ -55,7 +57,7 @@ def plot_basin_transects(
         output_dir: Output directory for plots
         run_name: Model run name
         year: Year string
-        nutrients: List of nutrients to plot
+        nutrients: List of nutrients to plot (default includes O2)
     """
     # Get latitude values for transect
     lat_values = get_central_latitude(nav_lat)
@@ -70,27 +72,23 @@ def plot_basin_transects(
     ]
 
     for basin_name, target_lon, lon_label in transects:
-        # Create 2x4 grid: model top, obs bottom
-        fig = plt.figure(figsize=(16, 8))
-        gs = fig.add_gridspec(3, 4, height_ratios=[1, 1, 0.1], hspace=0.3, wspace=0.3)
+        # Create Nx3 grid: nutrients in rows, 3 columns (model, obs, diff)
+        n_nutrients = len(nutrients)
 
-        # Store mappables and vmin/vmax for colorbars
-        mappables = []
-        vranges = []
+        # Use fig.subplots with sharex/sharey and constrained_layout
+        fig, axs = plt.subplots(
+            n_nutrients, 3,
+            figsize=(15, 3 * n_nutrients),
+            sharex='col',  # Share x-axis within each column
+            sharey='row',  # Share y-axis within each row
+            constrained_layout=True
+        )
 
         for i, nut in enumerate(nutrients):
-            ax_model = fig.add_subplot(gs[0, i])
-            ax_obs = fig.add_subplot(gs[1, i])
-
             meta = get_variable_metadata(nut)
 
-            # Initialize vmin/vmax
-            vmin = 0
-            vmax = None
-            im_model = None
-            im_obs = None
-
             # Model transect
+            model_transect = None
             if nut in ptrc_ds:
                 model_data = ptrc_ds[nut]
 
@@ -107,25 +105,8 @@ def plot_basin_transects(
                 # Extract transect
                 model_transect = get_longitude_transect(model_data, nav_lon, target_lon, lat_values)
 
-                # Mask land values (0 or very close to 0)
-                model_transect_masked = model_transect.where(model_transect > 1e-10)
-
-                # Calculate dynamic vmax from 95th percentile of model data
-                vmax = float(np.nanpercentile(model_transect_masked.values, 95))
-
-                # Plot model
-                im_model = model_transect_masked.plot(
-                    ax=ax_model,
-                    cmap=meta['cmap'],
-                    vmin=vmin,
-                    vmax=vmax,
-                    add_colorbar=False
-                )
-
-                ax_model.set_title(f"{meta['long_name']}\nModel", fontsize=10)
-                ax_model.invert_yaxis()
-
             # Observation transect
+            obs_transect = None
             if nut in obs_datasets and obs_datasets[nut] is not None:
                 obs_data = obs_datasets[nut]
 
@@ -144,51 +125,20 @@ def plot_basin_transects(
                 # Extract transect
                 obs_transect = get_longitude_transect(obs_data, obs_nav_lon, target_lon, lat_values)
 
-                # If vmax not set from model, calculate from obs
-                if vmax is None:
-                    vmax = float(np.nanpercentile(obs_transect.values, 95))
+            # Use shared 3-panel plotting function from difference_utils
+            from difference_utils import plot_three_panel_transect
 
-                # Plot observations
-                im_obs = obs_transect.plot(
-                    ax=ax_obs,
-                    cmap=meta['cmap'],
-                    vmin=vmin,
-                    vmax=vmax,
-                    add_colorbar=False
-                )
-
-                ax_obs.set_title(f"Observations", fontsize=10)
-                ax_obs.invert_yaxis()
-            else:
-                ax_obs.text(0.5, 0.5, 'No observations',
-                           ha='center', va='center', transform=ax_obs.transAxes)
-
-            # Store mappable and vrange for colorbar
-            mappables.append(im_model if im_model is not None else im_obs)
-            vranges.append((vmin, vmax if vmax is not None else meta['vmax']))
-
-            # Set labels only on edge subplots
-            if i == 0:
-                ax_model.set_ylabel('Depth (m)', fontsize=10)
-                ax_obs.set_ylabel('Depth (m)', fontsize=10)
-            else:
-                ax_model.set_ylabel('')
-                ax_obs.set_ylabel('')
-
-            ax_obs.set_xlabel('Latitude (°N)', fontsize=10)
-            ax_model.set_xlabel('')
-
-        # Add colorbars at bottom
-        for i, nut in enumerate(nutrients):
-            if mappables[i] is not None:
-                cax = fig.add_subplot(gs[2, i])
-                meta = get_variable_metadata(nut)
-                cbar = fig.colorbar(mappables[i], cax=cax, orientation='horizontal')
-                cbar.set_label(meta['units'], fontsize=9)
-                cbar.ax.tick_params(labelsize=8)
-
-        # Overall title
-        fig.suptitle(f'{basin_name} Transect ({lon_label})', fontsize=12)
+            plot_three_panel_transect(
+                axs=axs[i, :],  # Pass the row of axes
+                model_data=model_transect,
+                obs_data=obs_transect,
+                variable=nut,
+                label_model="Model",
+                label_obs="Observations",
+                show_ylabel=(i == 0),  # Only first row
+                show_xlabel=(i == n_nutrients - 1),  # Only last row
+                max_depth=None
+            )
 
         # Save
         output_path = output_dir / f"{run_name}_{year}_transect_{basin_name.lower()}.png"
@@ -390,7 +340,8 @@ def main():
 
     print("Data processing complete.")
 
-    # Load observational datasets
+    # Load observational datasets (including O2)
+    nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
     obs_dir = Path(args.obs_dir)
     obs_datasets = load_observations(obs_dir, nutrients=nutrients)
 

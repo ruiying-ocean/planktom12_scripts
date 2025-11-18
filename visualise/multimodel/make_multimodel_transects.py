@@ -152,7 +152,7 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
     n_models = len(models)
     has_anomaly = (n_models == 2)
     n_cols = n_models + (1 if has_anomaly else 0)
-    nutrients = ['_NO3', '_PO4', '_Si', '_Fer']
+    nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
 
     # Get DPI and format from config
     dpi = config.get("figure", {}).get("dpi", 300) if config else 300
@@ -188,17 +188,19 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
     for basin_name, target_lon, lon_label in transects:
         print(f"Generating {basin_name} nutrient transect comparison...")
 
-        # Create figure: 4 nutrients in rows, models+anomaly in columns
-        fig = plt.figure(figsize=(5 * n_cols, 3 * 4))
-        gs = gridspec.GridSpec(4, n_cols, figure=fig, hspace=0.3, wspace=0.3)
+        # Create figure: 5 nutrients (including O2) in rows, models+anomaly in columns
+        n_nutrients = len(nutrients)
+
+        # Use fig.subplots with sharex/sharey and constrained_layout
+        fig, axs = plt.subplots(
+            n_nutrients, n_cols,
+            figsize=(5 * n_cols, 3 * n_nutrients),
+            sharex='col',  # Share x-axis within each column
+            sharey='row',  # Share y-axis within each row
+            constrained_layout=True
+        )
 
         for i, nut in enumerate(nutrients):
-            # Get nutrient metadata
-            meta = get_variable_metadata(nut)
-            nut_name = meta.get('long_name', nut)
-            nut_unit = meta.get('units', '')
-            cmap = meta.get('cmap', 'Spectral_r')
-
             # Load data for all models
             model_transects = []
             for model in models:
@@ -218,68 +220,22 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
                 else:
                     model_transects.append(None)
 
-            # Plot each model
-            for model_idx in range(n_models):
-                ax = fig.add_subplot(gs[i, model_idx])
+            # Use shared plotting function from difference_utils
+            sys.path.insert(0, str(Path(__file__).parent.parent))
+            from difference_utils import plot_multimodel_transect_row
 
-                if model_transects[model_idx] is not None:
-                    transect_masked = model_transects[model_idx].where(model_transects[model_idx] > 1e-10)
-                    vmax = float(np.nanpercentile(transect_masked.values, 95))
+            model_labels = [m['name'] for m in models]
 
-                    transect_masked.plot(
-                        ax=ax,
-                        cmap=cmap,
-                        vmin=0,
-                        vmax=vmax,
-                        add_colorbar=True,
-                        cbar_kwargs={'label': nut_unit, 'shrink': 0.8, 'pad': 0.02}
-                    )
-
-                    ax.invert_yaxis()
-                    if max_depth is not None:
-                        ax.set_ylim(max_depth, 0)
-
-                # Title: First row shows model names, first column shows nutrient names
-                if i == 0:
-                    ax.set_title(f"{models[model_idx]['name']}", fontsize=12, fontweight='bold')
-                if model_idx == 0:
-                    ax.set_ylabel(f"{nut_name}\nDepth (m)", fontsize=10)
-                else:
-                    ax.set_ylabel('')
-
-                if i == 3:  # Last row
-                    ax.set_xlabel('Latitude (°N)', fontsize=10)
-                else:
-                    ax.set_xlabel('')
-
-            # Plot anomaly if 2 models
-            if has_anomaly and model_transects[0] is not None and model_transects[1] is not None:
-                ax = fig.add_subplot(gs[i, 2])
-
-                diff = model_transects[1] - model_transects[0]
-                diff_max = float(np.nanpercentile(np.abs(diff.values), 95))
-
-                diff.plot(
-                    ax=ax,
-                    cmap='RdBu_r',
-                    vmin=-diff_max,
-                    vmax=diff_max,
-                    add_colorbar=True,
-                    cbar_kwargs={'label': f'Δ {nut_unit}', 'shrink': 0.8, 'pad': 0.02}
-                )
-
-                ax.invert_yaxis()
-                if max_depth is not None:
-                    ax.set_ylim(max_depth, 0)
-
-                if i == 0:
-                    ax.set_title("Anomaly (B-A)", fontsize=12, fontweight='bold')
-                ax.set_ylabel('')
-
-                if i == 3:
-                    ax.set_xlabel('Latitude (°N)', fontsize=10)
-                else:
-                    ax.set_xlabel('')
+            plot_multimodel_transect_row(
+                axs=axs[i, :],  # Pass the row of axes
+                model_transects=model_transects,
+                variable=nut,
+                model_labels=model_labels,
+                show_anomaly=has_anomaly,
+                show_ylabel=(i == 0),  # Only first row gets full ylabel
+                show_xlabel=(i == n_nutrients - 1),  # Only last row gets xlabel
+                max_depth=max_depth
+            )
 
         # Save
         output_file = output_dir / f"multimodel_transect_{basin_name.lower()}_nutrients.{fmt}"
@@ -340,19 +296,18 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
         print(f"Generating {basin_name} PFT transect comparison...")
 
         # Create figure: 12 PFTs in rows, models+anomaly in columns
-        # Layout: n_rows = 12, n_cols = n_models + anomaly
-        fig = plt.figure(figsize=(5 * n_cols, 2 * 12))
-        gs = gridspec.GridSpec(12, n_cols, figure=fig, hspace=0.3, wspace=0.3)
+        n_pfts = len(pfts)
+
+        # Use fig.subplots with sharex/sharey and constrained_layout
+        fig, axs = plt.subplots(
+            n_pfts, n_cols,
+            figsize=(5 * n_cols, 2 * n_pfts),
+            sharex='col',  # Share x-axis within each column
+            sharey='row',  # Share y-axis within each row
+            constrained_layout=True
+        )
 
         for i, pft in enumerate(pfts):
-            # Get PFT name
-            if pft in PHYTO_NAMES:
-                pft_name = PHYTO_NAMES[pft]
-            elif pft in ZOO_NAMES:
-                pft_name = ZOO_NAMES[pft]
-            else:
-                pft_name = pft
-
             # Load data for all models
             model_transects = []
             for model in models:
@@ -375,66 +330,22 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
                 else:
                     model_transects.append(None)
 
-            # Plot each model
-            for model_idx in range(n_models):
-                ax = fig.add_subplot(gs[i, model_idx])
+            # Use shared plotting function from difference_utils
+            sys.path.insert(0, str(Path(__file__).parent.parent))
+            from difference_utils import plot_multimodel_transect_row
 
-                if model_transects[model_idx] is not None:
-                    transect_masked = model_transects[model_idx].where(model_transects[model_idx] > 1e-10)
-                    vmax = float(np.nanpercentile(transect_masked.values, 95))
+            model_labels = [m['name'] for m in models]
 
-                    transect_masked.plot(
-                        ax=ax,
-                        cmap='turbo',
-                        vmin=0,
-                        vmax=vmax,
-                        add_colorbar=True,
-                        cbar_kwargs={'label': 'µmol C L⁻¹', 'shrink': 0.8, 'pad': 0.02}
-                    )
-
-                    ax.invert_yaxis()
-                    ax.set_ylim(max_depth, 0)
-
-                # Title: First row shows model IDs, first column shows PFT names
-                if i == 0:
-                    ax.set_title(f"{models[model_idx]['name']}", fontsize=10, fontweight='bold')
-                if model_idx == 0:
-                    ax.set_ylabel(f"{pft_name}\nDepth (m)", fontsize=9)
-                else:
-                    ax.set_ylabel('')
-
-                if i == 11:  # Last row
-                    ax.set_xlabel('Latitude (°N)', fontsize=9)
-                else:
-                    ax.set_xlabel('')
-
-            # Plot anomaly if 2 models
-            if has_anomaly and model_transects[0] is not None and model_transects[1] is not None:
-                ax = fig.add_subplot(gs[i, 2])
-
-                diff = model_transects[1] - model_transects[0]
-                diff_max = float(np.nanpercentile(np.abs(diff.values), 95))
-
-                diff.plot(
-                    ax=ax,
-                    cmap='RdBu_r',
-                    vmin=-diff_max,
-                    vmax=diff_max,
-                    add_colorbar=True,
-                    cbar_kwargs={'label': 'Δ µmol C L⁻¹', 'shrink': 0.8, 'pad': 0.02}
-                )
-
-                ax.invert_yaxis()
-                ax.set_ylim(max_depth, 0)
-
-                if i == 0:
-                    ax.set_title("Anomaly (B-A)", fontsize=10, fontweight='bold')
-                ax.set_ylabel('')
-
-                if i == 11:
-                    ax.set_xlabel('Latitude (°N)', fontsize=9)
-                else:
-                    ax.set_xlabel('')
+            plot_multimodel_transect_row(
+                axs=axs[i, :],  # Pass the row of axes
+                model_transects=model_transects,
+                variable=pft,
+                model_labels=model_labels,
+                show_anomaly=has_anomaly,
+                show_ylabel=(i == 0),  # Only first row gets full ylabel
+                show_xlabel=(i == n_pfts - 1),  # Only last row gets xlabel
+                max_depth=max_depth
+            )
 
         # Save
         output_file = output_dir / f"multimodel_transect_{basin_name.lower()}_pfts.{fmt}"

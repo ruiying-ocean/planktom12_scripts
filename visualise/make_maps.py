@@ -268,9 +268,10 @@ def plot_nutrient_comparison(
     nutrients: list = ['_NO3', '_PO4', '_Si', '_Fer']
 ):
     """
-    Create model vs observations comparison for nutrients.
+    Create model vs observations comparison for nutrients with difference maps.
 
-    Matches style from OBio_state.ipynb cell 6.
+    Creates a 3-column layout: Model | Observations | Difference
+    Each nutrient is a row.
 
     Args:
         plotter: OceanMapPlotter instance
@@ -281,16 +282,20 @@ def plot_nutrient_comparison(
     """
     nnuts = len(nutrients)
 
-    # Create 2xN subplot grid (model top, obs bottom)
+    # Create NxS subplot grid (nutrients in rows, 3 columns: model, obs, diff)
     fig, axs = plotter.create_subplot_grid(
-        nrows=2, ncols=nnuts,
+        nrows=nnuts, ncols=3,
         projection=ccrs.PlateCarree(),
-        figsize=(10, 4)
+        figsize=(15, 4 * nnuts)
     )
 
     for i, nut in enumerate(nutrients):
-        # Model data (top row)
-        ax_model = axs[0, i]
+        # Column 0: Model data
+        ax_model = axs[i, 0]
+        # Column 1: Observations
+        ax_obs = axs[i, 1]
+        # Column 2: Difference
+        ax_diff = axs[i, 2]
 
         if nut not in ptrc_ds:
             print(f"Warning: {nut} not found in model dataset")
@@ -339,7 +344,7 @@ def plot_nutrient_comparison(
         else:
             vmax = vmax_model
 
-        # Plot model
+        # Plot model (Column 0)
         im = plotter.plot_variable(
             ax=ax_model,
             data=model_data,
@@ -350,12 +355,11 @@ def plot_nutrient_comparison(
         )
 
         ax_model.set_title(f"{meta['long_name']} - Model", fontsize=10)
+        cbar = fig.colorbar(im, ax=ax_model, orientation='horizontal', pad=0.05, shrink=0.8)
+        cbar.set_label(meta['units'], fontsize=10)
 
-        # Observational data (bottom row)
-        ax_obs = axs[1, i]
-
+        # Plot observations (Column 1)
         if obs_data is not None:
-            # Plot observations
             plotter.plot_variable(
                 ax=ax_obs,
                 data=obs_data,
@@ -364,17 +368,39 @@ def plot_nutrient_comparison(
                 vmax=vmax,
                 add_colorbar=False
             )
-
             ax_obs.set_title(f"{meta['long_name']} - Observations", fontsize=10)
+            cbar_obs = fig.colorbar(im, ax=ax_obs, orientation='horizontal', pad=0.05, shrink=0.8)
+            cbar_obs.set_label(meta['units'], fontsize=10)
         else:
             ax_obs.text(0.5, 0.5, 'No observations',
                        ha='center', va='center', transform=ax_obs.transAxes)
 
-        # Add shared colorbar for this column
-        cbar = fig.colorbar(im, ax=[ax_model, ax_obs],
-                          orientation='horizontal',
-                          shrink=0.8)
-        cbar.set_label(meta['units'], fontsize=10)
+        # Plot difference (Column 2)
+        if obs_data is not None:
+            # Import difference utilities
+            from difference_utils import calculate_difference, get_symmetric_colorbar_limits
+
+            diff = calculate_difference(model_data, obs_data)
+            diff = plotter.apply_mask(diff)
+
+            # Get symmetric colorbar limits
+            vmin_diff, vmax_diff = get_symmetric_colorbar_limits(diff)
+
+            im_diff = plotter.plot_variable(
+                ax=ax_diff,
+                data=diff,
+                cmap='RdBu_r',
+                vmin=vmin_diff,
+                vmax=vmax_diff,
+                add_colorbar=False
+            )
+
+            ax_diff.set_title(f"Difference (Model - Obs)", fontsize=10)
+            cbar_diff = fig.colorbar(im_diff, ax=ax_diff, orientation='horizontal', pad=0.05, shrink=0.8)
+            cbar_diff.set_label(f'Δ {meta["units"]}', fontsize=10)
+        else:
+            ax_diff.text(0.5, 0.5, 'Cannot compute\ndifference',
+                        ha='center', va='center', transform=ax_diff.transAxes)
 
     # Save figure
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -497,9 +523,9 @@ def main():
     if not args.no_nutrient_comparison:
         print("4. Nutrients (model vs observations)...")
 
-        # Load observational datasets using preprocessing module
+        # Load observational datasets using preprocessing module (including O2)
         obs_dir = Path(args.obs_dir)
-        nutrients = ['_NO3', '_PO4', '_Si', '_Fer']
+        nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
         obs_datasets = load_observations(obs_dir, nutrients=nutrients)
 
         # Generate comparison plot
@@ -545,12 +571,13 @@ def main():
     else:
         print("4. Nutrients (model only)...")
 
-        # Create a simple model-only nutrient plot
-        nutrients = ['_NO3', '_PO4', '_Si', '_Fer']
+        # Create a simple model-only nutrient plot (including O2)
+        nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
+        # Use 3 columns, 2 rows for 5 nutrients
         fig, axs = plotter.create_subplot_grid(
-            nrows=2, ncols=2,
+            nrows=2, ncols=3,
             projection=ccrs.PlateCarree(),
-            figsize=(10, 6)
+            figsize=(15, 8)
         )
 
         for i, nut in enumerate(nutrients):
@@ -594,6 +621,11 @@ def main():
             cbar.set_label(meta['units'], fontsize=10)
 
             ax.set_title(meta['long_name'], fontsize=11)
+
+        # Hide unused subplot (6th position)
+        if len(nutrients) < len(axs.flat):
+            for idx in range(len(nutrients), len(axs.flat)):
+                axs.flat[idx].set_visible(False)
 
         # Save
         output_path = output_dir / f"{args.run_name}_{args.year}_nutrients.png"

@@ -358,3 +358,288 @@ def calculate_anomaly(
         Anomaly (data - climatology)
     """
     return data - climatology
+
+
+def plot_transect_difference(
+    ax: plt.Axes,
+    diff_data: xr.DataArray,
+    title: str,
+    variable: str = None,
+    cmap: str = 'RdBu_r',
+    symmetric: bool = True,
+    add_colorbar: bool = True,
+    vmin: float = None,
+    vmax: float = None,
+    max_depth: float = None
+):
+    """
+    Plot a single transect difference/anomaly.
+
+    Args:
+        ax: Matplotlib axes
+        diff_data: Difference data to plot (2D: depth x latitude)
+        title: Plot title
+        variable: Variable name (for getting metadata)
+        cmap: Colormap (default: RdBu_r for diverging)
+        symmetric: Whether to use symmetric colorbar limits
+        add_colorbar: Whether to add colorbar
+        vmin: Manual vmin (overrides symmetric)
+        vmax: Manual vmax (overrides symmetric)
+        max_depth: Maximum depth to plot in meters
+    """
+    # Mask very small values (likely land/masked regions)
+    diff_data_masked = diff_data.where(np.abs(diff_data) > 1e-10)
+
+    # Get colorbar limits
+    if vmin is None or vmax is None:
+        if symmetric:
+            vmin, vmax = get_symmetric_colorbar_limits(diff_data_masked)
+        else:
+            vmin = float(np.nanpercentile(diff_data_masked.values, 5))
+            vmax = float(np.nanpercentile(diff_data_masked.values, 95))
+
+    # Plot
+    im = diff_data_masked.plot(
+        ax=ax,
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        add_colorbar=add_colorbar,
+        cbar_kwargs={'label': f'Δ', 'shrink': 0.8, 'pad': 0.02} if add_colorbar else None
+    )
+
+    ax.set_title(title, fontsize=10)
+    ax.invert_yaxis()
+
+    if max_depth is not None:
+        ax.set_ylim(max_depth, 0)
+
+    return im
+
+
+def plot_three_panel_transect(
+    axs: list,
+    model_data: xr.DataArray,
+    obs_data: xr.DataArray,
+    variable: str,
+    label_model: str = "Model",
+    label_obs: str = "Observations",
+    show_ylabel: bool = True,
+    show_xlabel: bool = True,
+    max_depth: float = None
+):
+    """
+    Create a 3-panel transect comparison: Model | Observations | Difference.
+
+    Args:
+        axs: List of 3 axes [ax_model, ax_obs, ax_diff]
+        model_data: Model transect data (2D: depth x latitude)
+        obs_data: Observation transect data (2D: depth x latitude)
+        variable: Variable name
+        label_model: Label for model panel
+        label_obs: Label for observations panel
+        show_ylabel: Whether to show y-axis label
+        show_xlabel: Whether to show x-axis label
+        max_depth: Maximum depth to plot in meters
+
+    Returns:
+        Tuple of (ax_model, ax_obs, ax_diff)
+    """
+    from map_utils import get_variable_metadata
+
+    # Get metadata
+    meta = get_variable_metadata(variable)
+    var_name = meta.get('long_name', variable)
+    var_unit = meta.get('units', '')
+    cmap = meta.get('cmap', 'Spectral_r')
+
+    # Unpack axes
+    ax_model, ax_obs, ax_diff = axs
+
+    # Mask very small values
+    model_masked = model_data.where(model_data > 1e-10) if model_data is not None else None
+    obs_masked = obs_data.where(obs_data > 1e-10) if obs_data is not None else None
+
+    # Calculate common vmax for model and obs
+    vmax = None
+    if model_masked is not None:
+        vmax = float(np.nanpercentile(model_masked.values, 95))
+    if obs_masked is not None:
+        obs_vmax = float(np.nanpercentile(obs_masked.values, 95))
+        vmax = max(vmax, obs_vmax) if vmax is not None else obs_vmax
+
+    # Panel 1: Model
+    if model_masked is not None:
+        model_masked.plot(
+            ax=ax_model,
+            cmap=cmap,
+            vmin=0,
+            vmax=vmax,
+            add_colorbar=True,
+            cbar_kwargs={'label': var_unit, 'shrink': 0.8, 'pad': 0.02}
+        )
+        ax_model.set_title(f"{var_name}\n{label_model}", fontsize=10)
+        ax_model.invert_yaxis()
+        if max_depth is not None:
+            ax_model.set_ylim(max_depth, 0)
+    else:
+        ax_model.text(0.5, 0.5, 'No data', ha='center', va='center', transform=ax_model.transAxes)
+
+    # Panel 2: Observations
+    if obs_masked is not None:
+        obs_masked.plot(
+            ax=ax_obs,
+            cmap=cmap,
+            vmin=0,
+            vmax=vmax,
+            add_colorbar=True,
+            cbar_kwargs={'label': var_unit, 'shrink': 0.8, 'pad': 0.02}
+        )
+        ax_obs.set_title(f"{label_obs}", fontsize=10)
+        ax_obs.invert_yaxis()
+        if max_depth is not None:
+            ax_obs.set_ylim(max_depth, 0)
+    else:
+        ax_obs.text(0.5, 0.5, 'No observations', ha='center', va='center', transform=ax_obs.transAxes)
+
+    # Panel 3: Difference
+    if model_data is not None and obs_data is not None:
+        diff = model_data - obs_data
+        plot_transect_difference(
+            ax=ax_diff,
+            diff_data=diff,
+            title=f"Difference\n({label_model} - {label_obs})",
+            variable=variable,
+            cmap='RdBu_r',
+            symmetric=True,
+            add_colorbar=True,
+            max_depth=max_depth
+        )
+    else:
+        ax_diff.text(0.5, 0.5, 'Cannot compute\ndifference',
+                     ha='center', va='center', transform=ax_diff.transAxes)
+
+    # Set labels
+    if show_ylabel:
+        ax_model.set_ylabel('Depth (m)', fontsize=10)
+    else:
+        ax_model.set_ylabel('')
+        ax_obs.set_ylabel('')
+        ax_diff.set_ylabel('')
+
+    if show_xlabel:
+        ax_model.set_xlabel('Latitude (°N)', fontsize=10)
+        ax_obs.set_xlabel('Latitude (°N)', fontsize=10)
+        ax_diff.set_xlabel('Latitude (°N)', fontsize=10)
+    else:
+        ax_model.set_xlabel('')
+        ax_obs.set_xlabel('')
+        ax_diff.set_xlabel('')
+
+    return ax_model, ax_obs, ax_diff
+
+
+def plot_multimodel_transect_row(
+    axs: list,
+    model_transects: list,
+    variable: str,
+    model_labels: list,
+    show_anomaly: bool = True,
+    show_ylabel: bool = True,
+    show_xlabel: bool = True,
+    max_depth: float = None
+):
+    """
+    Create a multi-model transect row: Model A | Model B | [Anomaly].
+
+    Args:
+        axs: List of axes (length = n_models or n_models + 1 if anomaly)
+        model_transects: List of model transect data (2D: depth x latitude)
+        variable: Variable name
+        model_labels: List of model names/labels
+        show_anomaly: Whether to show anomaly panel (only for 2 models)
+        show_ylabel: Whether to show y-axis label
+        show_xlabel: Whether to show x-axis label
+        max_depth: Maximum depth to plot in meters
+
+    Returns:
+        List of axes used
+    """
+    from map_utils import get_variable_metadata
+
+    n_models = len(model_transects)
+
+    # Get metadata
+    meta = get_variable_metadata(variable)
+    var_name = meta.get('long_name', variable)
+    var_unit = meta.get('units', '')
+    cmap = meta.get('cmap', 'Spectral_r')
+
+    # Calculate common vmax across all models
+    vmax = None
+    for transect in model_transects:
+        if transect is not None:
+            transect_masked = transect.where(transect > 1e-10)
+            model_vmax = float(np.nanpercentile(transect_masked.values, 95))
+            vmax = max(vmax, model_vmax) if vmax is not None else model_vmax
+
+    # Plot each model
+    for model_idx, (transect, label) in enumerate(zip(model_transects, model_labels)):
+        ax = axs[model_idx]
+
+        if transect is not None:
+            transect_masked = transect.where(transect > 1e-10)
+
+            transect_masked.plot(
+                ax=ax,
+                cmap=cmap,
+                vmin=0,
+                vmax=vmax,
+                add_colorbar=True,
+                cbar_kwargs={'label': var_unit, 'shrink': 0.8, 'pad': 0.02}
+            )
+
+            ax.invert_yaxis()
+            if max_depth is not None:
+                ax.set_ylim(max_depth, 0)
+
+            # First row gets model name as title, otherwise just variable name
+            ax.set_title(f"{label}", fontsize=10, fontweight='bold')
+        else:
+            ax.text(0.5, 0.5, 'No data', ha='center', va='center', transform=ax.transAxes)
+
+        # Y-label only on first column
+        if show_ylabel and model_idx == 0:
+            ax.set_ylabel(f"{var_name}\nDepth (m)", fontsize=10)
+        else:
+            ax.set_ylabel('')
+
+        # X-label only if requested
+        if show_xlabel:
+            ax.set_xlabel('Latitude (°N)', fontsize=10)
+        else:
+            ax.set_xlabel('')
+
+    # Plot anomaly if 2 models
+    if show_anomaly and n_models == 2 and model_transects[0] is not None and model_transects[1] is not None:
+        ax_diff = axs[2]  # Third axis in the row
+
+        diff = model_transects[1] - model_transects[0]
+        plot_transect_difference(
+            ax=ax_diff,
+            diff_data=diff,
+            title="Anomaly (B-A)",
+            variable=variable,
+            cmap='RdBu_r',
+            symmetric=True,
+            add_colorbar=True,
+            max_depth=max_depth
+        )
+
+        ax_diff.set_ylabel('')
+        if show_xlabel:
+            ax_diff.set_xlabel('Latitude (°N)', fontsize=10)
+        else:
+            ax_diff.set_xlabel('')
+
+    return axs
