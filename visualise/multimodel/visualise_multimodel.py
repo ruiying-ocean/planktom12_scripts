@@ -24,7 +24,7 @@ except ModuleNotFoundError:
 # Import from parent visualise directory
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from map_utils import OceanMapPlotter
-from logging_utils import print_header
+from logging_utils import print_header, print_step, print_success, print_warning
 
 # Import multimodel-specific modules
 from preprocess_multimodel import get_nav_coordinates
@@ -181,11 +181,11 @@ def main():
 
             result = subprocess.run(cmd, cwd=output_dir)
             if result.returncode != 0:
-                print(f"Warning: Timeseries generation failed")
+                print_warning("Timeseries generation failed")
             else:
-                print("✓ Timeseries complete\n")
+                print_success("Timeseries complete\n")
         else:
-            print(f"Warning: {timeseries_script} not found, skipping\n")
+            print_warning(f"{timeseries_script} not found, skipping\n")
 
     # ========================================================================
     # STEP 2: Spatial Comparison Maps
@@ -204,11 +204,11 @@ def main():
 
             result = subprocess.run(cmd)
             if result.returncode != 0:
-                print(f"Warning: Maps generation failed")
+                print_warning("Maps generation failed")
             else:
-                print("✓ Spatial maps complete\n")
+                print_success("Spatial maps complete\n")
         else:
-            print(f"Warning: {maps_script} not found, skipping\n")
+            print_warning(f"{maps_script} not found, skipping\n")
 
     # ========================================================================
     # STEP 3: Transect Comparisons
@@ -227,11 +227,11 @@ def main():
 
             result = subprocess.run(cmd)
             if result.returncode != 0:
-                print(f"Warning: Transects generation failed")
+                print_warning("Transects generation failed")
             else:
-                print("✓ Transects complete\n")
+                print_success("Transects complete\n")
         else:
-            print(f"Warning: {transects_script} not found, skipping\n")
+            print_warning(f"{transects_script} not found, skipping\n")
 
     # ========================================================================
     # STEP 4: Configuration Comparison (2-model only)
@@ -242,7 +242,7 @@ def main():
         script_dir = Path(__file__).parent
 
         # Compare setUpData files
-        print("  [1/2] Comparing setUpData configuration...")
+        print_step(1, 2, "Comparing setUpData configuration")
         setupdata_script = script_dir / 'compare_setupdata.py'
         if setupdata_script.exists():
             import subprocess
@@ -261,7 +261,7 @@ def main():
             subprocess.run(cmd, cwd=output_dir)
 
         # Compare namelists
-        print("  [2/2] Comparing namelist.trc.sms...")
+        print_step(2, 2, "Comparing namelist.trc.sms")
         namelist_script = script_dir / 'compare_namelists.py'
         if namelist_script.exists():
             import subprocess
@@ -280,7 +280,7 @@ def main():
             # Run in output_dir so heatmap PNG files are saved there
             subprocess.run(cmd, cwd=output_dir)
 
-        print("✓ Configuration comparison complete\n")
+        print_success("Configuration comparison complete\n")
 
     # ========================================================================
     # STEP 5: HTML Report Generation
@@ -298,11 +298,11 @@ def main():
 
             result = subprocess.run(cmd, cwd=output_dir)
             if result.returncode != 0:
-                print(f"Warning: HTML generation failed")
+                print_warning("HTML generation failed")
             else:
-                print("✓ HTML report complete\n")
+                print_success("HTML report complete\n")
         else:
-            print(f"Warning: {html_script} not found, skipping\n")
+            print_warning(f"{html_script} not found, skipping\n")
 
     # ========================================================================
     # Summary
