@@ -309,7 +309,8 @@ class FigureCreator:
             (data["nFer"], self.colors[2], "Surface Iron", "nmol/L", None, None),
             (data["Si"], self.colors[3], "Surface Silica", "μmol/L", None, ObservationLine(7.485)),
             (data["O2"], self.colors[4], "Surface Oxygen", "μmol/L", None, ObservationLine(251.1)),
-            (data["Alkalini"], self.colors[5], "Surface Alkalinity", "μmol/L", None, ObservationLine(2295.10936157)),
+            # Alkalinity: GLODAP value converted from μmol/kg to μmol/L (2295.11 * 1.025)
+            (data["Alkalini"], self.colors[5], "Surface Alkalinity", "μmol/L", None, ObservationLine(2352.49)),
         ]
 
         fig, axes = plt.subplots(

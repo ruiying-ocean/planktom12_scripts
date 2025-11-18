@@ -421,64 +421,161 @@ def plot_carbon_chemistry(
     plotter: OceanMapPlotter,
     ptrc_ds: xr.Dataset,
     output_path: Path,
+    obs_datasets: dict = None,
     variables: list = ['_ALK', '_DIC']
 ):
     """
-    Create multi-panel map of carbon chemistry variables.
+    Create multi-panel map of carbon chemistry variables with model-observation comparison.
 
     Args:
         plotter: OceanMapPlotter instance
         ptrc_ds: Dataset with tracer variables
         output_path: Where to save the figure
+        obs_datasets: Dictionary of observational datasets (optional)
         variables: List of variables to plot
     """
-    # Create 1x2 subplot grid for ALK and DIC
+    # Create 2x3 subplot grid (2 rows for ALK/DIC, 3 columns for Model/Obs/Diff)
+    n_vars = len(variables)
     fig, axs = plotter.create_subplot_grid(
-        nrows=1, ncols=2,
+        nrows=n_vars, ncols=3,
         projection=ccrs.PlateCarree(),
-        figsize=(12, 4)
+        figsize=(15, 5 * n_vars)
     )
 
-    for idx, var_name in enumerate(variables):
-        ax = axs.flat[idx]
+    for i, var_name in enumerate(variables):
+        # Column 0: Model data
+        ax_model = axs[i, 0]
+        # Column 1: Observations
+        ax_obs = axs[i, 1]
+        # Column 2: Difference
+        ax_diff = axs[i, 2]
 
-        if var_name in ptrc_ds:
-            meta = get_variable_metadata(var_name)
-            data = ptrc_ds[var_name]
+        if var_name not in ptrc_ds:
+            print(f"Warning: {var_name} not found in model dataset")
+            continue
 
-            # Time average if needed
-            if 'time_counter' in data.dims:
-                data = data.mean(dim='time_counter')
+        # Get metadata
+        meta = get_variable_metadata(var_name)
 
+        # Get surface model data (already time-averaged from preprocessing if available)
+        model_data = ptrc_ds[var_name]
+
+        # If time dimension still exists, average it
+        if 'time_counter' in model_data.dims:
+            model_data = model_data.mean(dim='time_counter')
+
+        if 'deptht' in model_data.dims:
+            model_data = model_data.isel(deptht=0)
+
+        # Remove any singleton dimensions
+        model_data = model_data.squeeze()
+
+        # Convert units (if not already converted)
+        model_data = convert_units(model_data, var_name)
+
+        # Apply mask
+        model_data = plotter.apply_mask(model_data)
+
+        # Calculate dynamic vmax from 95th percentile of model and obs data
+        vmax_model = float(np.nanpercentile(model_data.values, 95))
+
+        # Get obs data first to calculate combined vmax
+        obs_data = None
+        if obs_datasets and var_name in obs_datasets and obs_datasets[var_name] is not None:
+            obs_data = obs_datasets[var_name]
             # Get surface level
-            if 'deptht' in data.dims:
-                data = data.isel(deptht=0)
+            if 'depth' in obs_data.dims:
+                obs_data = obs_data.isel(depth=0)
+            elif 'deptht' in obs_data.dims:
+                obs_data = obs_data.isel(deptht=0)
+            elif 'depth_surface' in obs_data.dims:
+                obs_data = obs_data.isel(depth_surface=0)
+            # Remove any singleton dimensions
+            obs_data = obs_data.squeeze()
 
-            data = data.squeeze()
-            data = convert_units(data, var_name)
-            data = plotter.apply_mask(data)
+            # Convert GLODAP data from µmol kg⁻¹ to µmol L⁻¹
+            # Using typical surface seawater density of 1.025 kg/L
+            obs_data = obs_data * 1.025
 
-            # Plot
-            vmin = meta.get('vmin', None)
-            vmax = meta.get('vmax', None)
+            # Apply mask
+            obs_data = plotter.apply_mask(obs_data)
+            vmax_obs = float(np.nanpercentile(obs_data.values, 95))
+            vmax = max(vmax_model, vmax_obs)
+        else:
+            vmax = vmax_model
 
-            im = plotter.plot_variable(
-                ax=ax, data=data, cmap=meta['cmap'],
-                vmin=vmin, vmax=vmax, add_colorbar=False
+        # Use metadata vmin/vmax if specified, otherwise use 0 and calculated vmax
+        vmin = meta.get('vmin', 0)
+        if 'vmax' in meta:
+            vmax = meta['vmax']
+
+        # Plot model (Column 0)
+        im = plotter.plot_variable(
+            ax=ax_model,
+            data=model_data,
+            cmap=meta['cmap'],
+            vmin=vmin,
+            vmax=vmax,
+            add_colorbar=False
+        )
+
+        ax_model.set_title(f"{meta['long_name']} - Model", fontsize=12)
+        cbar = fig.colorbar(im, ax=ax_model, orientation='horizontal', pad=0.05, shrink=0.8)
+        cbar.set_label(meta['units'], fontsize=10)
+
+        # Plot observations (Column 1)
+        if obs_data is not None:
+            plotter.plot_variable(
+                ax=ax_obs,
+                data=obs_data,
+                cmap=meta['cmap'],
+                vmin=vmin,
+                vmax=vmax,
+                add_colorbar=False
+            )
+            ax_obs.set_title(f"{meta['long_name']} - Observations", fontsize=12)
+            cbar_obs = fig.colorbar(im, ax=ax_obs, orientation='horizontal', pad=0.05, shrink=0.8)
+            cbar_obs.set_label(meta['units'], fontsize=10)
+        else:
+            ax_obs.text(0.5, 0.5, 'No observations',
+                       ha='center', va='center', transform=ax_obs.transAxes)
+
+        # Plot difference (Column 2)
+        if obs_data is not None:
+            # Import difference utilities
+            from difference_utils import calculate_difference, get_symmetric_colorbar_limits
+
+            diff = calculate_difference(model_data, obs_data)
+
+            # Ensure nav_lon and nav_lat are preserved in difference
+            if 'nav_lon' in model_data.coords and 'nav_lat' in model_data.coords:
+                diff = diff.assign_coords({
+                    'nav_lon': model_data.coords['nav_lon'],
+                    'nav_lat': model_data.coords['nav_lat']
+                })
+
+            diff = plotter.apply_mask(diff)
+
+            # Get symmetric colorbar limits
+            vmin_diff, vmax_diff = get_symmetric_colorbar_limits(diff)
+
+            im_diff = plotter.plot_variable(
+                ax=ax_diff,
+                data=diff,
+                cmap='RdBu_r',
+                vmin=vmin_diff,
+                vmax=vmax_diff,
+                add_colorbar=False
             )
 
-            ax.set_title(meta['long_name'], fontsize=12, fontweight='bold')
-
-            # Add colorbar
-            cbar = plt.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, shrink=0.8)
-            cbar.set_label(meta['units'], fontsize=10)
-            cbar.ax.tick_params(labelsize=8)
+            ax_diff.set_title(f"Difference (Model - Obs)", fontsize=12)
+            cbar_diff = fig.colorbar(im_diff, ax=ax_diff, orientation='horizontal', pad=0.05, shrink=0.8)
+            cbar_diff.set_label(f'Δ {meta["units"]}', fontsize=10)
         else:
-            ax.text(0.5, 0.5, f'{var_name}\nnot available',
-                   ha='center', va='center', transform=ax.transAxes)
-            ax.set_title(var_name, fontsize=12)
+            ax_diff.text(0.5, 0.5, 'Cannot compute\ndifference',
+                        ha='center', va='center', transform=ax_diff.transAxes)
 
-    plt.tight_layout()
+    # Save figure (no tight_layout needed - using constrained_layout from create_subplot_grid)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close(fig)

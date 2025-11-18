@@ -24,7 +24,8 @@ from preprocess_data import (
 from make_maps import (
     plot_pft_maps,
     plot_ecosystem_diagnostics,
-    plot_nutrient_comparison
+    plot_nutrient_comparison,
+    plot_carbon_chemistry
 )
 from make_transects import plot_basin_transects, plot_pft_transects
 from difference_utils import plot_comparison_panel
@@ -129,7 +130,7 @@ def main():
         print("╚═══════════════════════════════════════════════════════════════╝")
 
         # 2.1 Ecosystem diagnostics with satellite chlorophyll
-        print("  [1/4] Ecosystem diagnostics (TChl, EXP, PPINT)...")
+        print("  [1/5] Ecosystem diagnostics (TChl, EXP, PPINT)...")
         obs_dir = Path(args.obs_dir)
         chl_obs_file = obs_dir / 'occi_chla_monthly_climatology.nc'
         if not chl_obs_file.exists():
@@ -145,7 +146,7 @@ def main():
         )
 
         # 2.2 Phytoplankton maps
-        print("  [2/4] Phytoplankton functional types...")
+        print("  [2/5] Phytoplankton functional types...")
         plot_pft_maps(
             plotter=plotter,
             ptrc_ds=ptrc_ds,
@@ -156,7 +157,7 @@ def main():
         )
 
         # 2.3 Zooplankton maps
-        print("  [3/4] Zooplankton functional types...")
+        print("  [3/5] Zooplankton functional types...")
         plot_pft_maps(
             plotter=plotter,
             ptrc_ds=ptrc_ds,
@@ -167,7 +168,7 @@ def main():
         )
 
         # 2.4 Nutrient maps
-        print("  [4/4] Nutrient distributions...")
+        print("  [4/5] Nutrient distributions...")
         nutrients = ['_NO3', '_PO4', '_Si', '_Fer']
 
         if not args.skip_observations:
@@ -216,6 +217,32 @@ def main():
             # Model-only nutrient plots (simplified version)
             print("        (Skipping observations - model only)")
             # Could call a simplified nutrient plotting function here if needed
+
+        # 2.5 Carbon chemistry maps
+        print("  [5/5] Carbon chemistry (ALK, DIC)...")
+        carbon_vars = ['_ALK', '_DIC']
+
+        if not args.skip_observations:
+            # Load carbon chemistry observations from GLODAP
+            carbon_obs = load_observations(obs_dir, nutrients=[], carbon_chemistry=carbon_vars)
+
+            plot_carbon_chemistry(
+                plotter=plotter,
+                ptrc_ds=ptrc_ds,
+                obs_datasets=carbon_obs,
+                output_path=output_dir / f"{args.run_name}_{args.year}_carbon_chemistry.png",
+                variables=carbon_vars
+            )
+        else:
+            # Model-only carbon chemistry plots
+            print("        (Skipping observations - model only)")
+            plot_carbon_chemistry(
+                plotter=plotter,
+                ptrc_ds=ptrc_ds,
+                obs_datasets=None,
+                output_path=output_dir / f"{args.run_name}_{args.year}_carbon_chemistry.png",
+                variables=carbon_vars
+            )
 
         print("✓ Spatial maps complete\n")
 

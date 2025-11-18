@@ -131,17 +131,19 @@ def load_and_preprocess_diad(
 
 def load_observations(
     obs_dir: Path,
-    nutrients: List[str] = ['_NO3', '_PO4', '_Si', '_Fer']
+    nutrients: List[str] = ['_NO3', '_PO4', '_Si', '_Fer'],
+    carbon_chemistry: List[str] = None
 ) -> dict:
     """
-    Load observational datasets for nutrients.
+    Load observational datasets for nutrients and carbon chemistry.
 
     Args:
         obs_dir: Directory containing observational data files
         nutrients: List of nutrients to load observations for
+        carbon_chemistry: List of carbon chemistry variables to load (e.g., ['_ALK', '_DIC'])
 
     Returns:
-        Dictionary mapping nutrient names to observational DataArrays
+        Dictionary mapping variable names to observational DataArrays
     """
     obs_datasets = {}
 
@@ -172,6 +174,22 @@ def load_observations(
             obs_datasets['_Fer'] = fe_ds['fe']
     else:
         print(f"Warning: Fe file not found at {fe_file}")
+
+    # Try to load GLODAP data for carbon chemistry (ALK, DIC)
+    if carbon_chemistry:
+        glodap_file = obs_dir / 'glodap_orca_bil.nc'
+        if glodap_file.exists():
+            print(f"Loading GLODAP data from {glodap_file}")
+            glodap_ds = xr.open_dataset(glodap_file, decode_times=False)
+            print(f"  GLODAP variables: {list(glodap_ds.data_vars)}")
+
+            # Map GLODAP variables to our naming convention
+            if 'alk' in glodap_ds and '_ALK' in carbon_chemistry:
+                obs_datasets['_ALK'] = glodap_ds['alk']
+            if 'dic' in glodap_ds and '_DIC' in carbon_chemistry:
+                obs_datasets['_DIC'] = glodap_ds['dic']
+        else:
+            print(f"Warning: GLODAP file not found at {glodap_file}")
 
     return obs_datasets
 
