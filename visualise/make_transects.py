@@ -78,7 +78,7 @@ def plot_basin_transects(
         # Use fig.subplots with sharex/sharey and constrained_layout
         fig, axs = plt.subplots(
             n_nutrients, 3,
-            figsize=(15, 3 * n_nutrients),
+            figsize=(12, 2.5 * n_nutrients),
             sharex='col',  # Share x-axis within each column
             sharey='row',  # Share y-axis within each row
             constrained_layout=True

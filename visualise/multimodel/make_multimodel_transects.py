@@ -194,7 +194,7 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
         # Use fig.subplots with sharex/sharey and constrained_layout
         fig, axs = plt.subplots(
             n_nutrients, n_cols,
-            figsize=(5 * n_cols, 3 * n_nutrients),
+            figsize=(4 * n_cols, 2.5 * n_nutrients),
             sharex='col',  # Share x-axis within each column
             sharey='row',  # Share y-axis within each row
             constrained_layout=True
@@ -301,7 +301,7 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
         # Use fig.subplots with sharex/sharey and constrained_layout
         fig, axs = plt.subplots(
             n_pfts, n_cols,
-            figsize=(5 * n_cols, 2 * n_pfts),
+            figsize=(4 * n_cols, 1.8 * n_pfts),
             sharex='col',  # Share x-axis within each column
             sharey='row',  # Share y-axis within each row
             constrained_layout=True
