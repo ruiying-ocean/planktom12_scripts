@@ -398,8 +398,20 @@ def plot_transect_difference(
             vmin = float(np.nanpercentile(diff_data_masked.values, 5))
             vmax = float(np.nanpercentile(diff_data_masked.values, 95))
 
-    # Plot
-    im = diff_data_masked.plot(
+    # Plot - always use pcolormesh for transect data (2D depth x latitude)
+    # Squeeze to remove any singleton dimensions first
+    diff_data_plot = diff_data_masked.squeeze()
+
+    # Ensure we have exactly 2 dimensions
+    if diff_data_plot.ndim != 2:
+        print(f"Warning: Difference data has {diff_data_plot.ndim} dimensions: {diff_data_plot.dims}")
+        print(f"Shape: {diff_data_plot.shape}")
+        # Try to drop any remaining singleton dimensions
+        for dim in diff_data_plot.dims:
+            if diff_data_plot.sizes[dim] == 1:
+                diff_data_plot = diff_data_plot.drop_vars(dim, errors='ignore').squeeze()
+
+    im = diff_data_plot.plot.pcolormesh(
         ax=ax,
         cmap=cmap,
         vmin=vmin,
@@ -470,7 +482,7 @@ def plot_three_panel_transect(
 
     # Panel 1: Model
     if model_masked is not None:
-        model_masked.plot(
+        model_masked.plot.pcolormesh(
             ax=ax_model,
             cmap=cmap,
             vmin=0,
@@ -487,7 +499,7 @@ def plot_three_panel_transect(
 
     # Panel 2: Observations
     if obs_masked is not None:
-        obs_masked.plot(
+        obs_masked.plot.pcolormesh(
             ax=ax_obs,
             cmap=cmap,
             vmin=0,
@@ -504,7 +516,18 @@ def plot_three_panel_transect(
 
     # Panel 3: Difference
     if model_data is not None and obs_data is not None:
-        diff = model_data - obs_data
+        # Ensure both datasets have the same dimension names for proper subtraction
+        # Model typically has 'deptht', obs might have 'depth'
+        model_for_diff = model_data.copy()
+        obs_for_diff = obs_data.copy()
+
+        # Rename depth dimensions to match
+        if 'depth' in obs_for_diff.dims and 'deptht' in model_for_diff.dims:
+            obs_for_diff = obs_for_diff.rename({'depth': 'deptht'})
+        elif 'deptht' in obs_for_diff.dims and 'depth' in model_for_diff.dims:
+            model_for_diff = model_for_diff.rename({'depth': 'deptht'})
+
+        diff = model_for_diff - obs_for_diff
         plot_transect_difference(
             ax=ax_diff,
             diff_data=diff,
@@ -590,7 +613,7 @@ def plot_multimodel_transect_row(
         if transect is not None:
             transect_masked = transect.where(transect > 1e-10)
 
-            transect_masked.plot(
+            transect_masked.plot.pcolormesh(
                 ax=ax,
                 cmap=cmap,
                 vmin=0,
