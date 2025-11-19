@@ -43,7 +43,8 @@ def plot_pft_maps(
     pft_list: list,
     pft_type: str,
     output_path: Path,
-    cmap: str = 'turbo'
+    cmap: str = 'turbo',
+    biomass_threshold: float = 2e-3
 ):
     """
     Create multi-panel map of plankton functional types.
@@ -57,6 +58,7 @@ def plot_pft_maps(
         pft_type: 'phyto' or 'zoo'
         output_path: Where to save the figure
         cmap: Colormap to use
+        biomass_threshold: Minimum total biomass (Pg C) to plot. Below this, panel is left empty (default: 2e-3 Pg C = 2 Tg C)
     """
     # Create 2x3 subplot grid
     fig, axs = plotter.create_subplot_grid(
@@ -94,6 +96,14 @@ def plot_pft_maps(
         # Calculate total global biomass (sum over grid, convert Tg to Pg)
         total_biomass = data.sum() * 1e-3
 
+        # Check if biomass is negligible (sensitivity experiment with near-zero values)
+        if total_biomass.values < biomass_threshold:
+            # Leave panel empty with just the title showing negligible biomass
+            ax.text(0.5, 0.5, f'Negligible biomass\n({total_biomass.values:.2e} Pg C)',
+                   ha='center', va='center', transform=ax.transAxes, fontsize=9, color='gray')
+            ax.set_title(f'{pft}: ~0 Pg C', fontsize=10)
+            continue
+
         # Get observational range if available
         obs_range_str = ''
         if var_int in BIOMASS_RANGES:
@@ -115,7 +125,7 @@ def plot_pft_maps(
         )
 
         # Title shows PFT name with total biomass and obs range
-        title = f'{pft}: {total_biomass.values:.1f}{obs_range_str}'
+        title = f'{pft}: {total_biomass.values:.2f}{obs_range_str}'
         ax.set_title(title, fontsize=10)
 
     # Add shared colorbar
@@ -655,7 +665,7 @@ def plot_derived_variables(
                    ha='center', va='center', transform=ax.transAxes)
             ax.set_title(var_name, fontsize=12)
 
-    plt.tight_layout()
+    # Note: tight_layout() is incompatible with colorbars; bbox_inches='tight' handles layout
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close(fig)

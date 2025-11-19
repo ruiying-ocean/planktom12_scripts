@@ -156,7 +156,8 @@ def plot_pft_transects(
     run_name: str,
     year: str,
     pfts: list = None,
-    max_depth: float = 500.0
+    max_depth: float = 500.0,
+    biomass_threshold: float = 4e-3
 ):
     """
     Create Atlantic and Pacific PFT transect plots (model only).
@@ -171,6 +172,7 @@ def plot_pft_transects(
         year: Year string
         pfts: List of PFTs to plot (default: all 12 PFTs)
         max_depth: Maximum depth to plot in meters (default: 500m)
+        biomass_threshold: Minimum max concentration (µmol C/L) to plot. Below this, panel is left empty (default: 4e-3 µmol C/L)
     """
     if pfts is None:
         pfts = PHYTOS + ZOOS
@@ -197,6 +199,14 @@ def plot_pft_transects(
             row = i // 3
             col = i % 3
             ax = axs[row, col]
+
+            # Get PFT name for title
+            if pft in PHYTO_NAMES:
+                pft_name = PHYTO_NAMES[pft]
+            elif pft in ZOO_NAMES:
+                pft_name = ZOO_NAMES[pft]
+            else:
+                pft_name = pft
 
             # Initialize
             vmin = 0
@@ -230,6 +240,22 @@ def plot_pft_transects(
                 # Mask land values (0 or very close to 0)
                 model_transect_masked = model_transect.where(model_transect > 1e-10)
 
+                # Check if biomass is negligible (sensitivity experiment with near-zero values)
+                max_concentration = float(np.nanmax(model_transect_masked.values))
+
+                if max_concentration < biomass_threshold or np.isnan(max_concentration):
+                    # Leave panel empty with just the title
+                    ax.text(0.5, 0.5, f'Negligible biomass\n(max: {max_concentration:.2e} µmol C/L)',
+                           ha='center', va='center', transform=ax.transAxes, fontsize=9, color='gray')
+                    ax.set_title(f"{pft_name}", fontsize=12)
+                    # Set appropriate axis limits and labels for empty panel
+                    ax.set_ylim(max_depth, 0)
+                    if col == 0:
+                        ax.set_ylabel('Depth (m)', fontsize=10)
+                    if row == 3:
+                        ax.set_xlabel('Latitude (°N)', fontsize=10)
+                    continue
+
                 # Calculate dynamic vmax from 95th percentile of model data
                 vmax = float(np.nanpercentile(model_transect_masked.values, 95))
 
@@ -242,14 +268,6 @@ def plot_pft_transects(
                     add_colorbar=True,
                     cbar_kwargs={'label': 'µmol C L⁻¹', 'shrink': 0.8}
                 )
-
-                # Get PFT name for title
-                if pft in PHYTO_NAMES:
-                    pft_name = PHYTO_NAMES[pft]
-                elif pft in ZOO_NAMES:
-                    pft_name = ZOO_NAMES[pft]
-                else:
-                    pft_name = pft
 
                 ax.set_title(f"{pft_name}", fontsize=12)
                 ax.invert_yaxis()

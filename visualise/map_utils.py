@@ -140,7 +140,8 @@ class OceanMapPlotter:
 
                     # Calculate transfer efficiency: EXP@1000m / EXP@100m
                     exp_1000m = ds['EXP'].isel({depth_dim: 24})  # ~1000m
-                    ds['_Teff'] = exp_1000m / ds['EXP100']
+                    # Use xr.where to avoid divide by zero warnings
+                    ds['_Teff'] = xr.where(ds['EXP100'] != 0, exp_1000m / ds['EXP100'], np.nan)
 
             # Note: e-ratio will be calculated after unit conversion when _PPINT is available
         return ds
@@ -198,7 +199,8 @@ class OceanMapPlotter:
 
             ## Calculate export ratio: EXP@100m / PPINT
             if '_EXP' in ds and '_PPINT' in ds:
-                ds['_eratio'] = ds['_EXP'] / ds['_PPINT']
+                # Use xr.where to avoid divide by zero warnings
+                ds['_eratio'] = xr.where(ds['_PPINT'] != 0, ds['_EXP'] / ds['_PPINT'], np.nan)
 
             return ds
 
