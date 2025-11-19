@@ -579,7 +579,7 @@ ECOSYSTEM_VARS = {
     '_Teff': {
         'long_name': 'Transfer Efficiency',
         'units': 'dimensionless',
-        'vmax': 0.5,
+        'vmax': 0.15,
         'vmin': 0,
         'depth_index': None,
         'cmap': 'viridis'
