@@ -93,23 +93,20 @@ def plot_pft_maps(
         # Apply land mask
         data = plotter.apply_mask(data)
 
-        # Calculate total global biomass (sum over grid, convert Tg to Pg)
-        total_biomass = data.sum() * 1e-3
-
         # Check if biomass is negligible (sensitivity experiment with near-zero values)
+        # Calculate sum to check for near-zero values
+        spatial_dims = [d for d in data.dims if d in ['x', 'y', 'i', 'j', 'nav_x', 'nav_y']]
+        if spatial_dims:
+            total_biomass = data.sum(dim=spatial_dims) * 1e-3
+        else:
+            total_biomass = data.sum() * 1e-3
+
         if total_biomass.values < biomass_threshold:
             # Leave panel empty with just the title showing negligible biomass
             ax.text(0.5, 0.5, f'Negligible biomass\n({total_biomass.values:.2e} Pg C)',
                    ha='center', va='center', transform=ax.transAxes, fontsize=9, color='gray')
-            ax.set_title(f'{pft}: ~0 Pg C', fontsize=10)
+            ax.set_title(f'{pft}', fontsize=10)
             continue
-
-        # Get observational range if available
-        obs_range_str = ''
-        if var_int in BIOMASS_RANGES:
-            obs_min, obs_max = BIOMASS_RANGES[var_int]
-            if not np.isnan(obs_min):
-                obs_range_str = f', ({obs_min:.1f}-{obs_max:.1f}) Pg C'
 
         # Calculate dynamic vmax from 95th percentile
         vmax = float(np.nanpercentile(data.values, 95))
@@ -124,9 +121,8 @@ def plot_pft_maps(
             add_colorbar=False
         )
 
-        # Title shows PFT name with total biomass and obs range
-        title = f'{pft}: {total_biomass.values:.2f}{obs_range_str}'
-        ax.set_title(title, fontsize=10)
+        # Title shows only PFT name (biomass totals shown in time series)
+        ax.set_title(pft, fontsize=10)
 
     # Add shared colorbar
     plotter.add_shared_colorbar(

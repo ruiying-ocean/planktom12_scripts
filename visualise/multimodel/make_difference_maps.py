@@ -27,8 +27,24 @@ from difference_utils import (
 )
 
 
-def load_annual_mean(model_dir, model_id, year, var_name, file_type='ptrc_T'):
-    """Load annual mean for a specific variable."""
+def load_annual_mean(model_dir, model_id, year, var_name, file_type='ptrc_T', plotter=None):
+    """
+    Load annual mean for a specific variable using OceanMapPlotter preprocessing.
+
+    Args:
+        model_dir: Base directory for model output
+        model_id: Model run name
+        year: Year to load
+        var_name: Variable name (can be preprocessed like _NO3, _PO4, _Si)
+        file_type: File type ('ptrc_T' or 'diad_T')
+        plotter: OceanMapPlotter instance for preprocessing (required)
+
+    Returns:
+        xarray.DataArray with preprocessed annual mean data
+    """
+    if plotter is None:
+        raise ValueError("plotter argument is required for preprocessing")
+
     nc_file = Path(model_dir) / model_id / f"{model_id}_{year}0101_{year}1231_{file_type}.nc"
 
     if not nc_file.exists():
@@ -36,9 +52,12 @@ def load_annual_mean(model_dir, model_id, year, var_name, file_type='ptrc_T'):
         return None
 
     try:
-        ds = xr.open_dataset(nc_file)
+        # Use plotter.load_data() to get preprocessed variables with unit conversions
+        # Pass volume to create integrated variables and derived variables
+        ds = plotter.load_data(str(nc_file), volume=plotter.volume)
+
         if var_name not in ds:
-            print(f"Warning: Variable {var_name} not found in {nc_file}")
+            print(f"Warning: Variable {var_name} not found after preprocessing")
             return None
 
         # Calculate annual mean
@@ -49,38 +68,46 @@ def load_annual_mean(model_dir, model_id, year, var_name, file_type='ptrc_T'):
         return None
 
 
-def calculate_derived_variables(model_dir, model_id, year):
-    """Calculate derived ecosystem variables for a model."""
+def calculate_derived_variables(model_dir, model_id, year, plotter):
+    """
+    Load derived ecosystem variables for a model.
+
+    These variables are now automatically calculated by map_utils.py preprocessing:
+    - _SPINT: Secondary Production (integrated)
+    - _RECYCLEINT: Recycled Production (integrated)
+    - _eratio: Export Ratio
+    - _Teff: Transfer Efficiency
+
+    Args:
+        model_dir: Base directory for model output
+        model_id: Model run name
+        year: Year to load
+        plotter: OceanMapPlotter instance for preprocessing
+
+    Returns:
+        Dictionary of derived variables as 2D surface maps
+    """
     derived = {}
 
-    # Load required variables from diad file
-    PPT = load_annual_mean(model_dir, model_id, year, 'PPT', file_type='diad_T')
-    EXP = load_annual_mean(model_dir, model_id, year, 'EXP', file_type='diad_T')
-    EXP1000 = load_annual_mean(model_dir, model_id, year, 'EXP1000', file_type='diad_T')
+    # Load preprocessed derived variables from diad file
+    # These are automatically created by plotter.load_data() via map_utils.py
+    derived_vars = ['_SPINT', '_RECYCLEINT', '_eratio', '_Teff']
 
-    # Load grazing variables
-    grazing_vars = ['GRAPRO', 'GRAMES', 'GRAPTE', 'GRACRU', 'GRAGEL']
-    grazing_data = []
-    for var in grazing_vars:
-        data = load_annual_mean(model_dir, model_id, year, var, file_type='diad_T')
+    for var_name in derived_vars:
+        data = load_annual_mean(model_dir, model_id, year, var_name, file_type='diad_T', plotter=plotter)
         if data is not None:
-            grazing_data.append(data)
+            # Handle depth dimension if present (should be surface for these vars)
+            if 'deptht' in data.dims or 'nav_lev' in data.dims:
+                depth_dim = 'deptht' if 'deptht' in data.dims else 'nav_lev'
+                meta = get_variable_metadata(var_name)
+                depth_index = meta.get('depth_index', 0)
+                if depth_index is None:
+                    depth_index = 0
+                data = data.isel({depth_dim: depth_index})
 
-    # Calculate SP (secondary production)
-    if grazing_data:
-        derived['SP'] = sum(grazing_data)
-
-    # Calculate e-ratio
-    if EXP is not None and PPT is not None:
-        derived['eratio'] = EXP / PPT
-
-    # Calculate Teff
-    if EXP1000 is not None and EXP is not None:
-        derived['Teff'] = EXP1000 / EXP
-
-    # Calculate recycle
-    if PPT is not None and EXP is not None and 'SP' in derived:
-        derived['recycle'] = PPT - EXP - derived['SP']
+            # Remove underscore prefix for compatibility with existing code
+            clean_name = var_name.replace('_SPINT', 'SP').replace('_RECYCLEINT', 'recycle').replace('_', '')
+            derived[clean_name] = data
 
     return derived
 
@@ -160,14 +187,8 @@ def main():
     args = parser.parse_args()
     output_dir = Path(args.output_dir)
 
-    # Initialize plotter (need to load navigation from one of the models)
-    ptrc_file = Path(args.model_dir1) / args.model1 / f"{args.model1}_{args.year}0101_{args.year}1231_ptrc_T.nc"
-    if not ptrc_file.exists():
-        print(f"Error: Cannot find model file: {ptrc_file}")
-        return 1
-
-    ds = xr.open_dataset(ptrc_file)
-    plotter = OceanMapPlotter(ds.nav_lon, ds.nav_lat)
+    # Initialize plotter with mask for preprocessing
+    plotter = OceanMapPlotter()
 
     # Generate diagnostics difference map (cflx, tchl, ppint, exp)
     print(f"Generating diagnostics difference map ({args.model1} - {args.model2})...")
@@ -178,8 +199,8 @@ def main():
 
     differences = {}
     for var, (var_name, title) in diag_vars.items():
-        data1 = load_annual_mean(args.model_dir1, args.model1, args.year, var_name)
-        data2 = load_annual_mean(args.model_dir2, args.model2, args.year, var_name)
+        data1 = load_annual_mean(args.model_dir1, args.model1, args.year, var_name, plotter=plotter)
+        data2 = load_annual_mean(args.model_dir2, args.model2, args.year, var_name, plotter=plotter)
         differences[var] = calculate_surface_difference(data1, data2)
 
     if any(diff is not None for diff in differences.values()):
@@ -193,8 +214,8 @@ def main():
 
     # Generate derived variables difference map
     print(f"Generating derived variables difference map ({args.model1} - {args.model2})...")
-    derived1 = calculate_derived_variables(args.model_dir1, args.model1, args.year)
-    derived2 = calculate_derived_variables(args.model_dir2, args.model2, args.year)
+    derived1 = calculate_derived_variables(args.model_dir1, args.model1, args.year, plotter)
+    derived2 = calculate_derived_variables(args.model_dir2, args.model2, args.year, plotter)
 
     derived_vars = {
         'SP': 'Secondary Production Difference [gC/m³/yr]',
@@ -219,7 +240,6 @@ def main():
             output_dir / f"difference_{args.year}_derived.png"
         )
 
-    ds.close()
     print(f"Difference maps complete for {args.model1} - {args.model2}")
     return 0
 

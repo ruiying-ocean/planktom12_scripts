@@ -571,7 +571,7 @@ ECOSYSTEM_VARS = {
     '_eratio': {
         'long_name': 'Export Ratio',
         'units': 'dimensionless',
-        'vmax': 0.4,
+        'vmax': 0.5,
         'vmin': 0,
         'depth_index': None,
         'cmap': 'viridis'
@@ -579,7 +579,7 @@ ECOSYSTEM_VARS = {
     '_Teff': {
         'long_name': 'Transfer Efficiency',
         'units': 'dimensionless',
-        'vmax': 0.15,
+        'vmax': 0.5,
         'vmin': 0,
         'depth_index': None,
         'cmap': 'viridis'
