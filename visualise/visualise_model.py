@@ -25,7 +25,8 @@ from make_maps import (
     plot_pft_maps,
     plot_ecosystem_diagnostics,
     plot_nutrient_comparison,
-    plot_carbon_chemistry
+    plot_carbon_chemistry,
+    plot_derived_variables
 )
 from make_transects import plot_basin_transects, plot_pft_transects
 from difference_utils import plot_comparison_panel
@@ -125,7 +126,7 @@ def main():
         print_header("Step 2: Generating Spatial Maps")
 
         # 2.1 Ecosystem diagnostics with satellite chlorophyll
-        print_step(1, 5, "Ecosystem diagnostics (TChl, EXP, PPINT)")
+        print_step(1, 6, "Ecosystem diagnostics (TChl, EXP, PPINT)")
         obs_dir = Path(args.obs_dir)
         chl_obs_file = obs_dir / 'occi_chla_monthly_climatology.nc'
         if not chl_obs_file.exists():
@@ -141,7 +142,7 @@ def main():
         )
 
         # 2.2 Phytoplankton maps
-        print_step(2, 5, "Phytoplankton functional types")
+        print_step(2, 6, "Phytoplankton functional types")
         plot_pft_maps(
             plotter=plotter,
             ptrc_ds=ptrc_ds,
@@ -152,7 +153,7 @@ def main():
         )
 
         # 2.3 Zooplankton maps
-        print_step(3, 5, "Zooplankton functional types")
+        print_step(3, 6, "Zooplankton functional types")
         plot_pft_maps(
             plotter=plotter,
             ptrc_ds=ptrc_ds,
@@ -163,7 +164,7 @@ def main():
         )
 
         # 2.4 Nutrient maps
-        print_step(4, 5, "Nutrient distributions")
+        print_step(4, 6, "Nutrient distributions")
         nutrients = ['_NO3', '_PO4', '_Si', '_Fer']
 
         if not args.skip_observations:
@@ -213,8 +214,16 @@ def main():
             print("        (Skipping observations - model only)")
             # Could call a simplified nutrient plotting function here if needed
 
-        # 2.5 Carbon chemistry maps
-        print_step(5, 5, "Carbon chemistry (ALK, DIC)")
+        # 2.5 Derived variables maps
+        print_step(5, 6, "Derived ecosystem variables (SP, RECYCLE, e-ratio, Teff)")
+        plot_derived_variables(
+            plotter=plotter,
+            diad_ds=diad_ds,
+            output_path=output_dir / f"{args.run_name}_{args.year}_derived.png"
+        )
+
+        # 2.6 Carbon chemistry maps
+        print_step(6, 6, "Carbon chemistry (ALK, DIC)")
         carbon_vars = ['_ALK', '_DIC']
 
         if not args.skip_observations:

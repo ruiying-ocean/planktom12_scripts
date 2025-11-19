@@ -114,9 +114,9 @@ def load_and_preprocess_diad(
 
     print("Computing time averages...")
 
-    # Standard diagnostic variables
+    # Standard diagnostic variables including derived variables
     if variables is None:
-        variables = ['_TChl', '_EXP', '_PPINT']
+        variables = ['_TChl', '_EXP', '_PPINT', '_SPINT', '_RECYCLEINT', '_eratio', '_Teff']
 
     for var in variables:
         if var in diad_ds:
