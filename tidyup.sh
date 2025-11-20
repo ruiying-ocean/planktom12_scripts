@@ -64,7 +64,7 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 	python3 breakdown.py breakdown_config.toml ${y} ${y}
 
 	# Run timeseries visualization script
-	python3 make_timeseries.py --model-id $model_id --model-dir $modelOutputDir
+	python3 make_timeseries.py $model_id --model-run-dir $modelOutputDir
 
 	# Process output files
 	if [[ $y < $spinupEnd ]]; then

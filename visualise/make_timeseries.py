@@ -385,12 +385,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(
-        '--model-id',
-        required=True,
-        help='Model run identifier'
+        'model_id',
+        help='Model run identifier (e.g., TOM12_RY_SPE2)'
     )
     parser.add_argument(
-        '--model-dir',
+        '--model-run-dir',
         default='~/scratch/ModelRuns',
         help='Base directory for model outputs (default: %(default)s)'
     )
@@ -398,7 +397,7 @@ def main():
     args = parser.parse_args()
 
     model_name = args.model_id
-    model_output_dir = pathlib.Path(args.model_dir).expanduser()
+    model_output_dir = pathlib.Path(args.model_run_dir).expanduser()
 
     print(f"\n🌊 Ocean Model Visualization Tool")
     print(f"📊 Processing model: {model_name}")
