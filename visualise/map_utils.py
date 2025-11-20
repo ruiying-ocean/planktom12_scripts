@@ -1,6 +1,15 @@
 """
 Ocean mapping utilities for PlankTom model output visualization.
 Based on the style from tompy notebooks (OBio_state.ipynb, warming_map.ipynb).
+
+ORCA2 Vertical Grid Depth Levels (0-indexed):
+    Level 0  = 5.00m    (surface)
+    Level 9  = 95.49m   (closest to 100m)
+    Level 10 = 105.97m
+    Level 17 = 272.48m  (closest to 300m - used for O2)
+    Level 21 = 1033.22m (closest to 1000m - used for EXP1000/Teff)
+    Level 24 = 2289.77m
+    Total: 31 levels (0-30)
 """
 
 import xarray as xr
@@ -136,10 +145,10 @@ class OceanMapPlotter:
                 depth_dim = 'deptht' if 'deptht' in ds['EXP'].dims else 'nav_lev'
                 if depth_dim in ds['EXP'].dims and len(ds[depth_dim]) > 24:
                     # Store EXP at 100m for export ratio calculation
-                    ds['EXP100'] = ds['EXP'].isel({depth_dim: 10})  # ~100m
+                    ds['EXP100'] = ds['EXP'].isel({depth_dim: 10})  # ~106m
 
                     # Calculate transfer efficiency: EXP@1000m / EXP@100m
-                    exp_1000m = ds['EXP'].isel({depth_dim: 24})  # ~1000m
+                    exp_1000m = ds['EXP'].isel({depth_dim: 21})  # ~1033m (level 21, matches breakdown)
                     # Use xr.where to avoid divide by zero warnings
                     ds['_Teff'] = xr.where(ds['EXP100'] != 0, exp_1000m / ds['EXP100'], np.nan)
 
