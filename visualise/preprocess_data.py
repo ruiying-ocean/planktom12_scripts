@@ -65,7 +65,7 @@ def load_and_preprocess_ptrc(
                 print(f"  Processed {var}")
 
     # Process nutrient variables
-    nutrients = ['_NO3', '_PO4', '_Si', '_Fer']
+    nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
     for var in nutrients:
         if var in ptrc_ds and (variables is None or var in variables):
             if 'time_counter' in ptrc_ds[var].dims:
@@ -147,7 +147,7 @@ def load_observations(
     """
     obs_datasets = {}
 
-    # Try to load WOA data for NO3, PO4, Si
+    # Try to load WOA data for NO3, PO4, Si, O2
     woa_file = obs_dir / 'woa_orca_bil.nc'
     if woa_file.exists():
         print(f"Loading WOA data from {woa_file}")
@@ -161,6 +161,8 @@ def load_observations(
             obs_datasets['_PO4'] = woa_ds['po4']
         if 'si' in woa_ds and '_Si' in nutrients:
             obs_datasets['_Si'] = woa_ds['si']
+        if 'o2' in woa_ds and '_O2' in nutrients:
+            obs_datasets['_O2'] = woa_ds['o2']
     else:
         print(f"Warning: WOA file not found at {woa_file}")
 

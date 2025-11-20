@@ -165,7 +165,7 @@ def main():
 
         # 2.4 Nutrient maps
         print_step(4, 6, "Nutrient distributions")
-        nutrients = ['_NO3', '_PO4', '_Si', '_Fer']
+        nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
 
         if not args.skip_observations:
             # Load observations for comparison
@@ -263,7 +263,7 @@ def main():
             # 3.1 Nutrient transects
             if not args.skip_observations:
                 print_step(1, 2, "Nutrient transects (Atlantic 35°W, Pacific 170°W)")
-                nutrients = ['_NO3', '_PO4', '_Si', '_Fer']
+                nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
                 obs_datasets = load_observations(obs_dir, nutrients=nutrients)
 
                 plot_basin_transects(
