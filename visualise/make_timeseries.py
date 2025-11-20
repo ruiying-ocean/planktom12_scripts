@@ -304,11 +304,11 @@ class FigureCreator:
         subplot_height = self.config['layout']['subplot_height']
 
         nutrient_configs = [
-            (data["nPO4"], self.colors[0], "Surface Phosphate", "μmol/L", None, ObservationLine(0.530)),
-            (data["NO3"], self.colors[1], "Surface Nitrate", "μmol/L", None, ObservationLine(5.152)),
+            (data["nPO4"], self.colors[0], "Surface Phosphate", "μmol/L", None, ObservationLine(0.517)),
+            (data["NO3"], self.colors[1], "Surface Nitrate", "μmol/L", None, ObservationLine(5.044)),
             (data["nFer"], self.colors[2], "Surface Iron", "nmol/L", None, None),
-            (data["Si"], self.colors[3], "Surface Silica", "μmol/L", None, ObservationLine(7.485)),
-            (data["O2"], self.colors[4], "Surface Oxygen", "μmol/L", None, ObservationLine(251.1)),
+            (data["Si"], self.colors[3], "Surface Silica", "μmol/L", None, ObservationLine(7.227)),
+            (data["O2"], self.colors[4], "Oxygen at 300m", "μmol/L", None, ObservationLine(168.3)),
             # Alkalinity: GLODAP value converted from μmol/kg to μmol/L (2295.11 * 1.025)
             (data["Alkalini"], self.colors[5], "Surface Alkalinity", "μmol/L", None, ObservationLine(2352.49)),
         ]
