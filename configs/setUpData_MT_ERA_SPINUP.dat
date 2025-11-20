@@ -122,8 +122,8 @@ data_1m_salinity_nomask.nc:/gpfs/data/greenocean/software/resources/ModelResourc
 
 # Surface dust deposition - source of Fe
 #dust.orca.nc:/gpfs/home/vhf24tbu/Observations/input_data/MERRA2_DUST.MONTHLY_ORCA2.times035.nc
-dust.orca.nc:/gpfs/home/vhf24tbu/Observations/input_data/gesamp.tfe_dep.ORCA2.nc
-#dust.orca.nc:/gpfs/data/greenocean/software/resources/ModelResources/Dust/dust.Jickells2005.times035.ORCA.nc
+#dust.orca.nc:/gpfs/home/vhf24tbu/Observations/input_data/gesamp.tfe_dep.ORCA2.nc
+dust.orca.nc:/gpfs/data/greenocean/software/resources/ModelResources/Dust/dust.Jickells2005.times035.ORCA.nc
 
 
 # Atmospheric input of nitrogen
