@@ -23,6 +23,12 @@ Comparison of global ecosystem metrics across models.
 
 ![](multimodel_summary_global.png)
 
+## Normalized Timeseries
+
+Normalized timeseries showing temporal trends relative to baseline values. All variables are normalized by subtracting the mean of the first 10 years (or all available years if less than 10) to highlight changes over time.
+
+![](multimodel_summary_global_normalized.png)
+
 # Regional and Monthly Patterns
 
 ## Carbon Flux

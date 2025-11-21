@@ -688,6 +688,70 @@ class GlobalSummaryPlotter(PlotGenerator):
                     ax.axhspan(obs["min"], obs["max"], **PlotConfig.HATCH_STYLE)
 
 
+class GlobalSummaryNormalizedPlotter(PlotGenerator):
+    """Generates normalized global summary plots using first 10 years as baseline"""
+
+    def generate(self):
+        fig, axes = plt.subplots(
+            2, 3, figsize=(3 * PlotConfig.RATIO, 2 * PlotConfig.RATIO), sharex=True
+        )
+        axes = axes.flatten()
+
+        PlotConfig.setup_axes(axes)
+
+        self.plot_all_models(fig, axes, self._plot_model)
+
+        self.add_legend(fig)
+        self.save_figure(fig, "multimodel_summary_global_normalized.png")
+
+    def _plot_model(self, model, axes, color):
+        sur_data = DataLoader.load_breakdown_data(model, "sur", "annual")
+        if sur_data is None:
+            return
+
+        actual_years = DataLoader.get_actual_years(sur_data)
+        indices = model.get_year_range_indices(actual_years)
+        if indices[0] is None:
+            return
+
+        vol_data = DataLoader.load_breakdown_data(model, "vol", "annual")
+        lev_data = DataLoader.load_breakdown_data(model, "lev", "annual")
+        ave_data = DataLoader.load_breakdown_data(model, "ave", "annual")
+
+        year = DataLoader.safe_load_column(sur_data, "year", indices)
+        if year is None:
+            return
+
+        plot_configs = [
+            (axes[0], sur_data, "Cflx", "Normalized Cflx [PgC/yr]", False),
+            (axes[1], ave_data, "TChl", "Normalized TChl [ug/L]", True),
+            (axes[2], vol_data, "PPT", "Normalized PPT [PgC/yr]", False),
+            (axes[3], lev_data, "EXP", "Normalized EXP@100 [PgC/yr]", False),
+            (axes[4], vol_data, "probsi", "Normalized PROSi [Tmol/yr]", False),
+            (axes[5], lev_data, "sinksil", "Normalized SNKSi [Tmol/yr]", False),
+        ]
+
+        for ax, data_df, column, title, add_label in plot_configs:
+            if data_df is not None:
+                values = DataLoader.safe_load_column(data_df, column, indices)
+                if values is not None and len(values) == len(year):
+                    # Calculate baseline as mean of first 10 years (or available years if less)
+                    baseline_years = min(10, len(values))
+                    baseline = np.mean(values[:baseline_years])
+                    normalized_values = values - baseline
+
+                    label = model.label if add_label else None
+                    ax.plot(
+                        year,
+                        normalized_values,
+                        color=color,
+                        label=label,
+                        linewidth=PlotConfig.LINE_WIDTH,
+                    )
+                    ax.set_title(title, fontsize=PlotConfig.TITLE_FONTSIZE)
+                    ax.axhline(0, color='gray', linestyle=':', linewidth=0.8, alpha=0.5)
+
+
 class RegionalPlotter(PlotGenerator):
     """Base class for regional plotters"""
 
@@ -1307,6 +1371,7 @@ class MultiModelPlotter:
     def generate_all_plots(self):
         plotters = [
             GlobalSummaryPlotter(self.models, self.save_dir),
+            GlobalSummaryNormalizedPlotter(self.models, self.save_dir),
             CflxPlotter(self.models, self.save_dir),
             TChlPlotter(self.models, self.save_dir),
             PFTPlotter(self.models, self.save_dir),
