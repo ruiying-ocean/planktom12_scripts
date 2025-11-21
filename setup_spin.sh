@@ -17,11 +17,25 @@ SPIN_DIR=${MODEL_RUN_DIR}/TOM12_RY_SPJ2
 
 STEPS_PER_YEAR=5475
 FIRST_YEAR_SPINUP=1750
-FIRST_YEAR_TRANSIENT=1940 # should be identical to the new start year
+
+# Parse FIRST_YEAR_TRANSIENT from the model run directory's setUpData file
+TRANSIENT_SETUP_DATA=$(find "${MODEL_RUN_DIR}/${MODEL_ID}" -maxdepth 1 -name "setUpData*.dat" | head -1)
+if [ -z "$TRANSIENT_SETUP_DATA" ] || [ ! -f "$TRANSIENT_SETUP_DATA" ]; then
+    echo "Error: Could not find setUpData*.dat file in ${MODEL_RUN_DIR}/${MODEL_ID}"
+    exit 1
+fi
+
+FIRST_YEAR_TRANSIENT=$(grep "^yearStart:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
+if [ -z "$FIRST_YEAR_TRANSIENT" ]; then
+    echo "Error: Could not parse yearStart from $TRANSIENT_SETUP_DATA"
+    exit 1
+fi
 
 TIMESTEP=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
 
 echo "============================================"
+echo "Using setUpData file: $TRANSIENT_SETUP_DATA"
+echo "First year (transient): $FIRST_YEAR_TRANSIENT"
 echo "Calculated TIMESTEP: $TIMESTEP"
 echo "============================================"
 
