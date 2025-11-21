@@ -8,61 +8,31 @@ import matplotlib.pyplot as plt
 import pathlib
 import sys
 import argparse
-from dataclasses import dataclass
 
-# Import TOML parser (tomllib in Python 3.11+, tomli for earlier versions)
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib
-
-@dataclass
-class ObservationRange:
-    min_val: float
-    max_val: float
-    label: str = "Obs. Range"
-
-@dataclass
-class ObservationLine:
-    value: float
-    label: str = "Observation"
+# Import shared utilities
+from timeseries_util import (
+    ObservationRange,
+    ObservationLine,
+    ObservationData,
+    ConfigLoader,
+    DataFileLoader,
+    PlotStyler,
+    FigureSaver,
+    AxisSetup
+)
 
 class ModelDataLoader:
     def __init__(self, base_dir, model_name):
-        self.base_dir = base_dir
+        self.base_dir = pathlib.Path(base_dir)
         self.model_name = model_name
-        
+
     def _read_breakdown_file(self, file_type):
-        # Try CSV format first (new format), fall back to TSV if not found
-        base_path = pathlib.Path(self.base_dir)
-        csv_path = base_path / self.model_name / f"breakdown.{file_type}.annual.csv"
-        dat_path = base_path / self.model_name / f"breakdown.{file_type}.annual.dat"
-
-        try:
-            # New CSV format - single header row, comma-separated
-            df = pd.read_csv(csv_path)
-        except FileNotFoundError:
-            # Legacy TSV format - 3 header rows, tab-separated
-            # Read with header=2 to skip first 2 rows (units and keys)
-            df = pd.read_csv(dat_path, sep="\t", header=2)
-
-        # Sort by year if year column exists
-        if 'year' in df.columns:
-            df = df.sort_values('year').reset_index(drop=True)
-
-        return df
+        """Read breakdown file using shared utility."""
+        return DataFileLoader.read_breakdown_file(self.base_dir, self.model_name, file_type, "annual")
 
     def _extract_arrays(self, df, columns, skip_rows=0):
-        """Extract columns as numpy arrays.
-
-        Note: skip_rows is now 0 by default since CSV format has clean headers.
-        Legacy TSV files are handled in _read_breakdown_file by using header=2.
-        """
-        data = {}
-        for col in columns:
-            if col in df.columns:
-                data[col] = df[col][skip_rows:].to_numpy().astype(float)
-        return data
+        """Extract columns as numpy arrays using shared utility."""
+        return DataFileLoader.extract_columns(df, columns, skip_rows)
         
     def load_all_data(self):
         data = {}
@@ -122,112 +92,34 @@ class FigureCreator:
             model_name: Name of the model run
             config_path: Path to TOML configuration file (optional)
         """
-        self.save_dir = save_dir
+        self.save_dir = pathlib.Path(save_dir)
         self.model_name = model_name
 
-        # Load configuration
-        if config_path is None:
-            # Default to config file in the same directory as this script
-            script_dir = pathlib.Path(__file__).parent
-            config_path = script_dir / 'visualise_config.toml'
+        # Load configuration using shared utility
+        self.config = ConfigLoader.load_config(config_path)
 
-        with open(config_path, 'rb') as f:
-            self.config = tomllib.load(f)
+        # Initialize styler and apply style
+        self.styler = PlotStyler(self.config)
+        self.styler.apply_style()
 
-        # Extract commonly used config values
-        self.dpi = self.config['figure']['dpi']
-        self.format = self.config['figure']['format']
-        color_palette = self.config['colors']['palette']
+        # Store commonly used values
+        self.colors = self.styler.colors
 
-        # Use automatic color palette
-        self.color_palette = plt.get_cmap(color_palette)
-        self.colors = [self.color_palette(i) for i in np.linspace(0, 1, 10)]
-
-        # Apply matplotlib style from config
-        style_cfg = self.config['style']
-        fonts_cfg = style_cfg['fonts']
-        axes_cfg = style_cfg['axes']
-
-        plt.style.use(self.config['figure']['style'])
-        plt.rcParams.update({
-            'font.family': 'sans-serif',
-            'font.sans-serif': ['Helvetica', 'Arial', 'DejaVu Sans'],
-            'font.size': fonts_cfg['base'],
-            'axes.titlesize': fonts_cfg['title'],
-            'axes.labelsize': fonts_cfg['axis_label'],
-            'xtick.labelsize': fonts_cfg['tick_label'],
-            'ytick.labelsize': fonts_cfg['tick_label'],
-            'legend.fontsize': fonts_cfg['legend'],
-            'figure.titlesize': fonts_cfg['figure_title'],
-            'lines.linewidth': style_cfg['linewidth'],
-            'axes.linewidth': axes_cfg['linewidth'],
-            'grid.linewidth': style_cfg['grid_linewidth'],
-            'grid.color': style_cfg['grid_color'],
-            'grid.linestyle': style_cfg['grid_linestyle'],
-            'xtick.major.width': axes_cfg['tick_major_width'],
-            'ytick.major.width': axes_cfg['tick_major_width'],
-            'xtick.major.size': axes_cfg['tick_major_size'],
-            'ytick.major.size': axes_cfg['tick_major_size'],
-        })
+        # Initialize figure saver
+        self.saver = FigureSaver(self.save_dir, self.styler.dpi, self.styler.format)
 
     def _get_global_year_limits(self, data):
         return data["year"].min(), data["year"].max()
 
     def _setup_axis(self, ax, year, data, color, title, ylabel, obs_range=None, obs_line=None, year_limits=None, add_xlabel=True):
-        obs_cfg = self.config['style']['observations']
-
-        ax.plot(year, data, color=color, alpha=self.config['style']['alpha'])
-        ax.set_title(title, fontweight='bold', pad=5)
-        ax.set_ylabel(ylabel)
-
-        # Conditionally add the x-axis label
-        if add_xlabel:
-            ax.set_xlabel('Year', fontweight='bold')
-        else:
-            ax.tick_params(labelbottom=False)
-
-        ax.grid(True)
-
-        min_val, max_val = np.min(data), np.max(data)
-
-        if obs_range:
-            ax.axhspan(obs_range.min_val, obs_range.max_val,
-                       color=obs_cfg['range_color'],
-                       alpha=obs_cfg['range_alpha'], zorder=1)
-            min_val = min(min_val, obs_range.min_val)
-            max_val = max(max_val, obs_range.max_val)
-
-        if obs_line:
-            ax.axhline(obs_line.value,
-                       color=obs_cfg['line_color'],
-                       linestyle=obs_cfg['line_linestyle'],
-                       alpha=obs_cfg['line_alpha'],
-                       linewidth=obs_cfg['line_linewidth'], zorder=2)
-            min_val = min(min_val, obs_line.value)
-            max_val = max(max_val, obs_line.value)
-        
-        buffer = (max_val - min_val) * 0.15
-        ax.set_ylim(min_val - buffer, max_val + buffer)
-        ax.ticklabel_format(style='scientific', axis='y', scilimits=(-2, 3), useMathText=True)
-        
-        if year_limits:
-            ax.set_xlim(year_limits[0], year_limits[1])
-        else:
-            ax.set_xlim(year.min(), year.max())
+        """Set up axis using shared utility."""
+        AxisSetup.setup_axis(ax, year, data, color, title, ylabel,
+                           obs_range, obs_line, year_limits, add_xlabel, self.styler)
 
     def _save_figure(self, fig, filename_base):
-        # Replace extension with configured format
-        filename = pathlib.Path(filename_base).stem + f".{self.format}"
-        path = pathlib.Path(self.save_dir) / filename
-
-        # For SVG, don't use DPI (it's vector-based)
-        if self.format == 'svg':
-            fig.savefig(path, format='svg', bbox_inches='tight', facecolor='white')
-        else:
-            fig.savefig(path, dpi=self.dpi, bbox_inches='tight', facecolor='white')
-
+        """Save figure using shared utility."""
+        path = self.saver.save(fig, filename_base)
         print(f"✓ Saved: {path}")
-        plt.close(fig)
 
     def create_global_summary(self, data):
         year_limits = self._get_global_year_limits(data)
@@ -235,16 +127,26 @@ class FigureCreator:
         subplot_width = self.config['layout']['subplot_width']
         subplot_height = self.config['layout']['subplot_height']
 
+        # Use shared observation data
+        obs = ObservationData.GLOBAL
+
         plot_configs = [
             (data["Cflx"], self.colors[0], "Surface Carbon Flux", "PgC/yr", None, None),
-            (data["TChl"], self.colors[1], "Surface Chlorophyll", "μg Chl/L", None, ObservationLine(0.2921)),
-            (data["PPT"], self.colors[2], "Primary Production", "PgC/yr", ObservationRange(51, 65), None),
-            (data["EXP"], self.colors[3], "Export at 100m", "PgC/yr", ObservationRange(7.8, 12.2), None),
+            (data["TChl"], self.colors[1], "Surface Chlorophyll", "μg Chl/L", None,
+             ObservationLine(obs["TChl"]["value"])),
+            (data["PPT"], self.colors[2], "Primary Production", "PgC/yr",
+             ObservationRange(obs["PPT"]["min"], obs["PPT"]["max"]), None),
+            (data["EXP"], self.colors[3], "Export at 100m", "PgC/yr",
+             ObservationRange(obs["EXP"]["min"], obs["EXP"]["max"]), None),
             (data["EXP1000"], self.colors[4], "Export at 1000m", "PgC/yr", None, None),
-            (data["PROCACO3"], self.colors[5], "CaCO₃ Production", "PgC/yr", ObservationRange(1.04, 3.34), None),
-            (data["EXPCACO3"], self.colors[6], "CaCO₃ Export at 100m", "PgC/yr", ObservationRange(0.68, 0.9), None),
-            (data["probsi"], self.colors[7], "Silica Production", "Tmol/yr", ObservationRange(203, 307), None),
-            (data["SI_FLX"], self.colors[8], "Silica Export at 100m", "Tmol/yr", ObservationRange(89, 135), None),
+            (data["PROCACO3"], self.colors[5], "CaCO₃ Production", "PgC/yr",
+             ObservationRange(obs["PROCACO3"]["min"], obs["PROCACO3"]["max"]), None),
+            (data["EXPCACO3"], self.colors[6], "CaCO₃ Export at 100m", "PgC/yr",
+             ObservationRange(obs["EXPCACO3"]["min"], obs["EXPCACO3"]["max"]), None),
+            (data["probsi"], self.colors[7], "Silica Production", "Tmol/yr",
+             ObservationRange(obs["probsi"]["min"], obs["probsi"]["max"]), None),
+            (data["SI_FLX"], self.colors[8], "Silica Export at 100m", "Tmol/yr",
+             ObservationRange(obs["SI_FLX"]["min"], obs["SI_FLX"]["max"]), None),
         ]
 
         fig, axes = plt.subplots(
@@ -267,19 +169,33 @@ class FigureCreator:
         subplot_width = self.config['layout']['subplot_width']
         subplot_height = self.config['layout']['subplot_height']
 
+        # Use shared observation data
+        pft_obs = ObservationData.PFT
+
         pft_configs = [
-            ("PIC", "Picophytoplankton", "PgC", ObservationRange(0.28, 0.52)),
-            ("PHA", "Phaeocystis", "PgC", ObservationRange(0.11, 0.69)),
+            ("PIC", "Picophytoplankton", "PgC",
+             ObservationRange(pft_obs["PIC"]["min"], pft_obs["PIC"]["max"]) if pft_obs["PIC"]["min"] else None),
+            ("PHA", "Phaeocystis", "PgC",
+             ObservationRange(pft_obs["PHA"]["min"], pft_obs["PHA"]["max"]) if pft_obs["PHA"]["min"] else None),
             ("MIX", "Mixotrophs", "PgC", None),
-            ("DIA", "Diatoms", "PgC", ObservationRange(0.013, 0.75)),
-            ("COC", "Coccolithophores", "PgC", ObservationRange(0.001, 0.032)),
-            ("FIX", "Nitrogen Fixers", "PgC", ObservationRange(0.008, 0.12)),
-            ("GEL", "Gelatinous Zooplankton", "PgC", ObservationRange(0.10, 3.11)),
-            ("PRO", "Protozooplankton", "PgC", ObservationRange(0.10, 0.37)),
-            ("BAC", "Bacteria", "PgC", ObservationRange(0.25, 0.26)),
-            ("CRU", "Crustaceans", "PgC", ObservationRange(0.01, 0.64)),
-            ("PTE", "Pteropods", "PgC", ObservationRange(0.048, 0.057)),
-            ("MES", "Mesozooplankton", "PgC", ObservationRange(0.21, 0.34))
+            ("DIA", "Diatoms", "PgC",
+             ObservationRange(pft_obs["DIA"]["min"], pft_obs["DIA"]["max"]) if pft_obs["DIA"]["min"] else None),
+            ("COC", "Coccolithophores", "PgC",
+             ObservationRange(pft_obs["COC"]["min"], pft_obs["COC"]["max"]) if pft_obs["COC"]["min"] else None),
+            ("FIX", "Nitrogen Fixers", "PgC",
+             ObservationRange(pft_obs["FIX"]["min"], pft_obs["FIX"]["max"]) if pft_obs["FIX"]["min"] else None),
+            ("GEL", "Gelatinous Zooplankton", "PgC",
+             ObservationRange(pft_obs["GEL"]["min"], pft_obs["GEL"]["max"]) if pft_obs["GEL"]["min"] else None),
+            ("PRO", "Protozooplankton", "PgC",
+             ObservationRange(pft_obs["PRO"]["min"], pft_obs["PRO"]["max"]) if pft_obs["PRO"]["min"] else None),
+            ("BAC", "Bacteria", "PgC",
+             ObservationRange(pft_obs["BAC"]["min"], pft_obs["BAC"]["max"]) if pft_obs["BAC"]["min"] else None),
+            ("CRU", "Crustaceans", "PgC",
+             ObservationRange(pft_obs["CRU"]["min"], pft_obs["CRU"]["max"]) if pft_obs["CRU"]["min"] else None),
+            ("PTE", "Pteropods", "PgC",
+             ObservationRange(pft_obs["PTE"]["min"], pft_obs["PTE"]["max"]) if pft_obs["PTE"]["min"] else None),
+            ("MES", "Mesozooplankton", "PgC",
+             ObservationRange(pft_obs["MES"]["min"], pft_obs["MES"]["max"]) if pft_obs["MES"]["min"] else None)
         ]
 
         fig, axes = plt.subplots(
@@ -303,14 +219,22 @@ class FigureCreator:
         subplot_width = self.config['layout']['subplot_width']
         subplot_height = self.config['layout']['subplot_height']
 
+        # Use shared observation data
+        nut_obs = ObservationData.NUTRIENTS
+
         nutrient_configs = [
-            (data["nPO4"], self.colors[0], "Surface Phosphate", "μmol/L", None, ObservationLine(0.517)),
-            (data["NO3"], self.colors[1], "Surface Nitrate", "μmol/L", None, ObservationLine(5.044)),
-            (data["nFer"], self.colors[2], "Surface Iron", "nmol/L", None, None),
-            (data["Si"], self.colors[3], "Surface Silica", "μmol/L", None, ObservationLine(7.227)),
-            (data["O2"], self.colors[4], "Oxygen at 300m", "μmol/L", None, ObservationLine(168.3)),
-            # Alkalinity: GLODAP value converted from μmol/kg to μmol/L (2295.11 * 1.025)
-            (data["Alkalini"], self.colors[5], "Surface Alkalinity", "μmol/L", None, ObservationLine(2352.49)),
+            (data["nPO4"], self.colors[0], "Surface Phosphate", "μmol/L", None,
+             ObservationLine(nut_obs["PO4"]) if nut_obs["PO4"] else None),
+            (data["NO3"], self.colors[1], "Surface Nitrate", "μmol/L", None,
+             ObservationLine(nut_obs["NO3"]) if nut_obs["NO3"] else None),
+            (data["nFer"], self.colors[2], "Surface Iron", "nmol/L", None,
+             ObservationLine(nut_obs["Fer"]) if nut_obs["Fer"] else None),
+            (data["Si"], self.colors[3], "Surface Silica", "μmol/L", None,
+             ObservationLine(nut_obs["Si"]) if nut_obs["Si"] else None),
+            (data["O2"], self.colors[4], "Oxygen at 300m", "μmol/L", None,
+             ObservationLine(nut_obs["O2"]) if nut_obs["O2"] else None),
+            (data["Alkalini"], self.colors[5], "Surface Alkalinity", "μmol/L", None,
+             ObservationLine(nut_obs["Alkalini"]) if nut_obs["Alkalini"] else None),
         ]
 
         fig, axes = plt.subplots(

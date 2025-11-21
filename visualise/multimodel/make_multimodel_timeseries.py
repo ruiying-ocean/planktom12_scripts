@@ -19,40 +19,11 @@ matplotlib.use("Agg")
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 from logging_utils import print_header, print_info, print_warning, print_error, print_success
 
-# Load configuration
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib
+# Import shared utilities from parent directory
+from timeseries_util import ConfigLoader, DataFileLoader, ObservationData, PlotStyler
 
-# Load visualise_config.toml
-def load_config():
-    """Load configuration from visualise_config.toml"""
-    # Try environment variable first (set by shell script)
-    config_path_str = os.environ.get("VISUALISE_CONFIG", "")
-    if config_path_str:
-        config_path_env = pathlib.Path(config_path_str)
-        if config_path_env.exists() and config_path_env.is_file():
-            with open(config_path_env, "rb") as f:
-                return tomllib.load(f)
-
-    # Try current directory (for when script is copied to output dir)
-    config_path = pathlib.Path("visualise_config.toml")
-    if config_path.exists():
-        with open(config_path, "rb") as f:
-            return tomllib.load(f)
-
-    # Try parent directory (visualise/) if not in current dir
-    script_dir = pathlib.Path(__file__).parent
-    config_path = script_dir.parent / "visualise_config.toml"
-    if config_path.exists():
-        with open(config_path, "rb") as f:
-            return tomllib.load(f)
-
-    print_warning("Config file not found, using defaults")
-    return None
-
-CONFIG = load_config()
+# Load configuration using shared utility
+CONFIG = ConfigLoader.load_config()
 
 
 @dataclass
@@ -131,302 +102,59 @@ class ModelConfig:
         return self.get_monthly_index()
 
 
-class PlotConfig:
-    """Centralized configuration for plot styling and layout."""
+# Initialize global PlotStyler for consistent styling across all plotters
+PLOT_STYLER = PlotStyler(CONFIG) if CONFIG else None
 
-    # Load from config or use defaults
-    if CONFIG:
-        COLORS = CONFIG.get("colors", {}).get("multimodel_palette", [
-            "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
-            "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
-        ])
-        RATIO = CONFIG.get("multimodel", {}).get("figure_ratio", 2.5)
-        FONT_FAMILY = "sans-serif"
-        TITLE_FONTSIZE = CONFIG.get("style", {}).get("fonts", {}).get("title", 8)
-        LABEL_FONTSIZE = CONFIG.get("style", {}).get("fonts", {}).get("axis_label", 10)
-        LINE_WIDTH = CONFIG.get("style", {}).get("linewidth", 1.5)
+# Apply matplotlib styling globally
+if PLOT_STYLER:
+    PLOT_STYLER.apply_style()
 
-        # Grid style from config
-        GRID_STYLE = {
-            "linestyle": CONFIG.get("style", {}).get("grid_linestyle", "--"),
-            "linewidth": CONFIG.get("style", {}).get("grid_linewidth", 0.5),
-            "alpha": 0.7
-        }
+# Use colors from multimodel_palette in config, or fall back to standard colors
+if CONFIG:
+    COLORS = CONFIG.get("colors", {}).get("multimodel_palette", PLOT_STYLER.colors if PLOT_STYLER else [
+        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+        "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
+    ])
+    USE_CONSTRAINED_LAYOUT = CONFIG.get("layout", {}).get("use_constrained_layout", True)
+    # Use same subplot sizing as single-model for consistency
+    SUBPLOT_WIDTH = CONFIG.get("layout", {}).get("subplot_width", 2.5)
+    SUBPLOT_HEIGHT = CONFIG.get("layout", {}).get("subplot_height", 2.0)
+else:
+    COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+              "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
+    USE_CONSTRAINED_LAYOUT = True
+    SUBPLOT_WIDTH = 2.5
+    SUBPLOT_HEIGHT = 2.0
 
-        # Hatch style for observations (preferred multimodel style)
-        obs_config = CONFIG.get("style", {}).get("observations", {})
-        HATCH_STYLE = {
-            "color": obs_config.get("hatch_color", "k"),
-            "alpha": obs_config.get("hatch_alpha", 0.15),
-            "fill": obs_config.get("hatch_fill", False),
-            "hatch": obs_config.get("hatch_pattern", "///")
-        }
+# Direct access to styler properties (no wrapper class)
+TITLE_FONTSIZE = PLOT_STYLER.font_title if PLOT_STYLER else 8
+LABEL_FONTSIZE = PLOT_STYLER.font_axis_label if PLOT_STYLER else 10
+LINE_WIDTH = PLOT_STYLER.linewidth if PLOT_STYLER else 1.5
 
-        # Line style for observation lines
-        LINE_STYLE = {
-            "color": obs_config.get("line_color", "k"),
-            "linestyle": obs_config.get("line_linestyle", "--"),
-            "alpha": obs_config.get("line_alpha", 0.8),
-            "linewidth": obs_config.get("line_linewidth", 1.5)
-        }
-    else:
-        # Fallback defaults if config not found
-        COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
-                  "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
-        RATIO = 2.5
-        FONT_FAMILY = "sans-serif"
-        TITLE_FONTSIZE = 8
-        LABEL_FONTSIZE = 10
-        LINE_WIDTH = 1.5
-        GRID_STYLE = {"linestyle": "--", "linewidth": 0.5, "alpha": 0.7}
-        HATCH_STYLE = {"color": "k", "alpha": 0.15, "fill": False, "hatch": "///"}
-        LINE_STYLE = {"color": "k", "linestyle": "dashed", "alpha": 0.8, "linewidth": 1.5}
+# Observation styling from shared styler
+HATCH_STYLE = {
+    "color": PLOT_STYLER.obs_hatch_color if PLOT_STYLER else "k",
+    "alpha": PLOT_STYLER.obs_hatch_alpha if PLOT_STYLER else 0.15,
+    "fill": PLOT_STYLER.obs_hatch_fill if PLOT_STYLER else False,
+    "hatch": PLOT_STYLER.obs_hatch_pattern if PLOT_STYLER else "///"
+}
 
-    @staticmethod
-    def setup_axes(axes):
-        """Apply consistent styling to all axes in a figure."""
-        for ax in axes:
-            ax.grid(**PlotConfig.GRID_STYLE)
-            ax.tick_params(
-                axis="both", which="major", labelsize=PlotConfig.LABEL_FONTSIZE - 1
-            )
-            ax.spines["top"].set_visible(False)
-            ax.spines["right"].set_visible(False)
-            ax.xaxis.label.set_size(PlotConfig.LABEL_FONTSIZE)
-            ax.yaxis.label.set_size(PlotConfig.LABEL_FONTSIZE)
+LINE_STYLE = {
+    "color": PLOT_STYLER.obs_line_color if PLOT_STYLER else "k",
+    "linestyle": PLOT_STYLER.obs_line_linestyle if PLOT_STYLER else "--",
+    "alpha": PLOT_STYLER.obs_line_alpha if PLOT_STYLER else 0.8,
+    "linewidth": PLOT_STYLER.obs_line_linewidth if PLOT_STYLER else 1.5
+}
 
 
-class ObservationalData:
-    """Container for observational data ranges"""
-
-    GLOBAL_RANGES = {
-        "TCHL": {"value": 0.2921, "type": "line"},
-        "PPT": {"min": 51, "max": 65, "type": "span"},
-        "EXP": {"min": 5., "max": 12., "type": "span"},
-        "PROSIL": {"min": 203, "max": 307, "type": "span"},
-        "SINKSIL": {"min": 89, "max": 135, "type": "span"},
-    }
-
-    PFT_RANGES = {
-        "PIC": {"min": 0.28, "max": 0.52},
-        "PHA": {"min": 0.11, "max": 0.69},
-        "DIA": {"min": 0.013, "max": 0.75},
-        "COC": {"min": 0.001, "max": 0.032},
-        "FIX": {"min": 0.008, "max": 0.12},
-        "GEL": {"min": 0.10, "max": 3.11},
-        "PRO": {"min": 0.10, "max": 0.37},
-        "MAC": {"min": 0.01, "max": 0.64},
-        "MES": {"min": 0.21, "max": 0.34},
-        "BAC": {"min": 0.25, "max": 0.26},
-        "MIX": {"min": np.nan, "max": np.nan},
-        "PTE": {"min": 0.048, "max":0.057}
-    }
-
-    NUTRIENT_VALUES = {
-        "PO4": 0.530,
-        "NO3": 5.152,
-        "Fer": np.nan,
-        "Si": 7.485,
-        "O2": 251.1,
-    }
-
-    PCO2_MONTHLY = {
-        "global": np.array(
-            [
-                374.5267,
-                376.9849,
-                378.6273,
-                377.6980,
-                374.4194,
-                372.0030,
-                372.8390,
-                373.1397,
-                373.7141,
-                374.7667,
-                375.3111,
-                376.1471,
-            ]
-        ),
-        "reg1": np.array(
-            [
-                367.6449,
-                374.6633,
-                376.1620,
-                367.9230,
-                348.2934,
-                327.9850,
-                319.9174,
-                315.5227,
-                320.6641,
-                336.6024,
-                353.5276,
-                366.8002,
-            ]
-        ),
-        "reg2": np.array(
-            [
-                360.3107,
-                359.7239,
-                360.9054,
-                364.4423,
-                372.4738,
-                384.9409,
-                398.0022,
-                403.2199,
-                398.5489,
-                386.5432,
-                374.1430,
-                366.2098,
-            ]
-        ),
-        "reg3": np.array(
-            [
-                399.8266,
-                401.4656,
-                403.5920,
-                404.5923,
-                404.1028,
-                402.5178,
-                401.7164,
-                401.2903,
-                401.1736,
-                401.0325,
-                400.8897,
-                401.5201,
-            ]
-        ),
-        "reg4": np.array(
-            [
-                383.5775,
-                385.4783,
-                381.7295,
-                373.6719,
-                366.9351,
-                362.8020,
-                361.2315,
-                360.9230,
-                361.6792,
-                363.8154,
-                368.7272,
-                377.6358,
-            ]
-        ),
-        "reg5": np.array(
-            [
-                360.1319,
-                361.5651,
-                368.3551,
-                376.4319,
-                381.8729,
-                387.2647,
-                391.9770,
-                394.6131,
-                394.8327,
-                390.6098,
-                380.8251,
-                368.3117,
-            ]
-        ),
-    }
-
-    TCHL_MONTHLY = {
-        "global": np.array(
-            [
-                0.0,
-                0.00132746,
-                -0.00287947,
-                0.05538714,
-                0.19660503,
-                0.25430918,
-                0.25188863,
-                0.2225644,
-                0.20896989,
-                0.0965862,
-                0.00146702,
-                0.00250745,
-            ]
-        ),
-        "reg1": np.array(
-            [
-                0.0000000e00,
-                -9.6781135e-02,
-                -3.8862228e-05,
-                1.1393067e00,
-                2.7156515e00,
-                3.1558909e00,
-                2.8647695e00,
-                2.6039510e00,
-                3.1784720e00,
-                2.7834001e00,
-                1.4468776e00,
-                -1.5452981e-02,
-            ]
-        ),
-        "reg2": np.array(
-            [
-                0.0,
-                0.05065274,
-                0.0375762,
-                -0.08406973,
-                -0.12498319,
-                -0.22558725,
-                -0.23778045,
-                -0.22738922,
-                0.11215413,
-                0.08687639,
-                0.2218734,
-                0.09384,
-            ]
-        ),
-        "reg3": np.array(
-            [
-                0.0,
-                -0.04654008,
-                -0.10164082,
-                -0.10021466,
-                0.000534,
-                0.01825154,
-                0.04680908,
-                -0.00357324,
-                -0.06979609,
-                -0.09147316,
-                -0.02505821,
-                -0.04246014,
-            ]
-        ),
-        "reg4": np.array(
-            [
-                0.0,
-                0.03992385,
-                0.06925935,
-                0.09288526,
-                0.10391548,
-                0.10491946,
-                0.12549761,
-                0.11763752,
-                0.10455954,
-                0.10054898,
-                0.05817935,
-                0.03453296,
-            ]
-        ),
-        "reg5": np.array(
-            [
-                0.0,
-                -0.06191447,
-                -0.13221624,
-                0.01676586,
-                0.1082058,
-                0.04452744,
-                0.02129921,
-                0.10751635,
-                0.1628111,
-                0.15176588,
-                0.16497672,
-                0.03976542,
-            ]
-        ),
-    }
+def setup_axes(axes):
+    """Apply consistent styling to all axes in a figure."""
+    for ax in axes:
+        ax.grid(True)
+        ax.tick_params(axis="both", which="major", labelsize=LABEL_FONTSIZE - 1)
+        # Keep all 4 spines visible (full frame border) to match single-model style
+        ax.xaxis.label.set_size(LABEL_FONTSIZE)
+        ax.yaxis.label.set_size(LABEL_FONTSIZE)
 
 
 class DataLoader:
@@ -464,48 +192,19 @@ class DataLoader:
 
     @staticmethod
     def load_breakdown_data(model_config, data_type, frequency="annual"):
-        # Try CSV format first (new format), fall back to TSV if not found
-        csv_path = f"/{model_config.model_dir}/{model_config.name}/breakdown.{data_type}.{frequency}.csv"
-        dat_path = f"/{model_config.model_dir}/{model_config.name}/breakdown.{data_type}.{frequency}.dat"
+        """Load breakdown data using shared utility."""
+        base_dir = pathlib.Path(model_config.model_dir)
+        df = DataFileLoader.read_breakdown_file(base_dir, model_config.name, data_type, frequency)
 
-        try:
-            # New CSV format - single header row, comma-separated
-            df = pd.read_csv(csv_path)
-            if df.empty:
-                print_warning(f"Empty dataframe loaded from {csv_path}")
-                return None
-            print_info(f"Loaded CSV {csv_path}")
-        except FileNotFoundError:
-            try:
-                # Legacy TSV format - 3 header rows, tab-separated
-                # Row 0: variable names, Row 1: units, Row 2: keys
-                # Use header=0 to get the variable names
-                df = pd.read_csv(dat_path, sep="\t", header=0, skiprows=[1, 2])
-                if df.empty:
-                    print_warning(f"Empty dataframe loaded from {dat_path}")
-                    return None
-                print_info(f"Loaded TSV {dat_path}")
-            except FileNotFoundError:
-                print_warning(f"File not found - tried both {csv_path} and {dat_path}")
-                return None
-            except Exception as e:
-                print_warning(f"Error loading {dat_path}: {e}")
-                return None
-        except Exception as e:
-            print_warning(f"Error loading {csv_path}: {e}")
+        if df is None:
+            print_warning(f"File not found for {model_config.name}/{data_type}/{frequency}")
             return None
 
-        # Sort by year if year column exists
-        if 'year' in df.columns:
-            df = df.sort_values('year').reset_index(drop=True)
-        # For monthly data, sort by year and month if both exist
-        elif 'month' in df.columns or 'Month' in df.columns:
-            month_col = 'month' if 'month' in df.columns else 'Month'
-            if 'year' in df.columns:
-                df = df.sort_values(['year', month_col]).reset_index(drop=True)
-            else:
-                df = df.sort_values(month_col).reset_index(drop=True)
+        if df.empty:
+            print_warning(f"Empty dataframe loaded for {model_config.name}/{data_type}/{frequency}")
+            return None
 
+        print_info(f"Loaded {model_config.name}/{data_type}/{frequency}")
         return df
 
     @staticmethod
@@ -547,7 +246,7 @@ class PlotGenerator:
         self.models = models
         self.save_dir = save_dir
         pathlib.Path(save_dir).mkdir(parents=True, exist_ok=True)
-        plt.rcParams["font.family"] = PlotConfig.FONT_FAMILY
+        # Font family is already set by PLOT_STYLER.apply_style() at module level
 
     def add_legend(self, fig, **kwargs):
         """
@@ -559,7 +258,7 @@ class PlotGenerator:
                 0.5,
                 0.05,
             ),  # Position the anchor at the bottom center of the figure
-            "fontsize": PlotConfig.LABEL_FONTSIZE - 2,
+            "fontsize": LABEL_FONTSIZE - 2,
             "ncol": 5,  # Arrange legend items horizontally, adjust as needed
             "frameon": True,
         }
@@ -596,7 +295,7 @@ class PlotGenerator:
     def plot_all_models(self, fig, axes, plot_func):
         successful_plots = 0
         for i, model in enumerate(self.models):
-            color = PlotConfig.COLORS[i % len(PlotConfig.COLORS)]
+            color = COLORS[i % len(COLORS)]
             try:
                 plot_func(model, axes, color)
                 successful_plots += 1
@@ -619,13 +318,14 @@ class GlobalSummaryPlotter(PlotGenerator):
     """Generates global summary plots"""
 
     def generate(self):
-        # REWRITTEN: Use plt.subplots() to create the figure and axes grid directly.
+        # Use 3x3 grid to match single-model (9 panels)
         fig, axes = plt.subplots(
-            2, 3, figsize=(3 * PlotConfig.RATIO, 2 * PlotConfig.RATIO), sharex=True
+            3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=True,
+            constrained_layout=USE_CONSTRAINED_LAYOUT
         )
-        axes = axes.flatten()  # Flatten the 2D axes array for easy iteration.
+        axes = axes.flatten()
 
-        PlotConfig.setup_axes(axes)
+        setup_axes(axes)
 
         self.plot_all_models(fig, axes, self._plot_model)
         self._add_observational_data(axes)
@@ -651,41 +351,75 @@ class GlobalSummaryPlotter(PlotGenerator):
         if year is None:
             return
 
+        # Calculate PROCACO3 and EXPCACO3
+        proara = DataLoader.safe_load_column(vol_data, "proara", indices)
+        prococ = DataLoader.safe_load_column(vol_data, "prococ", indices)
+        procaco3 = None
+        if proara is not None and prococ is not None:
+            procaco3 = proara + prococ
+
+        expara = DataLoader.safe_load_column(lev_data, "ExpARA", indices)
+        expco3 = DataLoader.safe_load_column(lev_data, "ExpCO3", indices)
+        expcaco3 = None
+        if expara is not None and expco3 is not None:
+            expcaco3 = expara + expco3
+
         plot_configs = [
-            (axes[0], sur_data, "Cflx", "Cflx [PgC/yr]", False),
-            (axes[1], ave_data, "TChl", "TChl [ug/L]", True),
-            (axes[2], vol_data, "PPT", "PPT [PgC/yr]", False),
-            (axes[3], lev_data, "EXP", "EXP@100 [PgC/yr]", False),
-            (axes[4], vol_data, "probsi", "PROSi [Tmol/yr]", False),
-            (axes[5], lev_data, "sinksil", "SNKSi [Tmol/yr]", False),
+            (axes[0], sur_data, "Cflx", "Surface Carbon Flux", "PgC/yr", False, None),
+            (axes[1], ave_data, "TChl", "Surface Chlorophyll", "μg Chl/L", True, None),
+            (axes[2], vol_data, "PPT", "Primary Production", "PgC/yr", False, None),
+            (axes[3], lev_data, "EXP", "Export at 100m", "PgC/yr", False, None),
+            (axes[4], lev_data, "EXP1000", "Export at 1000m", "PgC/yr", False, None),
+            (axes[5], None, None, "CaCO₃ Production", "PgC/yr", False, procaco3),
+            (axes[6], None, None, "CaCO₃ Export at 100m", "PgC/yr", False, expcaco3),
+            (axes[7], vol_data, "probsi", "Silica Production", "Tmol/yr", False, None),
+            (axes[8], lev_data, "sinksil", "Silica Export at 100m", "Tmol/yr", False, None),
         ]
 
-        for ax, data_df, column, title, add_label in plot_configs:
-            if data_df is not None:
+        for idx, (ax, data_df, column, title, ylabel, add_label, custom_data) in enumerate(plot_configs):
+            if custom_data is not None:
+                # Use custom calculated data
+                if len(custom_data) == len(year):
+                    label = model.label if add_label else None
+                    ax.plot(year, custom_data, color=color, label=label, linewidth=LINE_WIDTH)
+                    ax.set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                    ax.set_ylabel(ylabel)
+                    # Add xlabel only to bottom row (indices 6, 7, 8 in 3x3 grid)
+                    if idx >= 6:
+                        ax.set_xlabel("Year", fontweight='bold')
+            elif data_df is not None and column is not None:
                 values = DataLoader.safe_load_column(data_df, column, indices)
                 if values is not None and len(values) == len(year):
                     label = model.label if add_label else None
-                    ax.plot(
-                        year,
-                        values,
-                        color=color,
-                        label=label,
-                        linewidth=PlotConfig.LINE_WIDTH,
-                    )
-                    ax.set_title(title, fontsize=PlotConfig.TITLE_FONTSIZE)
+                    ax.plot(year, values, color=color, label=label, linewidth=LINE_WIDTH)
+                    ax.set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                    ax.set_ylabel(ylabel)
+                    # Add xlabel only to bottom row (indices 6, 7, 8 in 3x3 grid)
+                    if idx >= 6:
+                        ax.set_xlabel("Year", fontweight='bold')
 
     def _add_observational_data(self, axes):
-        obs_mapping = {1: "TCHL", 2: "PPT", 3: "EXP", 4: "PROSIL", 5: "SINKSIL"}
-        for i, (key, ax) in enumerate(
-            zip(obs_mapping, [axes[1], axes[2], axes[3], axes[4], axes[5]])
-        ):
-            obs_key = obs_mapping[i + 1]
-            if obs_key in ObservationalData.GLOBAL_RANGES:
-                obs = ObservationalData.GLOBAL_RANGES[obs_key]
-                if obs["type"] == "line":
-                    ax.axhline(obs["value"], **PlotConfig.LINE_STYLE)
-                else:
-                    ax.axhspan(obs["min"], obs["max"], **PlotConfig.HATCH_STYLE)
+        # Map to shared ObservationData keys (now with 9 panels)
+        obs_mapping = {
+            1: ("TChl", "line"),
+            2: ("PPT", "span"),
+            3: ("EXP", "span"),
+            4: None,  # EXP1000 - no observation
+            5: ("PROCACO3", "span"),
+            6: ("EXPCACO3", "span"),
+            7: ("probsi", "span"),
+            8: ("SI_FLX", "span")
+        }
+        for i in range(1, 9):
+            if obs_mapping[i] is not None:
+                obs_key, obs_type = obs_mapping[i]
+                if obs_key in ObservationData.GLOBAL:
+                    obs = ObservationData.GLOBAL[obs_key]
+                    ax = axes[i]
+                    if obs.get("type") == "line" or obs_type == "line":
+                        ax.axhline(obs["value"], **LINE_STYLE)
+                    else:
+                        ax.axhspan(obs["min"], obs["max"], **HATCH_STYLE)
 
 
 class GlobalSummaryNormalizedPlotter(PlotGenerator):
@@ -693,11 +427,12 @@ class GlobalSummaryNormalizedPlotter(PlotGenerator):
 
     def generate(self):
         fig, axes = plt.subplots(
-            2, 3, figsize=(3 * PlotConfig.RATIO, 2 * PlotConfig.RATIO), sharex=True
+            2, 3, figsize=(3 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
+            constrained_layout=USE_CONSTRAINED_LAYOUT
         )
         axes = axes.flatten()
 
-        PlotConfig.setup_axes(axes)
+        setup_axes(axes)
 
         self.plot_all_models(fig, axes, self._plot_model)
 
@@ -723,15 +458,15 @@ class GlobalSummaryNormalizedPlotter(PlotGenerator):
             return
 
         plot_configs = [
-            (axes[0], sur_data, "Cflx", "Normalized Cflx [PgC/yr]", False),
-            (axes[1], ave_data, "TChl", "Normalized TChl [ug/L]", True),
-            (axes[2], vol_data, "PPT", "Normalized PPT [PgC/yr]", False),
-            (axes[3], lev_data, "EXP", "Normalized EXP@100 [PgC/yr]", False),
-            (axes[4], vol_data, "probsi", "Normalized PROSi [Tmol/yr]", False),
-            (axes[5], lev_data, "sinksil", "Normalized SNKSi [Tmol/yr]", False),
+            (axes[0], sur_data, "Cflx", "Normalized Surface Carbon Flux", "PgC/yr", False),
+            (axes[1], ave_data, "TChl", "Normalized Surface Chlorophyll", "μg Chl/L", True),
+            (axes[2], vol_data, "PPT", "Normalized Primary Production", "PgC/yr", False),
+            (axes[3], lev_data, "EXP", "Normalized Export at 100m", "PgC/yr", False),
+            (axes[4], vol_data, "probsi", "Normalized Silica Production", "Tmol/yr", False),
+            (axes[5], lev_data, "sinksil", "Normalized Silica Export at 100m", "Tmol/yr", False),
         ]
 
-        for ax, data_df, column, title, add_label in plot_configs:
+        for idx, (ax, data_df, column, title, ylabel, add_label) in enumerate(plot_configs):
             if data_df is not None:
                 values = DataLoader.safe_load_column(data_df, column, indices)
                 if values is not None and len(values) == len(year):
@@ -746,9 +481,13 @@ class GlobalSummaryNormalizedPlotter(PlotGenerator):
                         normalized_values,
                         color=color,
                         label=label,
-                        linewidth=PlotConfig.LINE_WIDTH,
+                        linewidth=LINE_WIDTH,
                     )
-                    ax.set_title(title, fontsize=PlotConfig.TITLE_FONTSIZE)
+                    ax.set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                    ax.set_ylabel(ylabel)
+                    # Add xlabel only to bottom row (indices 3, 4, 5 in 2x3 grid)
+                    if idx >= 3:
+                        ax.set_xlabel("Year", fontweight='bold')
                     ax.axhline(0, color='gray', linestyle=':', linewidth=0.8, alpha=0.5)
 
 
@@ -784,7 +523,7 @@ class RegionalPlotter(PlotGenerator):
                 normalized,
                 color=color,
                 label=label,
-                linewidth=PlotConfig.LINE_WIDTH,
+                linewidth=LINE_WIDTH,
             )
 
 
@@ -795,7 +534,7 @@ class CflxPlotter(RegionalPlotter):
         """
         Generates and saves the Cflx summary plot with a balanced, nested grid layout.
         """
-        fig = plt.figure(figsize=(3.5 * PlotConfig.RATIO, 2 * PlotConfig.RATIO))
+        fig = plt.figure(figsize=(3.5 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT))
 
         # --- MODIFICATION START ---
         # Use a nested GridSpec for complete control over column layouts.
@@ -831,7 +570,7 @@ class CflxPlotter(RegionalPlotter):
                 axis="x", which="both", bottom=False, top=False, labelbottom=False
             )
 
-        PlotConfig.setup_axes(axes)
+        setup_axes(axes)
         # --- MODIFICATION END ---
 
         self.plot_all_models(fig, axes, self._plot_model)
@@ -854,10 +593,10 @@ class CflxPlotter(RegionalPlotter):
 
         if year is not None and cflx_annual is not None:
             axes[0].plot(
-                year, cflx_annual, color=color, linewidth=PlotConfig.LINE_WIDTH
+                year, cflx_annual, color=color, linewidth=LINE_WIDTH
             )
             axes[0].set_title(
-                "Surface Cflx (Global) [PgC/yr]", fontsize=PlotConfig.TITLE_FONTSIZE
+                "Surface Cflx (Global) [PgC/yr]", fontsize=TITLE_FONTSIZE
             )
 
         sur_monthly = DataLoader.load_breakdown_data(model, "sur", "monthly")
@@ -886,7 +625,7 @@ class CflxPlotter(RegionalPlotter):
                 0.8,
                 0.9,
                 f"{title}",
-                fontsize=PlotConfig.TITLE_FONTSIZE - 2,
+                fontsize=TITLE_FONTSIZE - 2,
                 transform=ax.transAxes,
             )
 
@@ -895,12 +634,13 @@ class PFTPlotter(PlotGenerator):
     """Generates PFT summary plots"""
 
     def generate(self):
-        # REWRITTEN: Use plt.subplots() to create the grid and handle unused axes.
+        # Use 4x3 grid to match single-model (12 PFT panels)
         fig, axes = plt.subplots(
-            3,
             4,
-            figsize=(4.5 * PlotConfig.RATIO, 2.5 * PlotConfig.RATIO),
+            3,
+            figsize=(3 * SUBPLOT_WIDTH, 4 * SUBPLOT_HEIGHT),
             sharex=True,
+            constrained_layout=USE_CONSTRAINED_LAYOUT
         )
         flat_axes = axes.flatten()
 
@@ -913,7 +653,7 @@ class PFTPlotter(PlotGenerator):
         self.save_figure(fig, "multimodel_summary_pfts.png")
 
     def _setup_pft_axes(self, axes):
-        PlotConfig.setup_axes(axes)
+        setup_axes(axes)
         for i, ax in enumerate(axes):
             if i != 9:
                 ax.set_ylim(0, 0.5)
@@ -940,13 +680,13 @@ class PFTPlotter(PlotGenerator):
         pft_mapping = [
             ("PIC", "Picophytoplankton"),
             ("PHA", "Phaeocystis"),
-            ("MIX", "Mixed Phytoplankton"),
+            ("MIX", "Mixotrophs"),
             ("DIA", "Diatoms"),
             ("COC", "Coccolithophores"),
-            ("FIX", "N2-fixers"),
+            ("FIX", "Nitrogen Fixers"),
             ("BAC", "Bacteria"),
-            ("GEL", "Jellyfish"),
-            ("PRO", "Microzooplankton"),
+            ("GEL", "Gelatinous Zooplankton"),
+            ("PRO", "Protozooplankton"),
             ("CRU", "Crustaceans"),
             ("PTE", "Pteropods"),
             ("MES", "Mesozooplankton"),
@@ -961,9 +701,13 @@ class PFTPlotter(PlotGenerator):
                     values,
                     color=color,
                     label=label,
-                    linewidth=PlotConfig.LINE_WIDTH,
+                    linewidth=LINE_WIDTH,
                 )
-                axes[i].set_title(f"{title} [PgC]", fontsize=PlotConfig.TITLE_FONTSIZE)
+                axes[i].set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[i].set_ylabel("PgC")
+                # Add xlabel only to bottom row (indices 9, 10, 11 in 4x3 grid)
+                if i >= 9:
+                    axes[i].set_xlabel("Year", fontweight='bold')
 
     def _add_observational_ranges(self, axes):
         obs_indices = {
@@ -976,16 +720,17 @@ class PFTPlotter(PlotGenerator):
             6: "BAC",
             7: "GEL",
             8: "PRO",
-            9: "MAC",
+            9: "CRU",  # Changed from MAC to CRU to match shared data
             10: "PTE",
             11: "MES",
         }
         for idx, pft_name in obs_indices.items():
-            if pft_name in ObservationalData.PFT_RANGES:
-                ranges = ObservationalData.PFT_RANGES[pft_name]
-                axes[idx].axhspan(
-                    ranges["min"], ranges["max"], **PlotConfig.HATCH_STYLE
-                )
+            if pft_name in ObservationData.PFT:
+                ranges = ObservationData.PFT[pft_name]
+                if ranges["min"] is not None and ranges["max"] is not None:
+                    axes[idx].axhspan(
+                        ranges["min"], ranges["max"], **HATCH_STYLE
+                    )
 
 
 class TChlPlotter(RegionalPlotter):
@@ -995,7 +740,7 @@ class TChlPlotter(RegionalPlotter):
         """
         Generates and saves the TChl summary plot with a balanced, nested grid layout.
         """
-        fig = plt.figure(figsize=(3.5 * PlotConfig.RATIO, 2 * PlotConfig.RATIO))
+        fig = plt.figure(figsize=(3.5 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT))
 
         # Use a nested GridSpec for complete control over column layouts.
         gs_main = gridspec.GridSpec(1, 2, figure=fig, wspace=0.25, width_ratios=[1, 1])
@@ -1020,7 +765,7 @@ class TChlPlotter(RegionalPlotter):
                 axis="x", which="both", bottom=False, top=False, labelbottom=False
             )
 
-        PlotConfig.setup_axes(axes)
+        setup_axes(axes)
 
         self.plot_all_models(fig, axes, self._plot_model)
         self._add_observational_data(axes)  # MODIFICATION: This line was added
@@ -1043,10 +788,10 @@ class TChlPlotter(RegionalPlotter):
 
         if year is not None and tchl_annual is not None:
             axes[0].plot(
-                year, tchl_annual, color=color, linewidth=PlotConfig.LINE_WIDTH
+                year, tchl_annual, color=color, linewidth=LINE_WIDTH
             )
             axes[0].set_title(
-                "Average TChl (Global) [ug Chl/L]", fontsize=PlotConfig.TITLE_FONTSIZE
+                "Average TChl (Global) [ug Chl/L]", fontsize=TITLE_FONTSIZE
             )
 
         ave_monthly = DataLoader.load_breakdown_data(model, "ave", "monthly")
@@ -1070,7 +815,7 @@ class TChlPlotter(RegionalPlotter):
                 0.8,
                 0.9,
                 f"{title}",
-                fontsize=PlotConfig.TITLE_FONTSIZE - 2,
+                fontsize=TITLE_FONTSIZE - 2,
                 transform=ax.transAxes,
             )
 
@@ -1086,7 +831,7 @@ class TChlPlotter(RegionalPlotter):
         for i, (region, title) in enumerate(zip(regions, titles)):
             ax = axes[i + 1]
             # Assumes you have a similar data structure for TChl observational data
-            data = ObservationalData.TCHL_MONTHLY[region]
+            data = ObservationData.TCHL_MONTHLY[region]
             normalized = data - data[0]
             label = "data-products" if i == 0 else None
             ax.plot(
@@ -1095,13 +840,13 @@ class TChlPlotter(RegionalPlotter):
                 color="k",
                 linestyle="dashed",
                 label=label,
-                linewidth=PlotConfig.LINE_WIDTH,
+                linewidth=LINE_WIDTH,
             )
             ax.text(
                 0.8,
                 0.9,
                 f"{title}",
-                fontsize=PlotConfig.TITLE_FONTSIZE - 2,
+                fontsize=TITLE_FONTSIZE - 2,
                 transform=ax.transAxes,
             )
 
@@ -1110,18 +855,14 @@ class NutrientPlotter(PlotGenerator):
     """Generates nutrient summary plots"""
 
     def generate(self):
-        # REWRITTEN: Use plt.subplots() to create the grid and handle unused axes.
+        # Use full 2x3 grid for 6 nutrients (matching single-model)
         fig, axes = plt.subplots(
-            2, 3, figsize=(3.5 * PlotConfig.RATIO, 2 * PlotConfig.RATIO), sharex=True
+            2, 3, figsize=(3 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
+            constrained_layout=USE_CONSTRAINED_LAYOUT
         )
         flat_axes = axes.flatten()
 
-        # Turn off the last unused subplot in the 2x3 grid
-        flat_axes[-1].axis("off")
-
-        flat_axes = flat_axes[:5]  # We only need the first 5 axes
-
-        PlotConfig.setup_axes(flat_axes)
+        setup_axes(flat_axes)
 
         self.plot_all_models(fig, flat_axes, self._plot_model)
         self._add_observational_data(flat_axes)
@@ -1144,14 +885,15 @@ class NutrientPlotter(PlotGenerator):
             return
 
         plot_configs = [
-            ("PO4", axes[0], "Avg Surface Phosphate [umol/L]", 1 / 122, False),
-            ("NO3", axes[1], "Avg Surface Nitrates [umol/L]", 1, True),
-            ("Fer", axes[2], "Avg Surface Iron [nmol/L]", 1000, False),
-            ("Si", axes[3], "Avg Surface Silica [umol/L]", 1, False),
-            ("O2", axes[4], "Avg Surface Oxygen [umol/L]", 1, False),
+            ("PO4", axes[0], "Surface Phosphate", "μmol/L", 1 / 122, False),
+            ("NO3", axes[1], "Surface Nitrate", "μmol/L", 1, True),
+            ("Fer", axes[2], "Surface Iron", "nmol/L", 1000, False),
+            ("Si", axes[3], "Surface Silica", "μmol/L", 1, False),
+            ("O2", axes[4], "Oxygen at 300m", "μmol/L", 1, False),
+            ("Alkalini", axes[5], "Surface Alkalinity", "μmol/L", 1, False),
         ]
 
-        for col_name, ax, title, scale, add_label in plot_configs:
+        for idx, (col_name, ax, title, ylabel, scale, add_label) in enumerate(plot_configs):
             values = DataLoader.safe_load_column(ave_data, col_name, indices)
             if values is not None and len(values) == len(year):
                 label = model.label if add_label else None
@@ -1160,16 +902,22 @@ class NutrientPlotter(PlotGenerator):
                     values * scale,
                     color=color,
                     label=label,
-                    linewidth=PlotConfig.LINE_WIDTH,
+                    linewidth=LINE_WIDTH,
                 )
-                ax.set_title(title, fontsize=PlotConfig.TITLE_FONTSIZE)
+                ax.set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                ax.set_ylabel(ylabel)
+                # Add xlabel only to bottom row (indices 3, 4, 5 in 2x3 grid)
+                if idx >= 3:
+                    ax.set_xlabel("Year", fontweight='bold')
 
     def _add_observational_data(self, axes):
-        for i, key in enumerate(ObservationalData.NUTRIENT_VALUES.keys()):
-            if i < len(axes):
-                axes[i].axhline(
-                    ObservationalData.NUTRIENT_VALUES[key], **PlotConfig.LINE_STYLE
-                )
+        # Add observation lines for all 6 nutrients
+        nutrient_keys = ["PO4", "NO3", "Fer", "Si", "O2", "Alkalini"]
+        for i, key in enumerate(nutrient_keys):
+            if i < len(axes) and key in ObservationData.NUTRIENTS:
+                obs_value = ObservationData.NUTRIENTS[key]
+                if obs_value is not None:
+                    axes[i].axhline(obs_value, **LINE_STYLE)
 
 
 class PCO2Plotter(RegionalPlotter):
@@ -1179,7 +927,7 @@ class PCO2Plotter(RegionalPlotter):
         """
         Generates and saves the pCO2 summary plot with a balanced, nested grid layout.
         """
-        fig = plt.figure(figsize=(3.5 * PlotConfig.RATIO, 2 * PlotConfig.RATIO))
+        fig = plt.figure(figsize=(3.5 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT))
 
         # --- MODIFICATION START ---
         # Use a nested GridSpec for complete control over column layouts.
@@ -1215,7 +963,7 @@ class PCO2Plotter(RegionalPlotter):
                 axis="x", which="both", bottom=False, top=False, labelbottom=False
             )
 
-        PlotConfig.setup_axes(axes)
+        setup_axes(axes)
         # --- MODIFICATION END ---
 
         self.plot_all_models(fig, axes, self._plot_model)
@@ -1239,10 +987,10 @@ class PCO2Plotter(RegionalPlotter):
 
         if year is not None and pco2_annual is not None:
             axes[0].plot(
-                year, pco2_annual, color=color, linewidth=PlotConfig.LINE_WIDTH
+                year, pco2_annual, color=color, linewidth=LINE_WIDTH
             )
             axes[0].set_title(
-                "Avg Surface pCO2 (Global) [ppm]", fontsize=PlotConfig.TITLE_FONTSIZE
+                "Avg Surface pCO2 (Global) [ppm]", fontsize=TITLE_FONTSIZE
             )
 
         ave_monthly = DataLoader.load_breakdown_data(model, "ave", "monthly")
@@ -1269,7 +1017,7 @@ class PCO2Plotter(RegionalPlotter):
         for i, (region, title) in enumerate(zip(regions, titles)):
             # The axes list is now structured with axes[1] as the first regional plot.
             ax = axes[i + 1]
-            data = ObservationalData.PCO2_MONTHLY[region]
+            data = ObservationData.PCO2_MONTHLY[region]
             normalized = data - data[0]
             label = "data-products" if i == 0 else None
             ax.plot(
@@ -1278,14 +1026,14 @@ class PCO2Plotter(RegionalPlotter):
                 color="k",
                 linestyle="dashed",
                 label=label,
-                linewidth=PlotConfig.LINE_WIDTH,
+                linewidth=LINE_WIDTH,
             )
             # Use ax.text to prevent titles from overlapping in the new layout
             ax.text(
                 0.8,
                 0.9,
                 f"{title}",
-                fontsize=PlotConfig.TITLE_FONTSIZE - 2,
+                fontsize=TITLE_FONTSIZE - 2,
                 transform=ax.transAxes,
             )
 
@@ -1294,13 +1042,13 @@ class PhysicsPlotter(PlotGenerator):
     """Generates physics summary plots"""
 
     def generate(self):
-        # REWRITTEN: Use plt.subplots() to create the figure and axes grid directly.
+        # Use 1x3 grid to match single-model (3 panels: SST, SSS, MLD)
         fig, axes = plt.subplots(
-            2, 2, figsize=(3 * PlotConfig.RATIO, 1.5 * PlotConfig.RATIO), sharex=True
+            1, 3, figsize=(3 * SUBPLOT_WIDTH, 1 * SUBPLOT_HEIGHT), sharex=True,
+            constrained_layout=USE_CONSTRAINED_LAYOUT
         )
-        axes = axes.flatten()  # Flatten for consistent iteration pattern
 
-        PlotConfig.setup_axes(axes)
+        setup_axes(axes)
 
         self.plot_all_models(fig, axes, self._plot_model)
 
@@ -1326,16 +1074,10 @@ class PhysicsPlotter(PlotGenerator):
         mld = DataLoader.safe_load_column(ave_data, "mldr10_1", indices)
 
         if sst is not None:
-            axes[0].plot(year, sst, color=color, linewidth=PlotConfig.LINE_WIDTH)
-            axes[0].set_title(
-                "Avg Sea Surface Temp [degC]", fontsize=PlotConfig.TITLE_FONTSIZE
-            )
-            axes[2].plot(
-                year, sst - sst[0], color=color, linewidth=PlotConfig.LINE_WIDTH
-            )
-            axes[2].set_title(
-                "Normalised Avg SST [degC]", fontsize=PlotConfig.TITLE_FONTSIZE
-            )
+            axes[0].plot(year, sst, color=color, linewidth=LINE_WIDTH)
+            axes[0].set_title("Sea Surface Temperature", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+            axes[0].set_ylabel("°C")
+            axes[0].set_xlabel("Year", fontweight='bold')
 
         if sss is not None:
             axes[1].plot(
@@ -1343,17 +1085,93 @@ class PhysicsPlotter(PlotGenerator):
                 sss,
                 color=color,
                 label=model.label,
-                linewidth=PlotConfig.LINE_WIDTH,
+                linewidth=LINE_WIDTH,
             )
-            axes[1].set_title(
-                "Avg Sea Surface Salinity [1e-3]", fontsize=PlotConfig.TITLE_FONTSIZE
-            )
+            axes[1].set_title("Sea Surface Salinity", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+            axes[1].set_ylabel("‰")
+            axes[1].set_xlabel("Year", fontweight='bold')
 
         if mld is not None:
-            axes[3].plot(year, mld, color=color, linewidth=PlotConfig.LINE_WIDTH)
-            axes[3].set_title(
-                "Avg Mixed Layer Depth [m]", fontsize=PlotConfig.TITLE_FONTSIZE
-            )
+            axes[2].plot(year, mld, color=color, linewidth=LINE_WIDTH)
+            axes[2].set_title("Mixed Layer Depth", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+            axes[2].set_ylabel("m")
+            axes[2].set_xlabel("Year", fontweight='bold')
+
+
+class DerivedSummaryPlotter(PlotGenerator):
+    """Generates derived ecosystem variable summary plots"""
+
+    def generate(self):
+        fig, axes = plt.subplots(
+            2, 2, figsize=(2 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
+            constrained_layout=USE_CONSTRAINED_LAYOUT
+        )
+        axes = axes.flatten()
+
+        setup_axes(axes)
+
+        self.plot_all_models(fig, axes, self._plot_model)
+
+        self.add_legend(fig)
+        self.save_figure(fig, "multimodel_summary_derived.png")
+
+    def _plot_model(self, model, axes, color):
+        vol_data = DataLoader.load_breakdown_data(model, "vol", "annual")
+        lev_data = DataLoader.load_breakdown_data(model, "lev", "annual")
+
+        if vol_data is None or lev_data is None:
+            return
+
+        actual_years = DataLoader.get_actual_years(vol_data)
+        indices = model.get_year_range_indices(actual_years)
+        if indices[0] is None:
+            return
+
+        year = DataLoader.safe_load_column(vol_data, "year", indices)
+        if year is None:
+            return
+
+        # Load required columns for derived variables
+        ppt = DataLoader.safe_load_column(vol_data, "PPT", indices)
+        exp = DataLoader.safe_load_column(lev_data, "EXP", indices)
+        exp1000 = DataLoader.safe_load_column(lev_data, "EXP1000", indices)
+
+        # Load grazing terms for secondary production
+        grazing_cols = ["GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"]
+        grazing_data = {}
+        for col in grazing_cols:
+            val = DataLoader.safe_load_column(vol_data, col, indices)
+            if val is not None:
+                grazing_data[col] = val
+
+        # Calculate derived variables
+        if grazing_data:
+            sp = sum(grazing_data.values())
+            axes[0].plot(year, sp, color=color, label=model.label, linewidth=LINE_WIDTH)
+            axes[0].set_title("Secondary Production", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+            axes[0].set_ylabel("PgC/yr")
+
+            if ppt is not None and exp is not None:
+                recycle = ppt - exp - sp
+                axes[1].plot(year, recycle, color=color, linewidth=LINE_WIDTH)
+                axes[1].set_title("Recycled Production", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[1].set_ylabel("PgC/yr")
+
+        if exp is not None and ppt is not None:
+            eratio = exp / ppt
+            axes[2].plot(year, eratio, color=color, linewidth=LINE_WIDTH)
+            axes[2].set_title("Export Ratio (e-ratio)", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+            axes[2].set_ylabel("Dimensionless")
+            # Add xlabel to bottom row (indices 2, 3 in 2x2 grid)
+            axes[2].set_xlabel("Year", fontweight='bold')
+
+        if exp1000 is not None and exp is not None:
+            teff = exp1000 / exp
+            axes[3].plot(year, teff, color=color, linewidth=LINE_WIDTH)
+            axes[3].set_title("Transfer Efficiency", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+            axes[3].set_ylabel("Dimensionless")
+            # Add xlabel to bottom row (indices 2, 3 in 2x2 grid)
+            axes[3].set_xlabel("Year", fontweight='bold')
 
 
 class MultiModelPlotter:
@@ -1378,6 +1196,7 @@ class MultiModelPlotter:
             NutrientPlotter(self.models, self.save_dir),
             PCO2Plotter(self.models, self.save_dir),
             PhysicsPlotter(self.models, self.save_dir),
+            DerivedSummaryPlotter(self.models, self.save_dir),
         ]
 
         for plotter in plotters:
