@@ -219,7 +219,7 @@ python make_monthly_plots.py --model-id <model_id> --model-dir <model_dir>
 
 **Output**: Complete HTML report with all visualizations for a single model.
 
-**Note**: The script automatically detects the latest year from generated map files or breakdown data.
+**Note**: The script automatically detects the latest year from generated map files or analyser data.
 
 ### Multi-Model Comparison
 

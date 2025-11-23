@@ -181,13 +181,13 @@ class ConfigLoader:
 
 
 class DataFileLoader:
-    """Handles loading breakdown data files in CSV or legacy TSV format."""
+    """Handles loading analyser data files in CSV or legacy TSV format."""
 
     @staticmethod
-    def read_breakdown_file(base_dir: pathlib.Path, model_name: str,
+    def read_analyser_file(base_dir: pathlib.Path, model_name: str,
                            file_type: str, frequency: str = "annual") -> Optional[pd.DataFrame]:
         """
-        Read an analyser/breakdown file, trying multiple formats for backwards compatibility.
+        Read an analyser file, trying multiple formats for backwards compatibility.
 
         Args:
             base_dir: Base directory containing model output

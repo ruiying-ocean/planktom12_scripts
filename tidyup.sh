@@ -61,7 +61,7 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 
          # Python based totalling
          echo "Python version: $(which python)"
-	python3 breakdown.py breakdown_config.toml ${y} ${y}
+	python3 analyser.py analyser_config.toml ${y} ${y}
 
 	# Run timeseries visualization script
 	python3 make_timeseries.py $model_id --model-run-dir $modelOutputDir
@@ -159,9 +159,9 @@ done
 # Commands to execute at the end of the simulation (final year only)
 if [[ $yearTo -eq $yearEnd ]]; then
 
-	# copy all breakdown files to base model directory
-	echo "copying breakdown files"
-	cp breakdown* $afm_dir$model_id
+	# copy all analyser files to base model directory
+	echo "copying analyser files"
+	cp analyser* $afm_dir$model_id
 
 	# run script to generate monthly regional plots
 	python3 make_monthly_plots.py --model-id $model_id --model-dir $modelOutputDir

@@ -46,9 +46,11 @@ latest_year=$(find "${saveDir}" -name "${model_id}_[0-9]*_diagnostics.${img_form
               sed -n "s/.*${model_id}_\([0-9]\+\)_diagnostics\.${img_format}/\1/p" | \
               sort -n | tail -1)
 
-# If no year found, try to find from any breakdown files
+# If no year found, try to find from analyser/breakdown files (both for backwards compat)
 if [ -z "$latest_year" ]; then
-    if [ -f "${modelOutputDir}/${model_id}/breakdown.sur.annual.csv" ]; then
+    if [ -f "${modelOutputDir}/${model_id}/analyser.sur.annual.csv" ]; then
+        latest_year=$(tail -1 "${modelOutputDir}/${model_id}/analyser.sur.annual.csv" | cut -d',' -f1)
+    elif [ -f "${modelOutputDir}/${model_id}/breakdown.sur.annual.csv" ]; then
         latest_year=$(tail -1 "${modelOutputDir}/${model_id}/breakdown.sur.annual.csv" | cut -d',' -f1)
     fi
 fi

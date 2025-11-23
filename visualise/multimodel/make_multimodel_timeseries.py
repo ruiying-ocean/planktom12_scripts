@@ -191,10 +191,10 @@ class DataLoader:
         ]
 
     @staticmethod
-    def load_breakdown_data(model_config, data_type, frequency="annual"):
-        """Load breakdown data using shared utility."""
+    def load_analyser_data(model_config, data_type, frequency="annual"):
+        """Load analyser data using shared utility."""
         base_dir = pathlib.Path(model_config.model_dir)
-        df = DataFileLoader.read_breakdown_file(base_dir, model_config.name, data_type, frequency)
+        df = DataFileLoader.read_analyser_file(base_dir, model_config.name, data_type, frequency)
 
         if df is None:
             print_warning(f"File not found for {model_config.name}/{data_type}/{frequency}")
@@ -334,7 +334,7 @@ class GlobalSummaryPlotter(PlotGenerator):
         self.save_figure(fig, "multimodel_summary_global.png")
 
     def _plot_model(self, model, axes, color):
-        sur_data = DataLoader.load_breakdown_data(model, "sur", "annual")
+        sur_data = DataLoader.load_analyser_data(model, "sur", "annual")
         if sur_data is None:
             return
 
@@ -343,9 +343,9 @@ class GlobalSummaryPlotter(PlotGenerator):
         if indices[0] is None:
             return
 
-        vol_data = DataLoader.load_breakdown_data(model, "vol", "annual")
-        lev_data = DataLoader.load_breakdown_data(model, "lev", "annual")
-        ave_data = DataLoader.load_breakdown_data(model, "ave", "annual")
+        vol_data = DataLoader.load_analyser_data(model, "vol", "annual")
+        lev_data = DataLoader.load_analyser_data(model, "lev", "annual")
+        ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
 
         year = DataLoader.safe_load_column(sur_data, "year", indices)
         if year is None:
@@ -440,7 +440,7 @@ class GlobalSummaryNormalizedPlotter(PlotGenerator):
         self.save_figure(fig, "multimodel_summary_global_normalized.png")
 
     def _plot_model(self, model, axes, color):
-        sur_data = DataLoader.load_breakdown_data(model, "sur", "annual")
+        sur_data = DataLoader.load_analyser_data(model, "sur", "annual")
         if sur_data is None:
             return
 
@@ -449,9 +449,9 @@ class GlobalSummaryNormalizedPlotter(PlotGenerator):
         if indices[0] is None:
             return
 
-        vol_data = DataLoader.load_breakdown_data(model, "vol", "annual")
-        lev_data = DataLoader.load_breakdown_data(model, "lev", "annual")
-        ave_data = DataLoader.load_breakdown_data(model, "ave", "annual")
+        vol_data = DataLoader.load_analyser_data(model, "vol", "annual")
+        lev_data = DataLoader.load_analyser_data(model, "lev", "annual")
+        ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
 
         year = DataLoader.safe_load_column(sur_data, "year", indices)
         if year is None:
@@ -579,7 +579,7 @@ class CflxPlotter(RegionalPlotter):
         self.save_figure(fig, "multimodel_summary_cflx.png")
 
     def _plot_model(self, model, axes, color):
-        sur_annual = DataLoader.load_breakdown_data(model, "sur", "annual")
+        sur_annual = DataLoader.load_analyser_data(model, "sur", "annual")
         if sur_annual is None:
             return
 
@@ -599,7 +599,7 @@ class CflxPlotter(RegionalPlotter):
                 "Surface Cflx (Global) [PgC/yr]", fontsize=TITLE_FONTSIZE
             )
 
-        sur_monthly = DataLoader.load_breakdown_data(model, "sur", "monthly")
+        sur_monthly = DataLoader.load_analyser_data(model, "sur", "monthly")
         if sur_monthly is None:
             return
 
@@ -660,7 +660,7 @@ class PFTPlotter(PlotGenerator):
         axes[9].set_ylim(bottom=0)
 
     def _plot_model(self, model, axes, color):
-        int_data = DataLoader.load_breakdown_data(model, "int", "annual")
+        int_data = DataLoader.load_analyser_data(model, "int", "annual")
         if int_data is None:
             return
 
@@ -774,7 +774,7 @@ class TChlPlotter(RegionalPlotter):
         self.save_figure(fig, "multimodel_summary_tchl.png")
 
     def _plot_model(self, model, axes, color):
-        ave_annual = DataLoader.load_breakdown_data(model, "ave", "annual")
+        ave_annual = DataLoader.load_analyser_data(model, "ave", "annual")
         if ave_annual is None:
             return
 
@@ -794,7 +794,7 @@ class TChlPlotter(RegionalPlotter):
                 "Average TChl (Global) [ug Chl/L]", fontsize=TITLE_FONTSIZE
             )
 
-        ave_monthly = DataLoader.load_breakdown_data(model, "ave", "monthly")
+        ave_monthly = DataLoader.load_analyser_data(model, "ave", "monthly")
         if ave_monthly is None:
             return
 
@@ -871,7 +871,7 @@ class NutrientPlotter(PlotGenerator):
         self.save_figure(fig, "multimodel_summary_nutrients.png")
 
     def _plot_model(self, model, axes, color):
-        ave_data = DataLoader.load_breakdown_data(model, "ave", "annual")
+        ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
         if ave_data is None:
             return
 
@@ -973,7 +973,7 @@ class PCO2Plotter(RegionalPlotter):
         self.save_figure(fig, "multimodel_summary_pco2.png")
 
     def _plot_model(self, model, axes, color):
-        ave_annual = DataLoader.load_breakdown_data(model, "ave", "annual")
+        ave_annual = DataLoader.load_analyser_data(model, "ave", "annual")
         if ave_annual is None:
             return
 
@@ -993,7 +993,7 @@ class PCO2Plotter(RegionalPlotter):
                 "Avg Surface pCO2 (Global) [ppm]", fontsize=TITLE_FONTSIZE
             )
 
-        ave_monthly = DataLoader.load_breakdown_data(model, "ave", "monthly")
+        ave_monthly = DataLoader.load_analyser_data(model, "ave", "monthly")
         if ave_monthly is None:
             return
 
@@ -1056,7 +1056,7 @@ class PhysicsPlotter(PlotGenerator):
         self.save_figure(fig, "multimodel_summary_physics.png")
 
     def _plot_model(self, model, axes, color):
-        ave_data = DataLoader.load_breakdown_data(model, "ave", "annual")
+        ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
         if ave_data is None:
             return
 
@@ -1116,8 +1116,8 @@ class DerivedSummaryPlotter(PlotGenerator):
         self.save_figure(fig, "multimodel_summary_derived.png")
 
     def _plot_model(self, model, axes, color):
-        vol_data = DataLoader.load_breakdown_data(model, "vol", "annual")
-        lev_data = DataLoader.load_breakdown_data(model, "lev", "annual")
+        vol_data = DataLoader.load_analyser_data(model, "vol", "annual")
+        lev_data = DataLoader.load_analyser_data(model, "lev", "annual")
 
         if vol_data is None or lev_data is None:
             return

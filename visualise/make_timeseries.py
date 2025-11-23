@@ -26,9 +26,9 @@ class ModelDataLoader:
         self.base_dir = pathlib.Path(base_dir)
         self.model_name = model_name
 
-    def _read_breakdown_file(self, file_type):
-        """Read breakdown file using shared utility."""
-        return DataFileLoader.read_breakdown_file(self.base_dir, self.model_name, file_type, "annual")
+    def _read_analyser_file(self, file_type):
+        """Read analyser file using shared utility."""
+        return DataFileLoader.read_analyser_file(self.base_dir, self.model_name, file_type, "annual")
 
     def _extract_arrays(self, df, columns, skip_rows=0):
         """Extract columns as numpy arrays using shared utility."""
@@ -36,12 +36,12 @@ class ModelDataLoader:
         
     def load_all_data(self):
         data = {}
-        
-        surface_df = self._read_breakdown_file("sur")
+
+        surface_df = self._read_analyser_file("sur")
         surface_data = self._extract_arrays(surface_df, ["year", "Cflx"])
         data.update(surface_data)
-        
-        volume_df = self._read_breakdown_file("vol")
+
+        volume_df = self._read_analyser_file("vol")
         volume_cols = ["PPT", "proara", "prococ", "probsi", "GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"]
         volume_data = self._extract_arrays(volume_df, volume_cols)
         volume_data["PROCACO3"] = volume_data["proara"] + volume_data["prococ"]
@@ -49,8 +49,8 @@ class ModelDataLoader:
         volume_data["SP"] = sum(volume_data[col] for col in ["GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"])
         volume_data["SPT"] = sum(volume_data[col] for col in ["GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"])
         data.update(volume_data)
-        
-        level_df = self._read_breakdown_file("lev")
+
+        level_df = self._read_analyser_file("lev")
         level_cols = ["EXP", "ExpARA", "ExpCO3", "sinksil", "EXP1000"]
         level_data = self._extract_arrays(level_df, level_cols)
         level_data["EXPCACO3"] = level_data["ExpARA"] + level_data["ExpCO3"]
@@ -60,8 +60,8 @@ class ModelDataLoader:
         level_data["eratio"] = level_data["EXP"] / volume_data["PPT"]  # export100/NPP
         level_data["recycle"] = volume_data["PPT"] - level_data["EXP"] - volume_data["SP"]  # NPP - EXP100 - SP
         data.update(level_data)
-        
-        average_df = self._read_breakdown_file("ave")
+
+        average_df = self._read_analyser_file("ave")
         avg_cols = ["TChl", "PO4", "NO3", "Fer", "Si", "O2", "tos", "sos", "mldr10_1", "Alkalini"]
         avg_data = self._extract_arrays(average_df, avg_cols)
         avg_data["nFer"] = avg_data["Fer"] * 1000
@@ -70,8 +70,8 @@ class ModelDataLoader:
         avg_data["SSS"] = avg_data["sos"]
         avg_data["MLD"] = avg_data["mldr10_1"]
         data.update(avg_data)
-        
-        int_df = self._read_breakdown_file("int")
+
+        int_df = self._read_analyser_file("int")
         int_cols = ["BAC", "COC", "DIA", "FIX", "GEL", "CRU", "MES", "MIX", "PHA", "PIC", "PRO", "PTE"]
         int_data = self._extract_arrays(int_df, int_cols)
         int_data["PHY"] = sum(int_data[col] for col in ["COC", "DIA", "FIX", "MIX", "PHA", "PIC"])

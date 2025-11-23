@@ -9,12 +9,12 @@ import pathlib
 import argparse
 import calendar
 
-# Script for creating monthly plots of variables using breakdowns created during the model run process
+# Script for creating monthly plots of variables using analyser files created during the model run process
 # Will only be run at the end of the model run process
 
 
-def read_breakdown_monthly(file_path):
-    """Read monthly breakdown file, supporting both CSV and TSV formats."""
+def read_analyser_monthly(file_path):
+    """Read monthly analyser file, supporting both CSV and TSV formats."""
     # Try CSV format first
     csv_path = file_path.replace('.dat', '.csv')
     try:
@@ -50,7 +50,7 @@ def makeSummaryFromBreakdowns(model_id, modBaseDir):
 		if sur_monthly_path is None:
 			raise FileNotFoundError("No surface monthly file found")
 
-		w = read_breakdown_monthly(sur_monthly_path)
+		w = read_analyser_monthly(sur_monthly_path)
 		print('Read surface monthly')
 
 		mnth = w.month[-12:].to_numpy().astype(int)
@@ -72,7 +72,7 @@ def makeSummaryFromBreakdowns(model_id, modBaseDir):
 		if ave_monthly_path is None:
 			raise FileNotFoundError("No average monthly file found")
 
-		w = read_breakdown_monthly(ave_monthly_path)
+		w = read_analyser_monthly(ave_monthly_path)
 		print('Read average monthly')
         
 		mnth = w.month[-12:].to_numpy().astype(int)
