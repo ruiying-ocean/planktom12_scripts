@@ -39,8 +39,18 @@ def makeSummaryFromBreakdowns(model_id, modBaseDir):
 	pathlib.Path(saveDir).mkdir(parents=True, exist_ok=True)
     
 	try:
-		### Surface monthly
-		w = read_breakdown_monthly(f'{modBaseDir}/{model_id}/breakdown.sur.monthly.dat')
+		### Surface monthly - try both analyser and breakdown naming
+		sur_monthly_path = None
+		for prefix in ['analyser', 'breakdown']:
+			path = f'{modBaseDir}/{model_id}/{prefix}.sur.monthly.dat'
+			if os.path.exists(path):
+				sur_monthly_path = path
+				break
+
+		if sur_monthly_path is None:
+			raise FileNotFoundError("No surface monthly file found")
+
+		w = read_breakdown_monthly(sur_monthly_path)
 		print('Read surface monthly')
 
 		mnth = w.month[-12:].to_numpy().astype(int)
@@ -51,8 +61,18 @@ def makeSummaryFromBreakdowns(model_id, modBaseDir):
 		Cflx_reg4 = w['Cflx.4'][-12:].to_numpy().astype(float)
 		Cflx_reg5 = w['Cflx.5'][-12:].to_numpy().astype(float)
 
-		### Average monthly
-		w = read_breakdown_monthly(f'/{modBaseDir}/{model_id}/breakdown.ave.monthly.dat')
+		### Average monthly - try both analyser and breakdown naming
+		ave_monthly_path = None
+		for prefix in ['analyser', 'breakdown']:
+			path = f'{modBaseDir}/{model_id}/{prefix}.ave.monthly.dat'
+			if os.path.exists(path):
+				ave_monthly_path = path
+				break
+
+		if ave_monthly_path is None:
+			raise FileNotFoundError("No average monthly file found")
+
+		w = read_breakdown_monthly(ave_monthly_path)
 		print('Read average monthly')
         
 		mnth = w.month[-12:].to_numpy().astype(int)

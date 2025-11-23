@@ -187,44 +187,48 @@ class DataFileLoader:
     def read_breakdown_file(base_dir: pathlib.Path, model_name: str,
                            file_type: str, frequency: str = "annual") -> Optional[pd.DataFrame]:
         """
-        Read a breakdown file, trying CSV format first, then falling back to TSV.
+        Read an analyser/breakdown file, trying multiple formats for backwards compatibility.
 
         Args:
             base_dir: Base directory containing model output
             model_name: Name of the model run
-            file_type: Type of breakdown file (sur, vol, lev, ave, int)
+            file_type: Type of file (sur, vol, lev, ave, int)
             frequency: Data frequency (annual or monthly)
 
         Returns:
             DataFrame with the data, or None if file not found
         """
-        csv_path = base_dir / model_name / f"breakdown.{file_type}.{frequency}.csv"
-        dat_path = base_dir / model_name / f"breakdown.{file_type}.{frequency}.dat"
+        # Try multiple file paths for backwards compatibility
+        csv_paths = [
+            base_dir / model_name / f"analyser.{file_type}.{frequency}.csv",  # New naming
+            base_dir / model_name / f"breakdown.{file_type}.{frequency}.csv"  # Legacy naming
+        ]
+        dat_paths = [
+            base_dir / model_name / f"analyser.{file_type}.{frequency}.dat",  # New naming
+            base_dir / model_name / f"breakdown.{file_type}.{frequency}.dat"  # Legacy naming
+        ]
 
-        try:
-            # New CSV format - single header row, comma-separated
-            df = pd.read_csv(csv_path)
-        except FileNotFoundError:
+        # Try CSV format first (both new and legacy names)
+        for csv_path in csv_paths:
+            try:
+                df = pd.read_csv(csv_path)
+                return df
+            except FileNotFoundError:
+                continue
+
+        # Fall back to TSV format (both new and legacy names)
+        for dat_path in dat_paths:
             try:
                 # Legacy TSV format - 3 header rows, tab-separated
                 # Row 0: variable names, Row 1: units, Row 2: keys
                 # Use header=0 to get variable names, skip rows 1 and 2
                 df = pd.read_csv(dat_path, sep="\t", header=0, skiprows=[1, 2])
+                return df
             except FileNotFoundError:
-                return None
+                continue
 
-        # Sort by year if year column exists
-        if 'year' in df.columns:
-            df = df.sort_values('year').reset_index(drop=True)
-        # For monthly data, sort by year and month if both exist
-        elif 'month' in df.columns or 'Month' in df.columns:
-            month_col = 'month' if 'month' in df.columns else 'Month'
-            if 'year' in df.columns:
-                df = df.sort_values(['year', month_col]).reset_index(drop=True)
-            else:
-                df = df.sort_values(month_col).reset_index(drop=True)
-
-        return df
+        # No file found
+        return None
 
     @staticmethod
     def extract_columns(df: pd.DataFrame, columns: list,
