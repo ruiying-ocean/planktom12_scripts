@@ -3,6 +3,13 @@ from scipy.interpolate import griddata
 from netCDF4 import Dataset
 import math
 from scipy.ndimage import gaussian_filter
+import logging
+
+log = logging.getLogger("Functions")
+
+# Constants for missing value thresholds
+MISSING_VAL_THRESHOLD_STRICT = 1000.0  # Divisor for strict missing value checks
+MISSING_VAL_THRESHOLD_LOOSE = 10.0     # Divisor for loose missing value checks
 
 # ---------- 1 REGRID DATA ----------
 def regrid(var, var_lons, var_lats, target_lon, target_lat, tmask, missingVal):
@@ -67,7 +74,7 @@ def regrid(var, var_lons, var_lats, target_lon, target_lat, tmask, missingVal):
 			data_out[t,-3:,:] = data_out_near[-3:,:]
 
 	# tidy up
-	data_out[ data_out > missingVal/1000. ] = missingVal
+	data_out[ data_out > missingVal/MISSING_VAL_THRESHOLD_STRICT ] = missingVal
 
 	return data_out
 
@@ -102,7 +109,7 @@ def subDomainORCA(lonLim, latLim, var_lons, var_lats, in_data, landMask, volMask
 	ind_mask = np.where( mask == missingVal )
 	ind_land = np.isnan(landMask)
 	ind_vol = np.isnan(volMask)
-	print(ind_vol.shape, in_data.shape)
+	log.debug(f"ind_vol shape: {ind_vol.shape}, in_data shape: {in_data.shape}")
 
 	if len(in_data.shape) == 3:
 		for t in range(0,in_data.shape[0]):
@@ -134,8 +141,8 @@ def surfaceData(var, var_lons, var_lats, units, area, landMask, volMask, missing
 
 	# filter data for missingVal (in-place to avoid copy)
 	varNan = var
-	varNan[ varNan > missingVal/10. ] = np.nan
-	varNan[ varNan < -missingVal/10. ] = np.nan
+	varNan[ varNan > missingVal/MISSING_VAL_THRESHOLD_LOOSE ] = np.nan
+	varNan[ varNan < -missingVal/MISSING_VAL_THRESHOLD_LOOSE ] = np.nan
 
 	# Vectorized calculation: compute total across all time steps at once
 	total = np.nansum(varNan * area * units / tDim)
@@ -164,8 +171,8 @@ def volumeData(var, var_lons, var_lats, units, vol, landMask, volMask, missingVa
 
 	# filter data for missingVal (in-place to avoid copy)
 	varNan = var
-	varNan[ varNan > missingVal/10. ] = np.nan
-	varNan[ varNan < -missingVal/10. ] = np.nan
+	varNan[ varNan > missingVal/MISSING_VAL_THRESHOLD_LOOSE ] = np.nan
+	varNan[ varNan < -missingVal/MISSING_VAL_THRESHOLD_LOOSE ] = np.nan
 	
 	# Vectorized calculation: compute total across all time steps at once
 	total = np.nansum(varNan * vol * units / tDim)
@@ -194,8 +201,8 @@ def levelData(var, var_lons, var_lats, units, area, landMask, volMask, missingVa
 
 	# filter data for missingVal (in-place to avoid copy)
 	varNan = var
-	varNan[ varNan > missingVal/10. ] = np.nan
-	varNan[ varNan < -missingVal/10. ] = np.nan
+	varNan[ varNan > missingVal/MISSING_VAL_THRESHOLD_LOOSE ] = np.nan
+	varNan[ varNan < -missingVal/MISSING_VAL_THRESHOLD_LOOSE ] = np.nan
 
 	# Vectorized calculation: compute total across all time steps at once
 	total = np.nansum(varNan[:, level, :, :] * area * units / tDim)
@@ -216,7 +223,7 @@ def levelData(var, var_lons, var_lats, units, area, landMask, volMask, missingVa
 	return total, monthly
 
 # ---------- 7 INTEGRATE DATA (sum over range of depths) ----------
-def intergrateData(var, var_lons, var_lats, depthFrom, depthTo, units, vol, landMask, volMask, missingVal, lonLim, latLim):
+def integrateData(var, var_lons, var_lats, depthFrom, depthTo, units, vol, landMask, volMask, missingVal, lonLim, latLim):
 
 	var = subDomainORCA(lonLim, latLim, var_lons, var_lats, var, landMask, volMask, missingVal)
 
@@ -224,8 +231,8 @@ def intergrateData(var, var_lons, var_lats, depthFrom, depthTo, units, vol, land
 
 	# filter data for missingVal (in-place to avoid copy)
 	varNan = var
-	varNan[ varNan > missingVal/10. ] = np.nan
-	varNan[ varNan < -missingVal/10. ] = np.nan
+	varNan[ varNan > missingVal/MISSING_VAL_THRESHOLD_LOOSE ] = np.nan
+	varNan[ varNan < -missingVal/MISSING_VAL_THRESHOLD_LOOSE ] = np.nan
 
 	# Vectorized calculation: compute total across all time steps at once
 	total = np.nansum(varNan[:, depthFrom:depthTo+1, :, :] * vol[depthFrom:depthTo+1, :, :] * units / tDim)
@@ -254,8 +261,8 @@ def volumeDataAverage(var, var_lons, var_lats, depthFrom, depthTo, units, vol, l
 
 	# filter data for missingVal (in-place to avoid copy)
 	varNan = var
-	varNan[ varNan > missingVal/10. ] = np.nan
-	varNan[ varNan < -missingVal/10. ] = np.nan
+	varNan[ varNan > missingVal/MISSING_VAL_THRESHOLD_LOOSE ] = np.nan
+	varNan[ varNan < -missingVal/MISSING_VAL_THRESHOLD_LOOSE ] = np.nan
 
 	if vol.shape[0] == varNan.shape[1]:
 		vol_masked = vol.copy()  # Need copy here as we modify it
@@ -307,7 +314,7 @@ def observationData(obs, obs_lon, obs_lat, var, var_lons, var_lats, obsCenter, t
 
 	data_out = regrid(var, var_lons, var_lats, obs_lon, obs_lat, tmask, missingVal)
 
-	obs[ obs > missingVal/1000. ] = missingVal
+	obs[ obs > missingVal/MISSING_VAL_THRESHOLD_STRICT ] = missingVal
 
 	# spread obs to account for DTA
 	spread = 2 # degree std
@@ -346,12 +353,12 @@ def observationData(obs, obs_lon, obs_lat, var, var_lons, var_lats, obsCenter, t
 			modified_obs[t,:,:] = np.zeros( slice.shape )
 
 	# Now, compare to obs data as its now on the same grid
-	data_out[ data_out > missingVal/1000. ] = np.nan
+	data_out[ data_out > missingVal/MISSING_VAL_THRESHOLD_STRICT ] = np.nan
 
 	diff = (data_out-obs) * (data_out-obs)
 	diff_mod = (data_out-modified_obs) * (data_out-modified_obs)
-	diff[ diff < -missingVal/1000. ] = np.nan
-	diff_mod[ diff_mod < -missingVal/1000. ] = np.nan
+	diff[ diff < -missingVal/MISSING_VAL_THRESHOLD_STRICT ] = np.nan
+	diff_mod[ diff_mod < -missingVal/MISSING_VAL_THRESHOLD_STRICT ] = np.nan
 
 	diff[ diff >  1E6 ] = np.nan
 	diff_mod[ diff_mod >  1E6 ] = np.nan
@@ -455,7 +462,7 @@ def observationData(obs, obs_lon, obs_lat, var, var_lons, var_lats, obsCenter, t
 									min_gamma = np.amin(gamma)
 									if min_gamma < 1:
 										b_vals[ai].append(r)
-										print(ix,iy,obs[t,iy,ix], data_out[t,iy,ix],a,r,min_gamma)
+										log.debug(f"GAM fit: ix={ix}, iy={iy}, obs={obs[t,iy,ix]}, data_out={data_out[t,iy,ix]}, a={a}, r={r}, min_gamma={min_gamma}")
 										prev_r = True
 
 		# output average b-vals for each a-val
@@ -576,7 +583,7 @@ def trophic(var, var_lons, var_lats, missingVal, lonLim, latLim):
 						m, c = getSlope(x_vals,y_vals)
 						trophicVals[3,t,y,x] = m
 
-	trophicVals[ trophicVals > missingVal/10. ] = np.nan
+	trophicVals[ trophicVals > missingVal/MISSING_VAL_THRESHOLD_LOOSE ] = np.nan
 
 	trophicVals = subDomain(lonLim, latLim, trophicVals)
 

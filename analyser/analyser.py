@@ -18,7 +18,7 @@ from netCDF4 import Dataset
 from analyser_config import parse_config_file
 from analyser_io import load_netcdf_files, OutputWriter
 from analyser_processor import process_variables, process_average_variables_special, precompute_region_masks
-from analyser_functions import surfaceData, volumeData, intergrateData, volumeDataAverage, observationData, levelData
+from analyser_functions import surfaceData, volumeData, integrateData, volumeDataAverage, observationData, levelData
 from analyser_functions import bloom, trophic, regrid
 from analyser_observations import observationDatasets
 from dateutil import relativedelta
@@ -48,9 +48,12 @@ parm_file = args.parm_file
 year_from = args.year_from
 year_to = args.year_to
 
-# Validate the parameter file exists
+# Validate inputs
 if not parm_file.exists():
     parser.error(f"Parameter file not found: {parm_file}")
+
+if year_to < year_from:
+    parser.error(f"End year ({year_to}) must be >= start year ({year_from})")
 
 # Set up logging
 logging.basicConfig(
@@ -289,7 +292,7 @@ process_variables(
     varInt, nc_run_ids, nc_runFileNames,
     list_of_units, regions, landMask, volMask,
     mask_area, mask_vol, missing_val,
-    intergrateData, 'integration', region_mask_cache
+    integrateData, 'integration', region_mask_cache
 )
 
 # Process average variables (special handling for multi-variable sums)

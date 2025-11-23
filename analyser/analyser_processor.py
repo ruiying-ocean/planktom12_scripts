@@ -10,7 +10,7 @@ import logging
 import numpy as np
 from typing import List, Tuple, Callable, Any
 from analyser_io import find_variable_in_files
-from analyser_functions import surfaceData, volumeData, intergrateData, volumeDataAverage, levelData
+from analyser_functions import surfaceData, volumeData, integrateData, volumeDataAverage, levelData
 
 log = logging.getLogger("Processor")
 
