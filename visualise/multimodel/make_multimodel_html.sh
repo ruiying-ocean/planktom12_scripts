@@ -31,6 +31,15 @@ to=( $( cut -f 4 -d , modelsToPlot.csv | tail -n +2 ) )
 
 length=${#runs[@]}
 
+# Create comparison name from model runs (strip TOM12_RY_ prefix)
+clean_runs=()
+for run in "${runs[@]}"; do
+    clean_run="${run#TOM12_RY_}"
+    clean_runs+=("$clean_run")
+done
+comparison_name=$(IFS="-"; echo "${clean_runs[*]}")
+output_filename="${comparison_name}.html"
+
 echo "Creating Quarto HTML for $length models..."
 
 # Copy template and stylesheet to current directory
@@ -176,14 +185,14 @@ awk '
 
 # Render Quarto document
 echo "Rendering Quarto document..."
-quarto render multimodel.qmd --output multimodel.html
+quarto render multimodel.qmd --output "$output_filename"
 
 # Clean up temporary files
 rm temp_template.qmd temp_with_timestamp.qmd temp_model_maps.txt temp_derived_section.txt temp_setupdata_section.txt temp_namelist_section.txt multimodel.qmd custom.scss
 
-if [ -f "multimodel.html" ]; then
-    echo "✓ Multi-model HTML report generated: $(pwd)/multimodel.html"
+if [ -f "$output_filename" ]; then
+    echo "✓ Multi-model HTML report generated: $(pwd)/$output_filename"
 else
-    echo "✗ Error: Failed to generate multimodel.html"
+    echo "✗ Error: Failed to generate $output_filename"
     exit 1
 fi

@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 """
-Processing module for breakdown system.
+Processing module for analyser system.
 
 This module provides unified processing functions that work across all variable types,
-eliminating code duplication in the original breakdown.py
+eliminating code duplication in the original analyser.py
 """
 
 import logging
 import numpy as np
 from typing import List, Tuple, Callable, Any
-from breakdown_io import find_variable_in_files
-from breakdown_functions import surfaceData, volumeData, intergrateData, volumeDataAverage, levelData
+from analyser_io import find_variable_in_files
+from analyser_functions import surfaceData, volumeData, intergrateData, volumeDataAverage, levelData
 
 log = logging.getLogger("Processor")
 

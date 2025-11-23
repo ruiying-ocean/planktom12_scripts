@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-Breakdown - Ocean biogeochemical model output analysis tool (Refactored)
+Analyser - Ocean biogeochemical model output analysis tool (Refactored)
 
-This is a refactored version of breakdown.py that uses modular components
+This is a refactored version of analyser.py that uses modular components
 to improve maintainability while preserving all functionality.
 """
 
@@ -15,12 +15,12 @@ import math
 from netCDF4 import Dataset
 
 # Import new modular components
-from breakdown_config import parse_config_file
-from breakdown_io import load_netcdf_files, OutputWriter
-from breakdown_processor import process_variables, process_average_variables_special, precompute_region_masks
-from breakdown_functions import surfaceData, volumeData, intergrateData, volumeDataAverage, observationData, levelData
-from breakdown_functions import bloom, trophic, regrid
-from breakdown_observations import observationDatasets
+from analyser_config import parse_config_file
+from analyser_io import load_netcdf_files, OutputWriter
+from analyser_processor import process_variables, process_average_variables_special, precompute_region_masks
+from analyser_functions import surfaceData, volumeData, intergrateData, volumeDataAverage, observationData, levelData
+from analyser_functions import bloom, trophic, regrid
+from analyser_observations import observationDatasets
 from dateutil import relativedelta
 import datetime
 
@@ -28,11 +28,11 @@ import datetime
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(
-    description='Breakdown - Ocean biogeochemical model output analysis tool',
+    description='Analyser - Ocean biogeochemical model output analysis tool',
     formatter_class=argparse.RawDescriptionHelpFormatter,
     epilog='''
 Examples:
-  %(prog)s breakdown_config.toml 2000 2010
+  %(prog)s analyser_config.toml 2000 2010
   %(prog)s my_config.toml 1990 2020
     '''
 )
@@ -57,7 +57,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
     datefmt='%m-%d %H:%M',
-    filename=f'breakdown.{year_from}_{year_to}.log',
+    filename=f'analyser.{year_from}_{year_to}.log',
     filemode='w'
 )
 
@@ -612,40 +612,40 @@ INCLUDE_KEYS_IN_HEADERS = False   # Set to True to include keys like "BAC [globa
 # Annual outputs - CSV format (clean, single header row)
 if OUTPUT_FORMAT == 'csv':
     log.info("Writing CSV format outputs...")
-    writer.write_annual_csv("breakdown.sur.annual.csv", config.surface_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
-    writer.write_annual_csv("breakdown.lev.annual.csv", config.level_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
-    writer.write_annual_csv("breakdown.vol.annual.csv", config.volume_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
-    writer.write_annual_csv("breakdown.int.annual.csv", config.integration_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
-    writer.write_annual_csv("breakdown.ave.annual.csv", config.average_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+    writer.write_annual_csv("analyser.sur.annual.csv", config.surface_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+    writer.write_annual_csv("analyser.lev.annual.csv", config.level_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+    writer.write_annual_csv("analyser.vol.annual.csv", config.volume_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+    writer.write_annual_csv("analyser.int.annual.csv", config.integration_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
+    writer.write_annual_csv("analyser.ave.annual.csv", config.average_vars, year_from, year_to, 0, INCLUDE_UNITS_IN_HEADERS, INCLUDE_KEYS_IN_HEADERS)
 else:
     # Original TSV format (backward compatible - 3 header rows)
     log.info("Writing TSV format outputs...")
-    writer.write_annual_file("breakdown.sur.annual.dat", varSurface, year_from, year_to, 0, 1, -3)
-    writer.write_annual_file("breakdown.lev.annual.dat", varLevel, year_from, year_to, 0, 2, -3)
-    writer.write_annual_file("breakdown.vol.annual.dat", varVolume, year_from, year_to, 0, 1, -3)
-    writer.write_annual_file("breakdown.int.annual.dat", varInt, year_from, year_to, 0, 3, -3)
-    writer.write_annual_file("breakdown.ave.annual.dat", varTotalAve, year_from, year_to, 0, 3, -3)
+    writer.write_annual_file("analyser.sur.annual.dat", varSurface, year_from, year_to, 0, 1, -3)
+    writer.write_annual_file("analyser.lev.annual.dat", varLevel, year_from, year_to, 0, 2, -3)
+    writer.write_annual_file("analyser.vol.annual.dat", varVolume, year_from, year_to, 0, 1, -3)
+    writer.write_annual_file("analyser.int.annual.dat", varInt, year_from, year_to, 0, 3, -3)
+    writer.write_annual_file("analyser.ave.annual.dat", varTotalAve, year_from, year_to, 0, 3, -3)
 
 # Observations (commented out - uncomment if needed)
-# writer.write_observation_file("breakdown.obs.annual.dat", obsComparisons, year_from, year_to)
+# writer.write_observation_file("analyser.obs.annual.dat", obsComparisons, year_from, year_to)
 
 # Spread outputs (commented out - uncomment if needed)
-# writer.write_spread_file("breakdown.sur.spread.dat", varSurface, year_from, year_to, 0, 1, -3)
-# writer.write_spread_file("breakdown.lev.spread.dat", varLevel, year_from, year_to, 0, 2, -3)
-# writer.write_spread_file("breakdown.vol.spread.dat", varVolume, year_from, year_to, 0, 1, -3)
-# writer.write_spread_file("breakdown.int.spread.dat", varInt, year_from, year_to, 0, 3, -3)
-# writer.write_spread_file("breakdown.ave.spread.dat", varTotalAve, year_from, year_to, 0, 3, -3)
+# writer.write_spread_file("analyser.sur.spread.dat", varSurface, year_from, year_to, 0, 1, -3)
+# writer.write_spread_file("analyser.lev.spread.dat", varLevel, year_from, year_to, 0, 2, -3)
+# writer.write_spread_file("analyser.vol.spread.dat", varVolume, year_from, year_to, 0, 1, -3)
+# writer.write_spread_file("analyser.int.spread.dat", varInt, year_from, year_to, 0, 3, -3)
+# writer.write_spread_file("analyser.ave.spread.dat", varTotalAve, year_from, year_to, 0, 3, -3)
 
 # Monthly outputs (commented out - uncomment if needed)
-# writer.write_monthly_file("breakdown.sur.monthly.dat", varSurface, year_from, year_to, 0, 1, -3)
-# writer.write_monthly_file("breakdown.ave.monthly.dat", varTotalAve, year_from, year_to, 0, 3, -3)
+# writer.write_monthly_file("analyser.sur.monthly.dat", varSurface, year_from, year_to, 0, 1, -3)
+# writer.write_monthly_file("analyser.ave.monthly.dat", varTotalAve, year_from, year_to, 0, 3, -3)
 
 # Property outputs
 for prop in properties:
     if hasattr(prop, 'key'):
-        filename = f"breakdown.{prop.prop_name}.{prop.key}.dat"
+        filename = f"analyser.{prop.prop_name}.{prop.key}.dat"
     else:
-        filename = f"breakdown.{prop[0]}.{prop[-2]}.dat"
+        filename = f"analyser.{prop[0]}.{prop[-2]}.dat"
     writer.write_property_file(filename, prop, year_from, year_to)
 
 # Report any files that failed to load

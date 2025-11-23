@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-Configuration parsing module for breakdown system.
+Configuration parsing module for analyser system.
 
-This module handles parsing of the breakdown_config.toml file and provides
+This module handles parsing of the analyser_config.toml file and provides
 structured configuration objects. Also supports legacy text-based format.
 """
 
@@ -103,7 +103,7 @@ class MapVariable:
 
 @dataclass
 class BreakdownConfig:
-    """Complete configuration for breakdown processing."""
+    """Complete configuration for analyser processing."""
     basin_mask: str = ""
     woa_mask: str = ""
     region_mask: str = ""

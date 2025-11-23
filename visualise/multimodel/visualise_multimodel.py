@@ -327,7 +327,11 @@ def main():
         file_count += len(files)
 
     print(f"  Total: {file_count} files")
-    print(f"  View report: {output_dir}/multimodel.html (if generated)")
+
+    # Look for generated HTML file
+    html_files = list(output_dir.glob('*.html'))
+    if html_files:
+        print(f"  View report: {html_files[0]}")
     print()
 
 

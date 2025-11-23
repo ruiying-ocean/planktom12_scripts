@@ -58,7 +58,7 @@ planktom-maps = "visualise.make_maps:main"
 planktom-transects = "visualise.make_transects:main"
 
 [tool.setuptools]
-packages = ["visualise", "visualise.multimodel", "breakdown"]
+packages = ["visualise", "visualise.multimodel", "analyser"]
 
 [tool.setuptools.package-data]
 visualise = ["*.toml"]
@@ -107,7 +107,7 @@ ignore = [
 "__init__.py" = ["F401"]  # Allow unused imports in __init__.py
 
 [tool.ruff.isort]
-known-first-party = ["visualise", "breakdown"]
+known-first-party = ["visualise", "analyser"]
 
 # pytest configuration
 [tool.pytest.ini_options]
@@ -120,7 +120,7 @@ addopts = [
     "--strict-markers",
     "--strict-config",
     "--cov=visualise",
-    "--cov=breakdown",
+    "--cov=analyser",
     "--cov-report=term-missing",
     "--cov-report=html",
 ]
@@ -150,7 +150,7 @@ ignore_missing_imports = true
 
 # Coverage configuration
 [tool.coverage.run]
-source = ["visualise", "breakdown"]
+source = ["visualise", "analyser"]
 omit = [
     "*/tests/*",
     "*/test_*.py",

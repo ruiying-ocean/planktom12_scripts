@@ -45,7 +45,7 @@ while IFS= read -r line; do
 		name=$(echo $line | awk -F':' '{print $1}')
 		val=$(echo $line | awk -F':' '{print $2}')
         
-		if [[ $name != *"."* && $name != "namelist"* && $name != "breakdown_parms" ]]; then
+		if [[ $name != *"."* && $name != "namelist"* ]]; then
 			if [[ $name == "yearStart" ]]; then yearStart=$val; fi
 			if [[ $name == "yearEnd" ]]; then yearEnd=$val; fi
 			if [[ $name == "CO2" ]]; then CO2=$val; fi
@@ -130,15 +130,6 @@ while IFS= read -r line; do
 		
 		# Copy xml files in a way so changes can be made
 		if [[ $name == *".xml" ]]; then
-			if [ -f $name ]; then
-				echo $name " exists so no fresh copy made "
-			else
-				cp $val $name
-			fi
-		fi
-
-		# Copy breakdown_parms in a way so changes can be made
-		if [[ $name == "breakdown_parms" ]]; then
 			if [ -f $name ]; then
 				echo $name " exists so no fresh copy made "
 			else
@@ -290,17 +281,17 @@ fi
 ln -fs ${SCRIPT_DIR}/tidyup.sh tidyup.sh
 ln -fs ${SCRIPT_DIR}/tidyup.job tidyup.job
 
-# Get breakdown scripts
-cp ${SCRIPT_DIR}/breakdown/breakdown*.py .
-cp ${SCRIPT_DIR}/breakdown/breakdown_config.toml .
+# Get analyser scripts
+cp ${SCRIPT_DIR}/analyser/analyser*.py .
+cp ${SCRIPT_DIR}/analyser/analyser_config.toml .
 if [ -f ${SCRIPT_DIR}/iodef_tom12piicc14.xml ]; then
 	cp ${SCRIPT_DIR}/iodef_tom12piicc14.xml .
 fi
 
-# If breakdown_config.toml does not exist (as specified in setUpData file) copy in default
-if [ ! -f breakdown_config.toml ]; then
-	echo "Copying in default script for breakdown_config.toml"
-	cp /gpfs/data/greenocean/software/source/analyseRun/analyse-run/breakdown_config.toml breakdown_config.toml
+# If analyser_config.toml does not exist (as specified in setUpData file) copy in default
+if [ ! -f analyser_config.toml ]; then
+	echo "Copying in default script for analyser_config.toml"
+	cp /gpfs/data/greenocean/software/source/analyseRun/analyse-run/analyser_config.toml analyser_config.toml
 fi
 
 # Get visualise scripts and files

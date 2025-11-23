@@ -1,8 +1,8 @@
 # ============================================================================
-# BREAKDOWN CONFIGURATION FILE
+# ANALYSER CONFIGURATION FILE
 # ============================================================================
 #
-# This file configures spatial and temporal breakdown of ocean model output.
+# This file configures spatial and temporal analysis of ocean model output.
 # Variables can be filtered by:
 #   1. Latitude/longitude ranges (rectangular boxes)
 #   2. Region masks (predefined ocean basins and biogeochemical provinces)

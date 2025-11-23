@@ -6,7 +6,7 @@ A comprehensive workflow system for running NEMO-PlankTom ocean biogeochemistry 
 
 This repository provides tools for:
 - Setting up and running NEMO-PlankTom model simulations
-- Extracting statistics from model output (breakdown files)
+- Extracting statistics from model output (analyser files)
 - Generating visualizations (time series, spatial maps, vertical profiles)
 - Comparing multiple model runs
 - Creating HTML reports
@@ -15,7 +15,7 @@ This repository provides tools for:
 
 ```
 PlankTomRunner/
-├── breakdown/          # Statistics extraction from NetCDF output
+├── analyser/           # Statistics extraction from NetCDF output
 ├── visualise/          # Single model visualization tools
 │   └── multimodel/     # Multi-model comparison tools
 ├── configs/            # Model setup configuration files
@@ -37,11 +37,11 @@ PlankTomRunner/
 
 1. **Run the model** (generates NetCDF output in `~/scratch/ModelRuns/<model_id>/`)
 
-2. **Generate breakdown statistics**:
+2. **Generate analyser statistics**:
    ```bash
    cd ~/scratch/ModelRuns/<model_id>/
-   python /path/to/PlankTomRunner/breakdown/breakdown.py \
-       /path/to/PlankTomRunner/breakdown/breakdown_config.toml \
+   python /path/to/PlankTomRunner/analyser/analyser.py \
+       /path/to/PlankTomRunner/analyser/analyser_config.toml \
        <start_year> <end_year>
    ```
 
@@ -61,15 +61,15 @@ PlankTomRunner/
 
 1. **Run multiple models** (each generates output in `~/scratch/ModelRuns/<model_id>/`)
 
-2. **Generate breakdown files for each model**:
+2. **Generate analyser files for each model**:
    ```bash
    cd ~/scratch/ModelRuns/TOM12_RY_SPE2/
-   python /path/to/PlankTomRunner/breakdown/breakdown.py \
-       /path/to/PlankTomRunner/breakdown/breakdown_config.toml 1750 1790
+   python /path/to/PlankTomRunner/analyser/analyser.py \
+       /path/to/PlankTomRunner/analyser/analyser_config.toml 1750 1790
 
    cd ~/scratch/ModelRuns/TOM12_RY_SPE5/
-   python /path/to/PlankTomRunner/breakdown/breakdown.py \
-       /path/to/PlankTomRunner/breakdown/breakdown_config.toml 1750 1790
+   python /path/to/PlankTomRunner/analyser/analyser.py \
+       /path/to/PlankTomRunner/analyser/analyser_config.toml 1750 1790
    ```
 
 3. **Create comparison configuration** (`modelsToPlot.csv`):
@@ -88,29 +88,29 @@ PlankTomRunner/
 
 ## Detailed Documentation
 
-### Breakdown Tools
+### Analyser Tools
 
 **Purpose**: Extract integrated statistics from model NetCDF output files.
 
-**Main Script**: `breakdown/breakdown.py`
+**Main Script**: `analyser/analyser.py`
 
 **Usage**:
 ```bash
 cd <model_output_directory>
-python /path/to/breakdown/breakdown.py <config_file.toml> <start_year> <end_year>
+python /path/to/analyser/analyser.py <config_file.toml> <start_year> <end_year>
 ```
 
-**Important**: The breakdown script must be run from the model output directory where the NetCDF files are located (it looks for files in the current directory).
+**Important**: The analyser script must be run from the model output directory where the NetCDF files are located (it looks for files in the current directory).
 
 **Output**: Creates CSV files in `<model_dir>/<model_id>/`:
-- `breakdown.sur.annual.csv` - Surface variables (e.g., air-sea carbon flux)
-- `breakdown.lev.annual.csv` - Level variables (e.g., export at 100m)
-- `breakdown.vol.annual.csv` - Volume-integrated variables (e.g., primary production)
-- `breakdown.ave.annual.csv` - Volume-averaged variables (e.g., nutrients)
-- `breakdown.int.annual.csv` - Depth-integrated variables (e.g., phytoplankton biomass)
+- `analyser.sur.annual.csv` - Surface variables (e.g., air-sea carbon flux)
+- `analyser.lev.annual.csv` - Level variables (e.g., export at 100m)
+- `analyser.vol.annual.csv` - Volume-integrated variables (e.g., primary production)
+- `analyser.ave.annual.csv` - Volume-averaged variables (e.g., nutrients)
+- `analyser.int.annual.csv` - Depth-integrated variables (e.g., phytoplankton biomass)
 - Monthly versions: `*.monthly.csv`
 
-**Configuration**: `breakdown/breakdown_config.toml`
+**Configuration**: `analyser/analyser_config.toml`
 
 ### Single Model Visualization
 
@@ -313,9 +313,9 @@ PPT = [51, 65]  # Primary production range [PgC/yr]
 EXP = [7.8, 12.2]  # Export production range [PgC/yr]
 ```
 
-### Breakdown Configuration
+### Analyser Configuration
 
-**File**: `breakdown/breakdown_config.toml`
+**File**: `analyser/analyser_config.toml`
 
 Defines which variables to extract and their spatial/temporal integration:
 - Surface variables
@@ -382,11 +382,11 @@ lat_range = [-90, 90]
 ├── ORCA2_1m_YYYY0101_YYYY1231_diad_T.nc  # Diagnostic variables
 ├── ORCA2_1m_YYYY0101_YYYY1231_ptrc_T.nc  # Tracer variables
 ├── ORCA2_1m_YYYY0101_YYYY1231_grid_T.nc  # Physical variables
-├── breakdown.sur.annual.csv               # Breakdown files
-├── breakdown.lev.annual.csv
-├── breakdown.vol.annual.csv
-├── breakdown.ave.annual.csv
-└── breakdown.int.annual.csv
+├── analyser.sur.annual.csv               # Analyser files
+├── analyser.lev.annual.csv
+├── analyser.vol.annual.csv
+├── analyser.ave.annual.csv
+└── analyser.int.annual.csv
 ```
 
 ## Variables and Units
@@ -460,15 +460,15 @@ For model-observation comparisons, observational data should be placed in:
 - Check NetCDF file naming convention: `ORCA2_1m_YYYY0101_YYYY1231_<type>.nc`
 - Can specify custom location in `modelsToPlot.csv` if needed
 
-**5. Empty or missing breakdown files**
-- Ensure `breakdown.py` completed successfully
-- Check breakdown configuration in `breakdown/breakdown_config.toml`
+**5. Empty or missing analyser files**
+- Ensure `analyser.py` completed successfully
+- Check analyser configuration in `analyser/analyser_config.toml`
 - Verify NetCDF variables exist in model output
 
 ### Getting Help
 
 1. Check script usage: `python <script>.py --help`
-2. Review configuration files in `visualise/` and `breakdown/`
+2. Review configuration files in `visualise/` and `analyser/`
 3. Ensure all required Python packages are installed
 4. Verify model output files exist and follow naming conventions
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-I/O module for breakdown system.
+I/O module for analyser system.
 
 This module handles:
 - NetCDF file loading and searching
@@ -109,7 +109,7 @@ def find_variable_in_files(nc_files: List, nc_filenames: List, var_name: str) ->
 # ---------- OUTPUT FILE WRITING ----------
 
 class OutputWriter:
-    """Unified output file writer for all breakdown output types."""
+    """Unified output file writer for all analyser output types."""
 
     @staticmethod
     def write_annual_csv(
