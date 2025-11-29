@@ -30,7 +30,7 @@ model:MYTEST
 
 # Starting year of the run
 # - forcing data starts in 1948 (NCEP) and 1940 (ERA5) so data before then will be a looping year of 1990 for spin-up purposes
-yearStart:1900
+yearStart:1750
 yearEnd:1940
 
 # CO2 (VARIABLE or STATIC)
@@ -48,10 +48,10 @@ spinupStart:1750
 spinupEnd:1930
 
 # Keep restarts and output frequency (years)
-spinupRestartKeepFrequency:10
-spinupOutputKeepFrequency:10
-runRestartKeepFrequency:5
-runOutputKeepFrequency:1
+spinupRestartKeepFrequency:30
+spinupOutputKeepFrequency:30
+runRestartKeepFrequency:10
+runOutputKeepFrequency:10
 
 # Flags for keeping respective files (0 = delete, 1 = keep)
 keepGrid_T:1
@@ -86,7 +86,7 @@ restart_ice_in.nc:/gpfs/data/greenocean/software/resources/ModelResources/Restar
 restart.nc:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/restart_19191231_opa_PT.nc
 
 # Evaporation and precipitation balancing file (this needs to be for previous year, if using restarts)
-EMPaveFile:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/EMPave_1947.dat
+EMPaveFile:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/EMPave_1749.dat
 
 # A file, a 2D integer used to increase the horizontal eddy viscosity along western boundary in the equatorial strip 20S-20N
 ahmcoef.nc:/gpfs/data/greenocean/software/resources/ModelResources/EddyViscCoeff/ahmcoef.nc

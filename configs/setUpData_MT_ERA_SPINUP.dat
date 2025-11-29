@@ -48,8 +48,8 @@ spinupStart:1750
 spinupEnd:1940
 
 # Keep restarts and output frequency (years)
-spinupRestartKeepFrequency:1
-spinupOutputKeepFrequency:1
+spinupRestartKeepFrequency:30
+spinupOutputKeepFrequency:30
 runRestartKeepFrequency:1
 runOutputKeepFrequency:1
 
@@ -85,7 +85,7 @@ restart_ice_in.nc:/gpfs/data/greenocean/software/resources/ModelResources/Restar
 restart.nc:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/restart_19191231_opa_PT.nc
 
 # Evaporation and precipitation balancing file (this needs to be for previous year, if using restarts)
-EMPaveFile:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/EMPave_1947.dat
+EMPaveFile:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/EMPave_1749.dat
 
 # A file, a 2D integer used to increase the horizontal eddy viscosity along western boundary in the equatorial strip 20S-20N
 ahmcoef.nc:/gpfs/data/greenocean/software/resources/ModelResources/EddyViscCoeff/ahmcoef.nc
