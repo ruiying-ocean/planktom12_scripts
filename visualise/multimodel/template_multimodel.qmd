@@ -25,7 +25,7 @@ Comparison of global ecosystem metrics across models.
 
 ## Normalized Timeseries
 
-Normalized timeseries showing temporal trends relative to baseline values. All variables are normalized by subtracting the mean of the first 10 years (or all available years if less than 10) to highlight changes over time.
+Normalized anomalies for key global metrics (Cflx, TChl, PPT, EXP/EXP1000, CaCO₃ production/export, silica production/export). All variables are normalized by subtracting the mean of the first 10 years (or all available years if less than 10) to highlight changes over time.
 
 ![](multimodel_summary_global_normalized.png)
 
@@ -54,6 +54,12 @@ Regional and monthly pCO₂ comparison.
 Comparison of phytoplankton and zooplankton biomass across models.
 
 ![](multimodel_summary_pfts.png)
+
+## PFT Anomalies
+
+PFT biomass anomalies relative to the first-decade mean to highlight temporal changes.
+
+![](multimodel_summary_pfts_normalized.png)
 
 # Nutrients
 
