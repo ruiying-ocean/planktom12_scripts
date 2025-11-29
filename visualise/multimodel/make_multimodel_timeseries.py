@@ -248,32 +248,52 @@ class PlotGenerator:
         pathlib.Path(save_dir).mkdir(parents=True, exist_ok=True)
         # Font family is already set by PLOT_STYLER.apply_style() at module level
 
-    def add_legend(self, fig, **kwargs):
+    def add_legend(self, fig, location="top", **kwargs):
         """
-        MODIFIED: Add a legend to the bottom of the plot area.
+        Add a figure-level legend with padding so it doesn't collide with tick labels.
         """
         legend_kwargs = {
-            "loc": "upper center",  # Anchor the legend at its upper center
-            "bbox_to_anchor": (
-                0.5,
-                0.05,
-            ),  # Position the anchor at the bottom center of the figure
             "fontsize": LABEL_FONTSIZE - 2,
-            "ncol": 5,  # Arrange legend items horizontally, adjust as needed
             "frameon": True,
+            "borderaxespad": 0.6,
         }
         legend_kwargs.update(kwargs)
-        # We get handles and labels from the figure's axes
+
+        # Collect handles/labels from all axes
         handles, labels = [], []
         for ax in fig.get_axes():
             h, l = ax.get_legend_handles_labels()
             handles.extend(h)
             labels.extend(l)
 
-        # Remove duplicate labels/handles
+        # Remove duplicate labels/handles while preserving one entry per model
         by_label = dict(zip(labels, handles))
-        if by_label:  # Only add legend if there are items to show
-            fig.legend(by_label.values(), by_label.keys(), **legend_kwargs)
+        if not by_label:
+            return
+
+        legend_kwargs.setdefault("ncol", min(5, max(1, len(by_label))))
+        legend_kwargs.setdefault("bbox_transform", fig.transFigure)
+
+        # Choose a placement that avoids the x tick labels
+        if location == "bottom":
+            legend_kwargs.setdefault("loc", "upper center")
+            legend_kwargs.setdefault("bbox_to_anchor", (0.5, -0.12))
+        elif location == "right":
+            legend_kwargs.setdefault("loc", "center left")
+            legend_kwargs.setdefault("bbox_to_anchor", (1.02, 0.5))
+        else:  # top (default)
+            legend_kwargs.setdefault("loc", "lower center")
+            legend_kwargs.setdefault("bbox_to_anchor", (0.5, 1.02))
+
+        fig.legend(by_label.values(), by_label.keys(), **legend_kwargs)
+
+        # Add a little breathing room when the legend sits outside the axes.
+        if USE_CONSTRAINED_LAYOUT:
+            fig.set_constrained_layout_pads(w_pad=0.02, h_pad=0.02, wspace=0.05, hspace=0.05)
+        elif location == "bottom":
+            fig.subplots_adjust(bottom=max(fig.subplotpars.bottom, 0.18))
+        elif location == "top":
+            fig.subplots_adjust(top=min(fig.subplotpars.top, 0.9))
 
     def save_figure(self, fig, filename):
         """
