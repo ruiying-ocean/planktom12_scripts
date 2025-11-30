@@ -557,7 +557,7 @@ ECOSYSTEM_VARS = {
         'cmap': 'viridis'
     },
     '_SPINT': {
-        'long_name': 'Secondary Production',
+        'long_name': 'Sec Prod',
         'units': 'Tg C yr⁻¹',
         'vmax': 10,
         'depth_index': None,
@@ -571,14 +571,14 @@ ECOSYSTEM_VARS = {
         'cmap': 'viridis'
     },
     '_RECYCLEINT': {
-        'long_name': 'Recycled Production',
+        'long_name': 'Rec Prod',
         'units': 'Tg C yr⁻¹',
         'vmax': 5,
         'depth_index': None,
         'cmap': 'viridis'
     },
     '_eratio': {
-        'long_name': 'Export Ratio',
+        'long_name': 'E-ratio',
         'units': 'dimensionless',
         'vmax': 0.5,
         'vmin': 0,
@@ -586,7 +586,7 @@ ECOSYSTEM_VARS = {
         'cmap': 'viridis'
     },
     '_Teff': {
-        'long_name': 'Transfer Efficiency',
+        'long_name': 'T_eff',
         'units': 'dimensionless',
         'vmax': 0.5,
         'vmin': 0,
