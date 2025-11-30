@@ -77,6 +77,14 @@ Comparison of physical variables across models.
 
 Comparison of derived ecosystem variables across models.
 
+![](multimodel_summary_derived.png)
+
+## Normalized Anomalies
+
+Derived variable anomalies relative to the first-decade mean.
+
+![](multimodel_summary_derived_normalized.png)
+
 ${DERIVED_SECTION}
 
 ---

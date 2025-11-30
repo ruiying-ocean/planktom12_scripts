@@ -1288,6 +1288,85 @@ class DerivedSummaryPlotter(PlotGenerator):
             axes[3].set_xlabel("Year", fontweight='bold')
 
 
+class DerivedSummaryNormalizedPlotter(PlotGenerator):
+    """Generates normalized/anomaly plots for derived ecosystem variables"""
+
+    def generate(self):
+        fig, axes = plt.subplots(
+            2, 2, figsize=(2 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
+            constrained_layout=USE_CONSTRAINED_LAYOUT
+        )
+        axes = axes.flatten()
+
+        setup_axes(axes)
+
+        self.plot_all_models(fig, axes, self._plot_model)
+
+        self.add_legend(fig)
+        self.save_figure(fig, "multimodel_summary_derived_normalized.png")
+
+    def _plot_model(self, model, axes, color):
+        vol_data = DataLoader.load_analyser_data(model, "vol", "annual")
+        lev_data = DataLoader.load_analyser_data(model, "lev", "annual")
+
+        if vol_data is None or lev_data is None:
+            return
+
+        actual_years = DataLoader.get_actual_years(vol_data)
+        indices = model.get_year_range_indices(actual_years)
+        if indices[0] is None:
+            return
+
+        year = DataLoader.safe_load_column(vol_data, "year", indices)
+        if year is None:
+            return
+
+        ppt = DataLoader.safe_load_column(vol_data, "PPT", indices)
+        exp = DataLoader.safe_load_column(lev_data, "EXP", indices)
+        exp1000 = DataLoader.safe_load_column(lev_data, "EXP1000", indices)
+
+        grazing_cols = ["GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"]
+        grazing_data = {}
+        for col in grazing_cols:
+            val = DataLoader.safe_load_column(vol_data, col, indices)
+            if val is not None:
+                grazing_data[col] = val
+
+        if grazing_data:
+            sp = sum(grazing_data.values())
+            sp_norm = GlobalSummaryNormalizedPlotter._normalize_series(sp)
+            axes[0].plot(year, sp_norm, color=color, label=model.label, linewidth=LINE_WIDTH)
+            axes[0].set_title("Secondary Production anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+            axes[0].set_ylabel("PgC/yr")
+            axes[0].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+
+            if ppt is not None and exp is not None:
+                recycle = ppt - exp - sp
+                recycle_norm = GlobalSummaryNormalizedPlotter._normalize_series(recycle)
+                axes[1].plot(year, recycle_norm, color=color, linewidth=LINE_WIDTH)
+                axes[1].set_title("Recycled Production anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[1].set_ylabel("PgC/yr")
+                axes[1].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+
+        if exp is not None and ppt is not None:
+            eratio = exp / ppt
+            eratio_norm = GlobalSummaryNormalizedPlotter._normalize_series(eratio)
+            axes[2].plot(year, eratio_norm, color=color, linewidth=LINE_WIDTH)
+            axes[2].set_title("Export Ratio anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+            axes[2].set_ylabel("Dimensionless")
+            axes[2].set_xlabel("Year", fontweight='bold')
+            axes[2].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+
+        if exp1000 is not None and exp is not None:
+            teff = exp1000 / exp
+            teff_norm = GlobalSummaryNormalizedPlotter._normalize_series(teff)
+            axes[3].plot(year, teff_norm, color=color, linewidth=LINE_WIDTH)
+            axes[3].set_title("Transfer Efficiency anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+            axes[3].set_ylabel("Dimensionless")
+            axes[3].set_xlabel("Year", fontweight='bold')
+            axes[3].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+
+
 class MultiModelPlotter:
     """Main class coordinating all plot generation"""
 
@@ -1312,6 +1391,7 @@ class MultiModelPlotter:
             PCO2Plotter(self.models, self.save_dir),
             PhysicsPlotter(self.models, self.save_dir),
             DerivedSummaryPlotter(self.models, self.save_dir),
+            DerivedSummaryNormalizedPlotter(self.models, self.save_dir),
         ]
 
         for plotter in plotters:
