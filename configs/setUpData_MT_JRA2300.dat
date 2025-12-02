@@ -25,8 +25,8 @@
 # -------------------------
 
 # ========== RUN COMPONENTS ==========
-# Model version to run (options: TOM5, TOM10, TOM12, dev)
-model:MYTEST
+# Model version to run (options: STD, DEV, CR, MYTEST, TESTSI)
+model:STD
 
 # Starting year of the run
 # - forcing data starts in 1948 (NCEP) and 1940 (ERA5) so data before then will be a looping year of 1990 for spin-up purposes
@@ -155,8 +155,9 @@ mask_itf.nc:/gpfs/data/greenocean/software/resources/ModelResources/Masks/mask_i
 xios_server.exe:/gpfs/software/ada/xios/1.0/gcc-openmpi/xios_server.exe 
 
 # Executeable for the model (compiled, to use your own just replace this path with the location)
-opa_DEV:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/BLD/bin/nemo.exe 
-opa_MYTEST:/gpfs/home/vhf24tbu/scratch/KAR12/CONFIG/ORCA2_LIM_PlankTOM/BLD/bin/nemo.exe
+opa_CR:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/BLD/bin/nemo.exe
+opa_STD:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM12-MAIN/CONFIG/ORCA2_LIM_PlankTOM/BLD/bin/nemo.exe
+opa_DEV:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM12-DEV/CONFIG/ORCA2_LIM_PlankTOM/BLD/bin/nemo.exe
 
 # ----- NAMELISTS -----
 # The NAMELIST of variables that control the run (e.g. how the model starts, defined by the restart file?)
