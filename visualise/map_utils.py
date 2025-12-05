@@ -17,6 +17,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colorbar
 import cartopy.crs as ccrs
+from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple, Union
 
@@ -318,7 +319,8 @@ class OceanMapPlotter:
         nrows: int,
         ncols: int,
         projection: ccrs.Projection = ccrs.PlateCarree(),
-        figsize: Tuple[float, float] = (10, 4)
+        figsize: Tuple[float, float] = (10, 4),
+        show_ticks: bool = True
     ) -> Tuple[plt.Figure, np.ndarray]:
         """
         Create a grid of map subplots with consistent styling.
@@ -328,6 +330,7 @@ class OceanMapPlotter:
             ncols: Number of columns
             projection: Cartopy projection (default PlateCarree)
             figsize: Figure size in inches
+            show_ticks: Whether to add formatted lon/lat ticks
 
         Returns:
             Tuple of (figure, axes array)
@@ -348,8 +351,33 @@ class OceanMapPlotter:
         # Add coastlines to all axes
         for ax in axs.flat:
             ax.coastlines(resolution='110m')
+            if show_ticks:
+                self._format_geo_ticks(ax)
 
         return fig, axs
+
+    def _format_geo_ticks(
+        self,
+        ax: plt.Axes,
+        xticks: Optional[np.ndarray] = None,
+        yticks: Optional[np.ndarray] = None
+    ) -> None:
+        """
+        Add readable longitude/latitude ticks to a GeoAxes.
+
+        Args:
+            ax: Axis to format
+            xticks: Optional array of longitude tick locations
+            yticks: Optional array of latitude tick locations
+        """
+        xticks = xticks if xticks is not None else np.arange(-180, 181, 60)
+        yticks = yticks if yticks is not None else np.arange(-90, 91, 30)
+
+        ax.set_xticks(xticks, crs=ccrs.PlateCarree())
+        ax.set_yticks(yticks, crs=ccrs.PlateCarree())
+        ax.xaxis.set_major_formatter(LongitudeFormatter(zero_direction_label=True))
+        ax.yaxis.set_major_formatter(LatitudeFormatter())
+        ax.tick_params(labelsize=8)
 
     def plot_variable(
         self,
