@@ -44,10 +44,10 @@ def plot_pft_maps(
     pft_type: str,
     output_path: Path,
     cmap: str = 'turbo',
-    biomass_threshold: float = 2e-3
+    biomass_threshold: float = 4e-3
 ):
     """
-    Create multi-panel map of plankton functional types.
+    Create multi-panel map of plankton functional types using upper-ocean mean concentration.
 
     Matches style from OBio_state.ipynb cells 4-5.
 
@@ -58,8 +58,31 @@ def plot_pft_maps(
         pft_type: 'phyto' or 'zoo'
         output_path: Where to save the figure
         cmap: Colormap to use
-        biomass_threshold: Minimum total biomass (Pg C) to plot. Below this, panel is left empty (default: 2e-3 Pg C = 2 Tg C)
+        biomass_threshold: Minimum maximum concentration (µmol C L⁻¹) to plot.
     """
+    def upper_ocean_mean(data: xr.DataArray, max_depth: float = 200.0) -> xr.DataArray:
+        """Volume-weighted mean concentration over the top `max_depth` metres."""
+        # Identify depth dimension name used by the dataset
+        depth_dim = next((d for d in ['deptht', 'z', 'depth', 'nav_lev'] if d in data.dims), None)
+        if depth_dim is None:
+            return data
+
+        # Restrict to top max_depth
+        depth_coord = data.coords[depth_dim]
+        top_mask = depth_coord <= max_depth
+        data_top = data.where(top_mask, drop=True)
+
+        # Use volume weights if available, otherwise simple mean
+        if plotter.volume is not None and depth_dim in plotter.volume.dims:
+            volume_top = plotter.volume.where(top_mask, drop=True)
+            weighted_sum = (data_top * volume_top).sum(dim=depth_dim)
+            total_volume = volume_top.sum(dim=depth_dim)
+            mean_conc = xr.where(total_volume != 0, weighted_sum / total_volume, np.nan)
+        else:
+            mean_conc = data_top.mean(dim=depth_dim)
+
+        return mean_conc.squeeze()
+
     # Create 2x3 subplot grid
     fig, axs = plotter.create_subplot_grid(
         nrows=2, ncols=3,
@@ -71,21 +94,24 @@ def plot_pft_maps(
     for i, pft in enumerate(pft_list):
         ax = axs.flat[i]
 
-        # Use integrated variable for plotting (_PICINT, _FIXINT, etc.)
-        var_int = f'_{pft}INT'
-
-        if var_int not in ptrc_ds:
-            print(f"Warning: {var_int} not found in dataset")
-            ax.text(0.5, 0.5, f'{var_int}\nNot Available',
+        # Use concentration variable and convert to mean upper-ocean concentration
+        if pft not in ptrc_ds:
+            print(f"Warning: {pft} not found in dataset")
+            ax.text(0.5, 0.5, f'{pft}\nNot Available',
                    ha='center', va='center', transform=ax.transAxes)
             continue
 
-        # Get integrated biomass (already time-averaged and vertically integrated)
-        data = ptrc_ds[var_int]
+        data = ptrc_ds[pft]
 
         # If time dimension still exists, average it
         if 'time_counter' in data.dims:
             data = data.mean(dim='time_counter')
+
+        # Mean concentration over upper 200 m (volume-weighted if volume is available)
+        data = upper_ocean_mean(data, max_depth=200.0)
+
+        # Convert from model units to µmol C L⁻¹ (consistent with transect plots)
+        data = data * 1e6
 
         # Remove any singleton dimensions
         data = data.squeeze()
@@ -93,17 +119,11 @@ def plot_pft_maps(
         # Apply land mask
         data = plotter.apply_mask(data)
 
-        # Check if biomass is negligible (sensitivity experiment with near-zero values)
-        # Calculate sum to check for near-zero values
-        spatial_dims = [d for d in data.dims if d in ['x', 'y', 'i', 'j', 'nav_x', 'nav_y']]
-        if spatial_dims:
-            total_biomass = data.sum(dim=spatial_dims) * 1e-3
-        else:
-            total_biomass = data.sum() * 1e-3
-
-        if total_biomass.values < biomass_threshold:
-            # Leave panel empty with just the title showing negligible biomass
-            ax.text(0.5, 0.5, f'Negligible biomass\n({total_biomass.values:.2e} Pg C)',
+        # Check if concentration is negligible (sensitivity experiment with near-zero values)
+        max_concentration = float(np.nanmax(data.values))
+        if max_concentration < biomass_threshold or np.isnan(max_concentration):
+            # Leave panel empty with just the title showing negligible concentration
+            ax.text(0.5, 0.5, f'Negligible concentration\n(max: {max_concentration:.2e} µmol C L⁻¹)',
                    ha='center', va='center', transform=ax.transAxes, fontsize=9, color='gray')
             ax.set_title(f'{pft}', fontsize=10)
             continue
@@ -129,7 +149,7 @@ def plot_pft_maps(
         fig=fig,
         im=im,
         axs=axs,
-        label='Tg C',
+        label='µmol C L⁻¹',
         orientation='horizontal',
         pad=0.075,
         fraction=0.05
