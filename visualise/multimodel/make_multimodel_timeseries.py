@@ -701,10 +701,8 @@ class PFTPlotter(PlotGenerator):
 
     def _setup_pft_axes(self, axes):
         setup_axes(axes)
-        for i, ax in enumerate(axes):
-            if i != 9:
-                ax.set_ylim(0, 0.5)
-        axes[9].set_ylim(bottom=0)
+        # Each PFT will have its own y-axis scale
+        # No hardcoded y-limits to allow individual scaling
 
     def _plot_model(self, model, axes, color):
         int_data = DataLoader.load_analyser_data(model, "int", "annual")
