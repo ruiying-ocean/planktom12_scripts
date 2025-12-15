@@ -8,7 +8,7 @@ eliminating code duplication in the original analyser.py
 
 import logging
 import numpy as np
-from typing import List, Tuple, Callable, Any
+from typing import List, Tuple, Callable, Any, Union
 from analyser_io import find_variable_in_files
 from analyser_functions import surfaceData, volumeData, integrateData, volumeDataAverage, levelData
 
@@ -17,12 +17,89 @@ log = logging.getLogger("Processor")
 
 # ---------- REGION MASK CACHE ----------
 
+class LazyRegionMaskCache:
+    """
+    Lazy region mask cache that computes masks on-demand and caches results.
+
+    This provides the same interface as the precomputed dictionary but only
+    computes masks when they are first accessed, significantly reducing startup
+    time when only a few regions are used.
+
+    Uses NumPy broadcasting for efficient 3D mask computation.
+    """
+
+    def __init__(self, landMask: np.ndarray, volMask: np.ndarray, regions: List):
+        """
+        Initialize the lazy cache.
+
+        Args:
+            landMask: 2D land mask array
+            volMask: 3D volume mask array
+            regions: List of region masks
+        """
+        self._landMask = landMask
+        self._volMask = volMask
+        self._regions = regions
+        self._cache = {}
+        self._access_count = 0
+
+    def __getitem__(self, key: str) -> np.ndarray:
+        """Get a mask, computing it lazily if not cached."""
+        if key not in self._cache:
+            self._cache[key] = self._compute_mask(key)
+            log.debug(f"Computed and cached mask: {key}")
+        self._access_count += 1
+        return self._cache[key]
+
+    def __contains__(self, key: str) -> bool:
+        """Check if a key could be valid (not whether it's cached)."""
+        parts = key.split('_')
+        if len(parts) != 2:
+            return False
+        mask_type, reg_str = parts
+        try:
+            reg = int(reg_str)
+            return mask_type in ('land', 'vol') and -1 <= reg < len(self._regions)
+        except ValueError:
+            return False
+
+    def _compute_mask(self, key: str) -> np.ndarray:
+        """Compute a single mask on demand."""
+        parts = key.split('_')
+        mask_type = parts[0]
+        reg = int(parts[1])
+
+        if mask_type == 'land':
+            if reg == -1:
+                return self._landMask.copy()
+            return self._landMask * self._regions[reg]
+
+        elif mask_type == 'vol':
+            if reg == -1:
+                return self._volMask.copy()
+            # Use NumPy broadcasting instead of loop: region[np.newaxis, :, :]
+            # This broadcasts the 2D region mask across all depth levels
+            return self._volMask * self._regions[reg][np.newaxis, :, :]
+
+        raise KeyError(f"Unknown mask type: {mask_type}")
+
+    def get_stats(self) -> dict:
+        """Get cache statistics."""
+        return {
+            'cached_masks': len(self._cache),
+            'total_accesses': self._access_count,
+            'possible_masks': (len(self._regions) + 1) * 2  # +1 for global, *2 for land/vol
+        }
+
+
 def precompute_region_masks(landMask: np.ndarray, volMask: np.ndarray, regions: List) -> dict:
     """
     Pre-compute all region mask combinations to avoid repeated calculations.
 
     This computes 2D land masks and 3D volume masks for all 54 regions once,
     then stores them in a dictionary for instant lookup during processing.
+
+    NOTE: For better performance with few regions, use LazyRegionMaskCache instead.
 
     Args:
         landMask: 2D land mask array
@@ -46,14 +123,36 @@ def precompute_region_masks(landMask: np.ndarray, volMask: np.ndarray, regions: 
             # Regional: apply region mask
             cache[f'land_{reg}'] = landMask * regions[reg]
 
-            # For 3D volume mask, broadcast region mask to all depth levels
-            region_vol = volMask.copy()
-            for z in range(region_vol.shape[0]):
-                region_vol[z, :, :] = region_vol[z, :, :] * regions[reg]
-            cache[f'vol_{reg}'] = region_vol
+            # Use NumPy broadcasting for 3D mask (faster than loop)
+            cache[f'vol_{reg}'] = volMask * regions[reg][np.newaxis, :, :]
 
     log.info(f"Pre-computed {len(cache)} region masks ({len(region_indices)} regions × 2 mask types)")
     return cache
+
+
+def create_region_mask_cache(
+    landMask: np.ndarray,
+    volMask: np.ndarray,
+    regions: List,
+    lazy: bool = True
+) -> Union[LazyRegionMaskCache, dict]:
+    """
+    Create a region mask cache.
+
+    Args:
+        landMask: 2D land mask array
+        volMask: 3D volume mask array
+        regions: List of region masks
+        lazy: If True, use lazy cache (recommended). If False, precompute all.
+
+    Returns:
+        LazyRegionMaskCache or dict depending on lazy parameter
+    """
+    if lazy:
+        log.info("Using lazy region mask cache (masks computed on demand)")
+        return LazyRegionMaskCache(landMask, volMask, regions)
+    else:
+        return precompute_region_masks(landMask, volMask, regions)
 
 
 # ---------- UNIFIED PROCESSING ----------

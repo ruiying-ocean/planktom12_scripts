@@ -16,13 +16,17 @@ from netCDF4 import Dataset
 
 # Import new modular components
 from analyser_config import parse_config_file
-from analyser_io import load_netcdf_files, OutputWriter
-from analyser_processor import process_variables, process_average_variables_special, precompute_region_masks
+from analyser_io import load_netcdf_files, load_netcdf_files_xarray, OutputWriter
+from analyser_processor import (
+    process_variables, process_average_variables_special,
+    precompute_region_masks, create_region_mask_cache
+)
 from analyser_functions import surfaceData, volumeData, integrateData, volumeDataAverage, observationData, levelData
 from analyser_functions import bloom, trophic, regrid
 from analyser_observations import observationDatasets
 from dateutil import relativedelta
 import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ---------- 1 SETUP AND INITIALIZATION ----------
 
@@ -248,9 +252,12 @@ for region in regions:
 
 log.info(f"Data read from: {config.region_mask}")
 
-# ---------- 6 PRE-COMPUTE REGION MASKS ----------
-log.info("Pre-computing region masks for all regions...")
-region_mask_cache = precompute_region_masks(landMask, volMask, regions)
+# ---------- 6 CREATE REGION MASK CACHE ----------
+# Use lazy=True for on-demand computation (faster startup, less memory)
+# Use lazy=False to pre-compute all masks upfront (original behavior)
+USE_LAZY_MASKS = True
+log.info(f"Creating region mask cache (lazy={USE_LAZY_MASKS})...")
+region_mask_cache = create_region_mask_cache(landMask, volMask, regions, lazy=USE_LAZY_MASKS)
 
 # ---------- 7 LOAD MODEL OUTPUT NETCDF FILES ----------
 log.info("Loading model output files...")
@@ -259,49 +266,85 @@ nc_run_ids, nc_runFileNames, years, failed_files = load_netcdf_files(year_from, 
 # ---------- 8 PROCESS VARIABLES (USING UNIFIED PROCESSOR) ----------
 log.info("Processing variables...")
 
-# Process surface variables
-log.info("Processing surface variables...")
-process_variables(
-    varSurface, nc_run_ids, nc_runFileNames,
-    list_of_units, regions, landMask, volMask,
-    mask_area, mask_vol, missing_val,
-    surfaceData, 'surface', region_mask_cache
-)
+# Configuration: Enable parallel processing for variable types
+# Set to True to process different variable types concurrently
+USE_PARALLEL_PROCESSING = True
+MAX_WORKERS = 4  # Number of parallel threads
 
-# Process level variables
-log.info("Processing level variables...")
-process_variables(
-    varLevel, nc_run_ids, nc_runFileNames,
-    list_of_units, regions, landMask, volMask,
-    mask_area, mask_vol, missing_val,
-    levelData, 'level', region_mask_cache
-)
+def _process_surface():
+    """Process surface variables."""
+    log.info("Processing surface variables...")
+    process_variables(
+        varSurface, nc_run_ids, nc_runFileNames,
+        list_of_units, regions, landMask, volMask,
+        mask_area, mask_vol, missing_val,
+        surfaceData, 'surface', region_mask_cache
+    )
+    return 'surface'
 
-# Process volume variables
-log.info("Processing volume variables...")
-process_variables(
-    varVolume, nc_run_ids, nc_runFileNames,
-    list_of_units, regions, landMask, volMask,
-    mask_area, mask_vol, missing_val,
-    volumeData, 'volume', region_mask_cache
-)
+def _process_level():
+    """Process level variables."""
+    log.info("Processing level variables...")
+    process_variables(
+        varLevel, nc_run_ids, nc_runFileNames,
+        list_of_units, regions, landMask, volMask,
+        mask_area, mask_vol, missing_val,
+        levelData, 'level', region_mask_cache
+    )
+    return 'level'
 
-# Process integration variables
-log.info("Processing integration variables...")
-process_variables(
-    varInt, nc_run_ids, nc_runFileNames,
-    list_of_units, regions, landMask, volMask,
-    mask_area, mask_vol, missing_val,
-    integrateData, 'integration', region_mask_cache
-)
+def _process_volume():
+    """Process volume variables."""
+    log.info("Processing volume variables...")
+    process_variables(
+        varVolume, nc_run_ids, nc_runFileNames,
+        list_of_units, regions, landMask, volMask,
+        mask_area, mask_vol, missing_val,
+        volumeData, 'volume', region_mask_cache
+    )
+    return 'volume'
 
-# Process average variables (special handling for multi-variable sums)
-log.info("Processing average variables...")
-process_average_variables_special(
-    varTotalAve, nc_run_ids, nc_runFileNames,
-    list_of_units, regions, landMask, volMask,
-    mask_vol, missing_val, region_mask_cache
-)
+def _process_integration():
+    """Process integration variables."""
+    log.info("Processing integration variables...")
+    process_variables(
+        varInt, nc_run_ids, nc_runFileNames,
+        list_of_units, regions, landMask, volMask,
+        mask_area, mask_vol, missing_val,
+        integrateData, 'integration', region_mask_cache
+    )
+    return 'integration'
+
+def _process_average():
+    """Process average variables (special handling for multi-variable sums)."""
+    log.info("Processing average variables...")
+    process_average_variables_special(
+        varTotalAve, nc_run_ids, nc_runFileNames,
+        list_of_units, regions, landMask, volMask,
+        mask_vol, missing_val, region_mask_cache
+    )
+    return 'average'
+
+if USE_PARALLEL_PROCESSING:
+    log.info(f"Using parallel processing with {MAX_WORKERS} workers...")
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = [
+            executor.submit(_process_surface),
+            executor.submit(_process_level),
+            executor.submit(_process_volume),
+            executor.submit(_process_integration),
+            executor.submit(_process_average),
+        ]
+        for future in as_completed(futures):
+            var_type = future.result()
+            log.info(f"Completed processing: {var_type}")
+else:
+    # Sequential processing (original behavior)
+    _process_surface()
+    _process_level()
+    _process_volume()
+    _process_integration()
+    _process_average()
 
 # NOTE: Observation and property processing retained from original code
 # These sections are kept as-is for now since they have unique logic

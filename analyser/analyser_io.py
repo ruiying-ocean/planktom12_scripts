@@ -3,7 +3,7 @@
 I/O module for analyser system.
 
 This module handles:
-- NetCDF file loading and searching
+- NetCDF file loading and searching (with xarray/Dask for lazy loading)
 - Output file writing with unified formatting
 """
 
@@ -12,6 +12,13 @@ from pathlib import Path
 from netCDF4 import Dataset
 import numpy as np
 from typing import List, Tuple, Dict, Any, Union, Optional
+
+# Optional xarray/dask for lazy loading
+try:
+    import xarray as xr
+    HAS_XARRAY = True
+except ImportError:
+    HAS_XARRAY = False
 
 log = logging.getLogger("IO")
 
@@ -74,6 +81,118 @@ def load_netcdf_files(year_from: int, year_to: int) -> Tuple[List, List, List, L
             log.info(f"Run data for year {year}: {len(nc_avail)} files loaded")
 
     return nc_run_ids, nc_runFileNames, years, failed_files
+
+
+def load_netcdf_files_xarray(
+    year_from: int,
+    year_to: int,
+    chunks: Dict[str, int] = None
+) -> Tuple[List, List, List, List]:
+    """
+    Load NetCDF files using xarray with optional Dask chunking for lazy loading.
+
+    This provides memory-efficient loading by only reading data when needed.
+
+    Args:
+        year_from: Starting year
+        year_to: Ending year
+        chunks: Dask chunking specification, e.g., {'time_counter': 1, 'deptht': 10}
+                If None, uses default chunking. If False, disables chunking.
+
+    Returns:
+        Tuple of (xr_datasets, filenames, years, failed_files)
+    """
+    if not HAS_XARRAY:
+        log.warning("xarray not available, falling back to netCDF4 loading")
+        return load_netcdf_files(year_from, year_to)
+
+    # Default chunking for typical ORCA2 data
+    if chunks is None:
+        chunks = {'time_counter': 1, 'deptht': 10}
+
+    xr_datasets = []
+    xr_filenames = []
+    years = []
+    failed_files = []
+
+    for year in range(year_from, year_to + 1):
+        file_patterns = [
+            f"ORCA2_1m_{year}0101_{year}1231_grid_T.nc",
+            f"ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc",
+            f"ORCA2_1m_{year}0101_{year}1231_diad_T.nc",
+            f"ORCA2_1m_{year}0101_{year}1231_dia2d_T.nc",
+            f"ORCA2_1m_{year}0101_{year}1231_dia3d_T.nc"
+        ]
+
+        ds_avail = []
+        names_avail = []
+
+        for pattern in file_patterns:
+            files = list(Path('.').glob(pattern))
+            if len(files) > 0:
+                file_path = files[0]
+                try:
+                    # Use xarray with chunking for lazy loading
+                    ds = xr.open_dataset(
+                        str(file_path),
+                        chunks=chunks if chunks else None
+                    )
+                    ds_avail.append(ds)
+                    names_avail.append(str(file_path))
+                    log.info(f"Loaded (xarray): {file_path}")
+                except Exception as e:
+                    error_msg = f"{type(e).__name__}: {str(e)}"
+                    failed_files.append((str(file_path), error_msg))
+                    log.warning(f"SKIPPED corrupted file: {file_path}")
+                    log.warning(f"  Error: {error_msg}")
+
+        if len(ds_avail) > 0:
+            xr_datasets.append(ds_avail)
+            xr_filenames.append(names_avail)
+            years.append(year)
+            log.info(f"Run data for year {year}: {len(ds_avail)} files loaded (xarray)")
+
+    return xr_datasets, xr_filenames, years, failed_files
+
+
+def find_variable_in_files_xarray(
+    xr_datasets: List,
+    xr_filenames: List,
+    var_name: str,
+    compute: bool = True
+) -> Tuple[bool, Any, Any, Any, str]:
+    """
+    Search for a variable across multiple xarray datasets.
+
+    Args:
+        xr_datasets: List of xarray Dataset objects to search
+        xr_filenames: List of corresponding filenames
+        var_name: Variable name to find
+        compute: If True, compute Dask array to NumPy. If False, return lazy array.
+
+    Returns:
+        Tuple of (found, data, lats, lons, filename)
+    """
+    for i, ds in enumerate(xr_datasets):
+        try:
+            if var_name in ds:
+                data = ds[var_name]
+                lats = ds['nav_lat']
+                lons = ds['nav_lon']
+
+                # Convert to numpy if requested (for compatibility with existing code)
+                if compute:
+                    data = data.values
+                    lats = lats.values
+                    lons = lons.values
+
+                log.info(f"{var_name} found in {xr_filenames[i]}")
+                return True, data, lats, lons, xr_filenames[i]
+        except Exception as e:
+            log.warning(f"Error reading variable '{var_name}' from {xr_filenames[i]}: {type(e).__name__}: {str(e)}")
+            continue
+
+    return False, None, None, None, None
 
 
 def find_variable_in_files(nc_files: List, nc_filenames: List, var_name: str) -> Tuple[bool, Any, Any, Any, str]:

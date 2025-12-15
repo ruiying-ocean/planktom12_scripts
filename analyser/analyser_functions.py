@@ -90,45 +90,44 @@ def subDomain(lonLim, latLim, in_data):
 
 # ---------- 3 SUB DOMAIN ORCA DATA ----------
 def subDomainORCA(lonLim, latLim, var_lons, var_lats, in_data, landMask, volMask, missingVal):
+	"""
+	Apply spatial domain masking to ORCA grid data.
 
+	Fully vectorized implementation - no Python loops over time/depth.
+	"""
 	lonStart = int(lonLim[0])
 	lonEnd = int(lonLim[1])
 	latStart = int(latLim[0])
 	latEnd = int(latLim[1])
 
-	if len(in_data.shape) == 3:
-		mask = np.zeros(in_data[0,:,:].shape) + 1
-	if len(in_data.shape) == 4:
-		mask = np.zeros(in_data[0,0,:,:].shape) + 1
+	# Create 2D mask for lat/lon bounds (vectorized)
+	mask_2d = (
+		(var_lons >= lonStart) &
+		(var_lons <= lonEnd) &
+		(var_lats >= latStart) &
+		(var_lats <= latEnd)
+	)
 
-	mask[var_lons < lonStart] = missingVal
-	mask[var_lons > lonEnd] = missingVal
-	mask[var_lats < latStart] = missingVal
-	mask[var_lats > latEnd] = missingVal
-    
-	ind_mask = np.where( mask == missingVal )
-	ind_land = np.isnan(landMask)
-	ind_vol = np.isnan(volMask)
-	log.debug(f"ind_vol shape: {ind_vol.shape}, in_data shape: {in_data.shape}")
+	# Combine with land mask
+	invalid_2d = ~mask_2d | np.isnan(landMask)
+
+	log.debug(f"volMask shape: {volMask.shape}, in_data shape: {in_data.shape}")
 
 	if len(in_data.shape) == 3:
-		for t in range(0,in_data.shape[0]):
-			temparr = in_data[t,:,:]
-			temparr[ ind_mask ] = missingVal
-			temparr[ ind_land ] = missingVal
-			in_data[t,:,:] = temparr
+		# 3D data (time, y, x): broadcast 2D mask across time dimension
+		# Using advanced indexing with broadcasting
+		in_data[:, invalid_2d] = missingVal
 
-	if len(in_data.shape) == 4:
-		for t in range(0,in_data.shape[0]):
-			for z in range(0,in_data.shape[1]):
-				temparr = in_data[t,z,:,:]
-				temparr[ ind_mask ] = missingVal
-				in_data[t,z,:,:] = temparr
+	elif len(in_data.shape) == 4:
+		# 4D data (time, depth, y, x): broadcast 2D mask across time and depth
+		# Apply 2D spatial mask to all time and depth levels
+		in_data[:, :, invalid_2d] = missingVal
 
-			temparr = in_data[t,:,:,:]
-			if ind_vol.shape[0] == in_data.shape[1]:
-				temparr[ ind_vol ] = missingVal
-			in_data[t,:,:,:] = temparr
+		# Apply 3D volume mask if dimensions match
+		if volMask.shape[0] == in_data.shape[1]:
+			ind_vol = np.isnan(volMask)
+			# Broadcast vol mask across time dimension
+			in_data[:, ind_vol] = missingVal
 
 	return in_data
 
