@@ -315,6 +315,72 @@ class OutputWriter:
                 f.write("\n")
 
     @staticmethod
+    def write_annual_csv_streaming(
+        filename: Union[str, Path],
+        variables: List,
+        year: int,
+        include_units: bool = False,
+        include_keys: bool = False
+    ):
+        """
+        Write a single year's results to CSV (streaming/append mode).
+
+        This method writes one year at a time for memory-efficient processing.
+        Headers are written only if the file doesn't exist yet.
+
+        Args:
+            filename: Output filename
+            variables: List of variable configuration objects
+            year: The year to write
+            include_units: Whether to include units in column names
+            include_keys: Whether to include keys in column names
+        """
+        filename = Path(filename)
+        write_headers = not filename.exists()
+
+        with filename.open('a') as f:
+            if write_headers:
+                # Write single header row with variable names
+                f.write("year,")
+                headers = []
+                for var in variables:
+                    if hasattr(var, 'column_name') and var.column_name:
+                        col_name = var.column_name
+                    elif hasattr(var, 'name'):
+                        name = var.name
+                        col_name = name
+                        if include_units and var.units:
+                            col_name += f" ({var.units})"
+                        if include_keys and var.key:
+                            col_name += f" [{var.key}]"
+                    else:
+                        col_name = var[0] if isinstance(var, (list, tuple)) else 'unknown'
+                    headers.append(col_name)
+                f.write(",".join(headers))
+                f.write("\n")
+
+            # Write this year's data (results[0] since we only processed one year)
+            f.write(f"{year},")
+            values = []
+            for var in variables:
+                if hasattr(var, 'results'):
+                    if len(var.results) > 0 and len(var.results[0]) > 0:
+                        value = var.results[0][0]  # First (only) year's result
+                    else:
+                        log.warning(f"Missing data for year {year} in variable {getattr(var, 'name', 'unknown')}")
+                        value = np.nan
+                else:
+                    if len(var) > 0 and len(var[-1]) > 0 and len(var[-1][0]) > 0:
+                        value = var[-1][0][0]
+                    else:
+                        var_name = var[0] if isinstance(var, (list, tuple)) and len(var) > 0 else 'unknown'
+                        log.warning(f"Missing data for year {year} in variable {var_name}")
+                        value = np.nan
+                values.append(f"{value:.4e}")
+            f.write(",".join(values))
+            f.write("\n")
+
+    @staticmethod
     def write_annual_file(
         filename: str,
         variables: List,
