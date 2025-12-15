@@ -193,7 +193,7 @@ def process_variables(
         region_mask_cache: Pre-computed region masks (recommended for performance)
     """
     null_annual = -1
-    null_monthly = np.array([np.zeros((6)) - 1 for r in range(12)])
+    null_monthly = np.full((12, 6), -1.0)
 
     for var in variables:
         for n in range(len(nc_run_ids)):
@@ -372,8 +372,7 @@ def _prepare_region_masks(
 
         # Apply region mask to volume mask for 3D processors
         if processor_type in ['level', 'volume', 'integration', 'average']:
-            for z in range(region_vol_mask.shape[0]):
-                region_vol_mask[z, :, :] = region_vol_mask[z, :, :] * regions[reg]
+            region_vol_mask *= regions[reg][np.newaxis, :, :]
 
     return region_land_mask, region_vol_mask
 
@@ -455,7 +454,7 @@ def process_average_variables_special(
     specified with '+' separator (e.g., "CHL1+CHL2+CHL3").
     """
     null_annual = -1
-    null_monthly = np.array([np.zeros((6)) - 1 for r in range(12)])
+    null_monthly = np.full((12, 6), -1.0)
 
     for var in variables:
         for n in range(len(nc_run_ids)):
@@ -496,10 +495,10 @@ def process_average_variables_special(
                 if found_var:
                     # Handle 3D data - expand to 4D
                     if len(data.shape) == 3:
-                        new_data = np.zeros((data.shape[0], volMask.shape[0], data.shape[1], data.shape[2]))
-                        for z in range(volMask.shape[0]):
-                            new_data[:, z, :, :] = data
-                        data = new_data
+                        data = np.broadcast_to(
+                            data[:, np.newaxis, :, :],
+                            (data.shape[0], volMask.shape[0], data.shape[1], data.shape[2])
+                        ).copy()
 
                     if len(data.shape) == 4:
                         all_data.append(data)
@@ -529,12 +528,11 @@ def process_average_variables_special(
             else:
                 region_vol_mask = np.copy(volMask)
                 if reg != -1:
-                    for z in range(region_vol_mask.shape[0]):
-                        region_vol_mask[z, :, :] = region_vol_mask[z, :, :] * regions[reg]
+                    region_vol_mask *= regions[reg][np.newaxis, :, :]
 
             # Process each variable and sum results
             output_all_total = 0
-            monthly_all_output = np.array([np.zeros((6)) for r in range(12)])
+            monthly_all_output = np.zeros((12, 6))
 
             for data in all_data:
                 output = volumeDataAverage(
@@ -543,10 +541,7 @@ def process_average_variables_special(
                     missingVal, lon_limit, lat_limit
                 )
                 output_all_total = output_all_total + output[0]
-                for m in range(12):
-                    for f in range(6):
-                        if len(output[1]) > m:
-                            monthly_all_output[m][f] = monthly_all_output[m][f] + output[1][m][f]
+                monthly_all_output += np.array(output[1])
 
             output_total = (output_all_total, monthly_all_output)
 

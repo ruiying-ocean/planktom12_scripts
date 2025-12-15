@@ -149,11 +149,8 @@ def surfaceData(var, var_lons, var_lats, units, area, landMask, volMask, missing
 	# Vectorized monthly statistics computation
 	varScaled = varNan * units
 	monthly_sums = np.nansum(varNan * area * units / tDim, axis=(1, 2))
-	monthly_min = np.nanpercentile(varScaled, 5, axis=(1, 2))
-	monthly_first = np.nanpercentile(varScaled, 25, axis=(1, 2))
-	monthly_median = np.nanmedian(varScaled, axis=(1, 2))
-	monthly_third = np.nanpercentile(varScaled, 75, axis=(1, 2))
-	monthly_max = np.nanpercentile(varScaled, 95, axis=(1, 2))
+	percentiles = np.nanquantile(varScaled, [0.05, 0.25, 0.5, 0.75, 0.95], axis=(1, 2))
+	monthly_min, monthly_first, monthly_median, monthly_third, monthly_max = percentiles
 
 	# Build monthly list from vectorized arrays
 	monthly = [[monthly_sums[t], monthly_min[t], monthly_first[t], monthly_median[t], monthly_third[t], monthly_max[t]]
@@ -179,11 +176,8 @@ def volumeData(var, var_lons, var_lats, units, vol, landMask, volMask, missingVa
 	# Vectorized monthly statistics computation
 	varScaled = varNan * units
 	monthly_sums = np.nansum(varNan * vol * units / tDim, axis=(1, 2, 3))
-	monthly_min = np.nanpercentile(varScaled, 5, axis=(1, 2, 3))
-	monthly_first = np.nanpercentile(varScaled, 25, axis=(1, 2, 3))
-	monthly_median = np.nanmedian(varScaled, axis=(1, 2, 3))
-	monthly_third = np.nanpercentile(varScaled, 75, axis=(1, 2, 3))
-	monthly_max = np.nanpercentile(varScaled, 95, axis=(1, 2, 3))
+	percentiles = np.nanquantile(varScaled, [0.05, 0.25, 0.5, 0.75, 0.95], axis=(1, 2, 3))
+	monthly_min, monthly_first, monthly_median, monthly_third, monthly_max = percentiles
 
 	# Build monthly list from vectorized arrays
 	monthly = [[monthly_sums[t], monthly_min[t], monthly_first[t], monthly_median[t], monthly_third[t], monthly_max[t]]
@@ -209,11 +203,8 @@ def levelData(var, var_lons, var_lats, units, area, landMask, volMask, missingVa
 	# Vectorized monthly statistics computation
 	varScaled = varNan[:, level, :, :] * units
 	monthly_sums = np.nansum(varNan[:, level, :, :] * area * units / tDim, axis=(1, 2))
-	monthly_min = np.nanpercentile(varScaled, 5, axis=(1, 2))
-	monthly_first = np.nanpercentile(varScaled, 25, axis=(1, 2))
-	monthly_median = np.nanmedian(varScaled, axis=(1, 2))
-	monthly_third = np.nanpercentile(varScaled, 75, axis=(1, 2))
-	monthly_max = np.nanpercentile(varScaled, 95, axis=(1, 2))
+	percentiles = np.nanquantile(varScaled, [0.05, 0.25, 0.5, 0.75, 0.95], axis=(1, 2))
+	monthly_min, monthly_first, monthly_median, monthly_third, monthly_max = percentiles
 
 	# Build monthly list from vectorized arrays
 	monthly = [[monthly_sums[t], monthly_min[t], monthly_first[t], monthly_median[t], monthly_third[t], monthly_max[t]]
@@ -239,11 +230,8 @@ def integrateData(var, var_lons, var_lats, depthFrom, depthTo, units, vol, landM
 	# Vectorized monthly statistics computation
 	varScaled = varNan[:, depthFrom:depthTo+1, :, :] * units
 	monthly_sums = np.nansum(varNan[:, depthFrom:depthTo+1, :, :] * vol[depthFrom:depthTo+1, :, :] * units / tDim, axis=(1, 2, 3))
-	monthly_min = np.nanpercentile(varScaled, 5, axis=(1, 2, 3))
-	monthly_first = np.nanpercentile(varScaled, 25, axis=(1, 2, 3))
-	monthly_median = np.nanmedian(varScaled, axis=(1, 2, 3))
-	monthly_third = np.nanpercentile(varScaled, 75, axis=(1, 2, 3))
-	monthly_max = np.nanpercentile(varScaled, 95, axis=(1, 2, 3))
+	percentiles = np.nanquantile(varScaled, [0.05, 0.25, 0.5, 0.75, 0.95], axis=(1, 2, 3))
+	monthly_min, monthly_first, monthly_median, monthly_third, monthly_max = percentiles
 
 	# Build monthly list from vectorized arrays
 	monthly = [[monthly_sums[t], monthly_min[t], monthly_first[t], monthly_median[t], monthly_third[t], monthly_max[t]]
@@ -278,11 +266,8 @@ def volumeDataAverage(var, var_lons, var_lats, depthFrom, depthTo, units, vol, l
 	# Vectorized monthly statistics computation
 	varScaled = varNan[:, depthFrom:depthTo+1, :, :] * units
 	monthly_sums = np.nansum(varNan[:, depthFrom:depthTo+1, :, :] * vol_masked[depthFrom:depthTo+1, :, :] / volNorm * units, axis=(1, 2, 3))
-	monthly_min = np.nanpercentile(varScaled, 5, axis=(1, 2, 3))
-	monthly_first = np.nanpercentile(varScaled, 25, axis=(1, 2, 3))
-	monthly_median = np.nanmedian(varScaled, axis=(1, 2, 3))
-	monthly_third = np.nanpercentile(varScaled, 75, axis=(1, 2, 3))
-	monthly_max = np.nanpercentile(varScaled, 95, axis=(1, 2, 3))
+	percentiles = np.nanquantile(varScaled, [0.05, 0.25, 0.5, 0.75, 0.95], axis=(1, 2, 3))
+	monthly_min, monthly_first, monthly_median, monthly_third, monthly_max = percentiles
 
 	# Build monthly list from vectorized arrays
 	monthly = [[monthly_sums[t], monthly_min[t], monthly_first[t], monthly_median[t], monthly_third[t], monthly_max[t]]
