@@ -256,28 +256,17 @@ for year in range(year_from, year_to + 1):
         log.warning(f"No data files found for year {year}, skipping...")
         continue
 
-    # 2. Clear previous results
+    # 2. Clear previous results (use .clear() to preserve references)
     for var in config.surface_vars:
-        var.results = []
+        var.results.clear()
     for var in config.level_vars:
-        var.results = []
+        var.results.clear()
     for var in config.volume_vars:
-        var.results = []
+        var.results.clear()
     for var in config.integration_vars:
-        var.results = []
+        var.results.clear()
     for var in config.average_vars:
-        var.results = []
-
-    for var in varSurface:
-        var[-1] = []
-    for var in varLevel:
-        var[-1] = []
-    for var in varVolume:
-        var[-1] = []
-    for var in varInt:
-        var[-1] = []
-    for var in varTotalAve:
-        var[-1] = []
+        var.results.clear()
 
     # 3. Process all variable types for this year
     log.info("Processing surface variables...")
