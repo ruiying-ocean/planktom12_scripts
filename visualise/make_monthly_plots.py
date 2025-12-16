@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -39,19 +40,22 @@ def makeSummaryFromBreakdowns(model_id, modBaseDir):
 	pathlib.Path(saveDir).mkdir(parents=True, exist_ok=True)
     
 	try:
-		### Surface monthly - try both analyser and breakdown naming
+		### Surface monthly - try analyser first (CSV then DAT), then breakdown
 		sur_monthly_path = None
 		for prefix in ['analyser', 'breakdown']:
-			path = f'{modBaseDir}/{model_id}/{prefix}.sur.monthly.dat'
-			if os.path.exists(path):
-				sur_monthly_path = path
+			for ext in ['csv', 'dat']:
+				path = f'{modBaseDir}/{model_id}/{prefix}.sur.monthly.{ext}'
+				if os.path.exists(path):
+					sur_monthly_path = path
+					break
+			if sur_monthly_path:
 				break
 
 		if sur_monthly_path is None:
 			raise FileNotFoundError("No surface monthly file found")
 
 		w = read_analyser_monthly(sur_monthly_path)
-		print('Read surface monthly')
+		print(f'Read surface monthly from {sur_monthly_path}')
 
 		mnth = w.month[-12:].to_numpy().astype(int)
 		Cflx_total = w.Cflx[-12:].to_numpy().astype(float)
@@ -61,12 +65,15 @@ def makeSummaryFromBreakdowns(model_id, modBaseDir):
 		Cflx_reg4 = w['Cflx.4'][-12:].to_numpy().astype(float)
 		Cflx_reg5 = w['Cflx.5'][-12:].to_numpy().astype(float)
 
-		### Average monthly - try both analyser and breakdown naming
+		### Average monthly - try analyser first (CSV then DAT), then breakdown
 		ave_monthly_path = None
 		for prefix in ['analyser', 'breakdown']:
-			path = f'{modBaseDir}/{model_id}/{prefix}.ave.monthly.dat'
-			if os.path.exists(path):
-				ave_monthly_path = path
+			for ext in ['csv', 'dat']:
+				path = f'{modBaseDir}/{model_id}/{prefix}.ave.monthly.{ext}'
+				if os.path.exists(path):
+					ave_monthly_path = path
+					break
+			if ave_monthly_path:
 				break
 
 		if ave_monthly_path is None:

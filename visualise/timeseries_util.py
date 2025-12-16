@@ -198,31 +198,27 @@ class DataFileLoader:
         Returns:
             DataFrame with the data, or None if file not found
         """
-        # Try multiple file paths for backwards compatibility
-        csv_paths = [
-            base_dir / model_name / f"analyser.{file_type}.{frequency}.csv",  # New naming
-            base_dir / model_name / f"breakdown.{file_type}.{frequency}.csv"  # Legacy naming
+        # Try analyser files first (higher priority), then breakdown files
+        # Within each, try CSV format before DAT format
+        analyser_paths = [
+            (base_dir / model_name / f"analyser.{file_type}.{frequency}.csv", "csv"),
+            (base_dir / model_name / f"analyser.{file_type}.{frequency}.dat", "dat"),
         ]
-        dat_paths = [
-            base_dir / model_name / f"analyser.{file_type}.{frequency}.dat",  # New naming
-            base_dir / model_name / f"breakdown.{file_type}.{frequency}.dat"  # Legacy naming
+        breakdown_paths = [
+            (base_dir / model_name / f"breakdown.{file_type}.{frequency}.csv", "csv"),
+            (base_dir / model_name / f"breakdown.{file_type}.{frequency}.dat", "dat"),
         ]
 
-        # Try CSV format first (both new and legacy names)
-        for csv_path in csv_paths:
+        # Try all analyser files first, then breakdown files
+        for path, fmt in analyser_paths + breakdown_paths:
             try:
-                df = pd.read_csv(csv_path)
-                return df
-            except FileNotFoundError:
-                continue
-
-        # Fall back to TSV format (both new and legacy names)
-        for dat_path in dat_paths:
-            try:
-                # Legacy TSV format - 3 header rows, tab-separated
-                # Row 0: variable names, Row 1: units, Row 2: keys
-                # Use header=0 to get variable names, skip rows 1 and 2
-                df = pd.read_csv(dat_path, sep="\t", header=0, skiprows=[1, 2])
+                if fmt == "csv":
+                    df = pd.read_csv(path)
+                else:
+                    # Legacy TSV format - 3 header rows, tab-separated
+                    # Row 0: variable names, Row 1: units, Row 2: keys
+                    # Use header=0 to get variable names, skip rows 1 and 2
+                    df = pd.read_csv(path, sep="\t", header=0, skiprows=[1, 2])
                 return df
             except FileNotFoundError:
                 continue
