@@ -316,10 +316,10 @@ class FigureCreator:
         subplot_height = self.config['layout']['subplot_height']
 
         oc_configs = [
-            ("POC", "Particulate Organic Carbon", "PgC", None),
-            ("DOC", "Dissolved Organic Carbon", "PgC", None),
-            ("GOC", "Gelatinous Organic Carbon", "PgC", None),
-            ("HOC", "Holozoic Organic Carbon", "PgC", None),
+            ("POC", "POC", "PgC", None),
+            ("DOC", "DOC", "PgC", None),
+            ("GOC", "GOC", "PgC", None),
+            ("HOC", "HOC", "PgC", None),
         ]
 
         fig, axes = plt.subplots(
