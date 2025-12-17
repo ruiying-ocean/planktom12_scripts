@@ -78,6 +78,11 @@ class ModelDataLoader:
         int_data["ZOO"] = sum(int_data[col] for col in ["BAC", "GEL", "CRU", "MES", "PRO", "PTE"])
         int_data["TOT"] = int_data["PHY"] + int_data["ZOO"]
         data.update(int_data)
+
+        # Organic carbon pools (POC, DOC, GOC, HOC)
+        oc_cols = ["POC", "DOC", "GOC", "HOC"]
+        oc_data = self._extract_arrays(int_df, oc_cols)
+        data.update(oc_data)
         
         print("✓ Data loading completed successfully")
         return data
@@ -303,6 +308,40 @@ class FigureCreator:
 
         self._save_figure(fig, f"{self.model_name}_summary_derived.png")
 
+    def create_organic_carbon_summary(self, data):
+        """Create summary plots for organic carbon pools (POC, DOC, GOC, HOC)."""
+        year_limits = self._get_global_year_limits(data)
+        layout = {'rows': 2, 'cols': 2}
+        subplot_width = self.config['layout']['subplot_width']
+        subplot_height = self.config['layout']['subplot_height']
+
+        oc_configs = [
+            ("POC", "Particulate Organic Carbon", "PgC", None),
+            ("DOC", "Dissolved Organic Carbon", "PgC", None),
+            ("GOC", "Gelatinous Organic Carbon", "PgC", None),
+            ("HOC", "Holozoic Organic Carbon", "PgC", None),
+        ]
+
+        fig, axes = plt.subplots(
+            layout['rows'], layout['cols'],
+            figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
+            sharex=True, constrained_layout=self.config['layout']['use_constrained_layout']
+        )
+        axes = axes.flatten()
+
+        for i, (var_name, title, ylabel, obs_range) in enumerate(oc_configs):
+            if var_name not in data or data[var_name] is None or len(data[var_name]) == 0:
+                axes[i].text(0.5, 0.5, f'{var_name} not available',
+                           ha='center', va='center', transform=axes[i].transAxes)
+                axes[i].set_title(title, fontweight='bold', pad=5)
+                continue
+            color = self.colors[i % len(self.colors)]
+            is_bottom_row = i >= layout['cols']
+            self._setup_axis(axes[i], data["year"], data[var_name], color, title, ylabel,
+                           obs_range, None, year_limits, add_xlabel=is_bottom_row)
+
+        self._save_figure(fig, f"{self.model_name}_summary_organic_carbon.png")
+
 def main():
     parser = argparse.ArgumentParser(
         description='Create annual summary visualizations for ocean model output',
@@ -344,6 +383,7 @@ def main():
         creator.create_nutrient_summary(data)
         creator.create_physics_summary(data)
         creator.create_derived_summary(data)
+        creator.create_organic_carbon_summary(data)
 
         print("\n🎉 All visualizations completed successfully!")
         print(f"📂 Files saved to: {save_dir}")
