@@ -1266,7 +1266,7 @@ class DerivedSummaryPlotter(PlotGenerator):
             if ppt is not None and exp is not None:
                 recycle = ppt - exp - sp
                 axes[1].plot(year, recycle, color=color, linewidth=LINE_WIDTH)
-                axes[1].set_title("Recycled Production", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[1].set_title("Residual Production", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[1].set_ylabel("PgC/yr")
 
         if exp is not None and ppt is not None:
@@ -1342,7 +1342,7 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
                 recycle = ppt - exp - sp
                 recycle_norm = GlobalSummaryNormalizedPlotter._normalize_series(recycle)
                 axes[1].plot(year, recycle_norm, color=color, linewidth=LINE_WIDTH)
-                axes[1].set_title("Recycled Production anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[1].set_title("Residual Production anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[1].set_ylabel("PgC/yr")
                 axes[1].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 

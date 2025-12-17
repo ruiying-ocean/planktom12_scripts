@@ -139,7 +139,7 @@ class OceanMapPlotter:
 
             # NPP and derived variables
             ds['_NPP'] = ds['PPT']
-            ds['_RECYCLE'] = ds['PPT'] - ds['_SP']
+            # Residual Production: NPP - SP - EXP (calculated in _integrate_depth after EXP is available)
 
             # Extract EXP at specific depths for transfer efficiency and export ratio
             if 'EXP' in ds:
@@ -200,7 +200,7 @@ class OceanMapPlotter:
             ## also convert for new variables
             ## GRA* mol/m3/s => gC/m³/yr
             others = ['GRAPRO', 'GRAMES', 'GRAPTE', 'GRACRU', 'GRAGEL',
-                      '_SP', '_RECYCLE', '_NPP']
+                      '_SP', '_NPP']
 
             for var in others:
                 if var in ds:
@@ -244,7 +244,7 @@ class OceanMapPlotter:
 
         elif suffix == 'diad':
             ## rate to flux conversion
-            ## integrate NPP, SP, RECYCLE, and PP for each PFT
+            ## integrate NPP, SP, and PP for each PFT
             grazoos = ['GRAPRO', 'GRAMES', 'GRAPTE', 'GRACRU', 'GRAGEL']
 
             for grazoo in grazoos:
@@ -255,10 +255,14 @@ class OceanMapPlotter:
             ## vint for new variables
             if '_SP' in ds:
                 ds['_SPINT'] = (ds['_SP'] * volume).sum(dim='deptht') / 1e12  ## Tg C/yr
-            if '_RECYCLE' in ds:
-                ds['_RECYCLEINT'] = (ds['_RECYCLE'] * volume).sum(dim='deptht') / 1e12  ## Tg C/yr
             if '_NPP' in ds:
                 ds['_NPPINT'] = (ds['_NPP'] * volume).sum(dim='deptht') / 1e12  ## Tg C/yr
+            # Integrate EXP (2D) over area to get Tg C/yr
+            if '_EXP' in ds and self.area is not None:
+                ds['_EXPINT'] = ds['_EXP'] * self.area / 1e12  ## Tg C/yr
+            # Residual Production = NPP - SP - EXP (in HTML: NPP &minus; SP &minus; EXP)
+            if '_NPPINT' in ds and '_SPINT' in ds and '_EXPINT' in ds:
+                ds['_RESIDUALINT'] = ds['_NPPINT'] - ds['_SPINT'] - ds['_EXPINT']  ## Tg C/yr
 
             return ds
 
@@ -285,7 +289,7 @@ class OceanMapPlotter:
 
         elif suffix == 'diad':
             vars = ['_GRAPROINT', '_GRAMESINT', '_GRAPTEINT', '_GRACRUINT', '_GRAGELINT',
-                    '_SPINT', '_RECYCLEINT', '_NPPINT']
+                    '_SPINT', '_RESIDUALINT', '_NPPINT']
             for var in vars:
                 if var in ds:
                     new_name = self._new_varname(var, 'GS')
@@ -591,15 +595,8 @@ ECOSYSTEM_VARS = {
         'depth_index': None,
         'cmap': 'viridis'
     },
-    '_RECYCLE': {
-        'long_name': 'Recycled Production',
-        'units': 'g C m⁻³ yr⁻¹',
-        'vmax': 200,
-        'depth_index': 0,
-        'cmap': 'viridis'
-    },
-    '_RECYCLEINT': {
-        'long_name': 'Rec Prod',
+    '_RESIDUALINT': {
+        'long_name': 'Res Prod',
         'units': 'Tg C yr⁻¹',
         'vmax': 5,
         'depth_index': None,

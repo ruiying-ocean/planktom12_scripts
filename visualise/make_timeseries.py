@@ -289,7 +289,7 @@ class FigureCreator:
 
         derived_configs = [
             (data["SP"], self.colors[0], "Secondary Production", "PgC/yr", None, None),
-            (data["recycle"], self.colors[1], "Recycled Production", "PgC/yr", None, None),
+            (data["recycle"], self.colors[1], "Residual Production", "PgC/yr", None, None),
             (data["eratio"], self.colors[2], "Export Ratio (e-ratio)", "Dimensionless", None, None),
             (data["Teff"], self.colors[3], "Transfer Efficiency", "Dimensionless", None, None),
         ]

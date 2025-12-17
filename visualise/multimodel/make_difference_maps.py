@@ -74,7 +74,7 @@ def calculate_derived_variables(model_dir, model_id, year, plotter):
 
     These variables are now automatically calculated by map_utils.py preprocessing:
     - _SPINT: Secondary Production (integrated)
-    - _RECYCLEINT: Recycled Production (integrated)
+    - _RESIDUALINT: Residual Production (integrated)
     - _eratio: Export Ratio
     - _Teff: Transfer Efficiency
 
@@ -219,7 +219,7 @@ def main():
 
     derived_vars = {
         'SP': 'Secondary Production Difference [gC/m³/yr]',
-        'recycle': 'Recycled Production Difference [gC/m³/yr]',
+        'residual': 'Residual Production Difference [gC/m³/yr]',
         'eratio': 'Export Ratio Difference (e-ratio)',
         'Teff': 'Transfer Efficiency Difference',
     }
