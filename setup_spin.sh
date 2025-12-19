@@ -131,3 +131,13 @@ fi
 echo "============================================"
 echo "Namelist copied for model ID: $MODEL_ID"
 echo "============================================"
+
+## Record spinup info
+SPINUP_RECORD="${MODEL_RUN_DIR}/${MODEL_ID}/spinup_info.txt"
+echo "Spinup Model ID: $SPINUP_MODEL_ID" > "$SPINUP_RECORD"
+echo "Spinup Year: $((FIRST_YEAR_TRANSIENT - 1))" >> "$SPINUP_RECORD"
+echo "Setup Date: $(date '+%Y-%m-%d %H:%M:%S')" >> "$SPINUP_RECORD"
+
+echo "============================================"
+echo "Spinup record saved to: $SPINUP_RECORD"
+echo "============================================"
