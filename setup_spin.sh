@@ -64,7 +64,8 @@ echo "Calculated TIMESTEP: $TIMESTEP"
 echo "============================================"
 
 # Command
-bash /gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/setup_restarts_RY.sh $SPIN_DIR $TIMESTEP ${MODEL_RUN_DIR}/${MODEL_ID}
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+bash ${SCRIPT_DIR}/setup_restarts_RY.sh $SPIN_DIR $TIMESTEP ${MODEL_RUN_DIR}/${MODEL_ID}
 if [ $? -ne 0 ]; then
     echo "Error: Setup restarts script failed"
     exit 1
@@ -74,11 +75,9 @@ echo "============================================"
 echo "Setup complete for model ID: $MODEL_ID"
 echo "============================================"
 
-# bash /gpfs/home/vhf24tbu/scratch/setUpRuns/rm_old_restart.sh ${MODEL_ID}
-
-rm -f /gpfs/home/vhf24tbu/scratch/ModelRuns/${MODEL_ID}/restart_ice_in.nc
-rm -f /gpfs/home/vhf24tbu/scratch/ModelRuns/${MODEL_ID}/restart_trc.nc
-rm -f /gpfs/home/vhf24tbu/scratch/ModelRuns/${MODEL_ID}/restart.nc
+rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/restart_ice_in.nc
+rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/restart_trc.nc
+rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/restart.nc
 
 echo "============================================"
 echo "Old restart cleaned for model ID: $MODEL_ID"

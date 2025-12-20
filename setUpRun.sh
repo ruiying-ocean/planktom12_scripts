@@ -291,7 +291,7 @@ fi
 # If analyser_config.toml does not exist (as specified in setUpData file) copy in default
 if [ ! -f analyser_config.toml ]; then
 	echo "Copying in default script for analyser_config.toml"
-	cp /gpfs/data/greenocean/software/source/analyseRun/analyse-run/analyser_config.toml analyser_config.toml
+	cp ${SCRIPT_DIR}/analyser/analyser_config.toml analyser_config.toml
 fi
 
 # Get visualise scripts and files
