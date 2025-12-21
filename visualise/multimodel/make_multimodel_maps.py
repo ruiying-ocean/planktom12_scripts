@@ -56,6 +56,10 @@ def load_model_data(model_dir, model_id, year, var_name, plotter):
     """
     run_dir = Path(model_dir) / model_id
 
+    # Special handling for AOU - needs to be computed from O2, T, S
+    if var_name == '_AOU':
+        return load_aou_data(model_dir, model_id, year, plotter)
+
     # Determine which file type to use based on variable
     # Diagnostic variables are in diad_T.nc
     # Tracer variables (nutrients, PFTs) are in ptrc_T.nc
@@ -112,6 +116,54 @@ def load_model_data(model_dir, model_id, year, var_name, plotter):
         return None
 
 
+def load_aou_data(model_dir, model_id, year, plotter):
+    """
+    Load and compute AOU from O2, temperature, and salinity.
+
+    Args:
+        model_dir: Base directory for model output
+        model_id: Model run name
+        year: Year to load
+        plotter: OceanMapPlotter instance for preprocessing
+    """
+    run_dir = Path(model_dir) / model_id
+    ptrc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc"
+    grid_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_grid_T.nc"
+
+    if not ptrc_file.exists():
+        print_warning(f"ptrc_T file not found for AOU: {ptrc_file}")
+        return None
+
+    if not grid_file.exists():
+        print_warning(f"grid_T file not found for AOU: {grid_file}")
+        return None
+
+    try:
+        # Load O2 from ptrc_T
+        ptrc_ds = xr.open_dataset(str(ptrc_file), decode_times=False)
+        o2 = ptrc_ds['O2'].mean(dim='time_counter')
+
+        # Load T and S from grid_T
+        grid_ds = xr.open_dataset(str(grid_file), decode_times=False)
+        temp = grid_ds['votemper'].mean(dim='time_counter')
+        sal = grid_ds['vosaline'].mean(dim='time_counter')
+
+        # Calculate AOU at 300m (depth level 17)
+        aou = plotter.calculate_aou(o2, temp, sal, depth_index=17)
+
+        # Apply land mask
+        aou = plotter.apply_mask(aou)
+
+        ptrc_ds.close()
+        grid_ds.close()
+
+        return aou
+
+    except Exception as e:
+        print_error(f"Computing AOU: {e}")
+        return None
+
+
 def create_map_ax(fig, position, projection=ccrs.Robinson()):
     """Create a single map axis with cartopy features."""
     ax = fig.add_subplot(position, projection=projection)
@@ -148,7 +200,7 @@ def plot_multimodel_maps(models, output_dir, config):
         'nutrients': ['_PO4', '_NO3', '_Si', '_Fer', '_O2'],
         'phytoplankton': ['_PICINT', '_FIXINT', '_COCINT', '_DIAINT', '_MIXINT', '_PHAINT'],
         'zooplankton': ['_BACINT', '_PROINT', '_MESINT', '_PTEINT', '_CRUINT', '_GELINT'],
-        'derived': ['_SPINT', '_RECYCLEINT', '_eratio', '_Teff'],
+        'derived': ['_SPINT', '_RECYCLEINT', '_eratio', '_Teff', '_AOU'],
     }
 
     projection = ccrs.PlateCarree()

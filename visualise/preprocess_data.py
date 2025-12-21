@@ -6,9 +6,38 @@ Handles loading, time-averaging, and preparing datasets for plotting.
 
 from pathlib import Path
 import xarray as xr
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
-from map_utils import OceanMapPlotter, PHYTOS, ZOOS
+from map_utils import OceanMapPlotter, PHYTOS, ZOOS, calculate_3d_aou
+
+
+def load_grid_t_for_aou(
+    grid_t_file: Path
+) -> Tuple[xr.DataArray, xr.DataArray]:
+    """
+    Load temperature and salinity from grid_T file for AOU calculation.
+
+    Args:
+        grid_t_file: Path to grid_T NetCDF file
+
+    Returns:
+        Tuple of (temperature, salinity) DataArrays (time-averaged)
+    """
+    print(f"Loading grid_T dataset for AOU from {grid_t_file}...")
+
+    grid_ds = xr.open_dataset(str(grid_t_file), decode_times=False)
+
+    # Extract temperature and salinity
+    temp = grid_ds['votemper']
+    sal = grid_ds['vosaline']
+
+    # Time average if needed
+    if 'time_counter' in temp.dims:
+        temp = temp.mean(dim='time_counter').squeeze()
+        sal = sal.mean(dim='time_counter').squeeze()
+
+    print("  Loaded votemper and vosaline")
+    return temp, sal
 
 
 def load_and_preprocess_ptrc(
@@ -16,7 +45,9 @@ def load_and_preprocess_ptrc(
     plotter: OceanMapPlotter,
     variables: Optional[List[str]] = None,
     compute_integrated: bool = True,
-    compute_concentrations: bool = True
+    compute_concentrations: bool = True,
+    compute_aou: bool = False,
+    grid_t_file: Optional[Path] = None
 ) -> xr.Dataset:
     """
     Load and preprocess tracer (ptrc_T) dataset.
@@ -27,6 +58,8 @@ def load_and_preprocess_ptrc(
         variables: Specific variables to load (None = all)
         compute_integrated: Whether to compute integrated PFT variables (_PICINT, etc.)
         compute_concentrations: Whether to compute PFT concentration variables (PIC, FIX, etc.)
+        compute_aou: Whether to compute AOU (requires grid_t_file)
+        grid_t_file: Path to grid_T file for temperature/salinity (required if compute_aou=True)
 
     Returns:
         Preprocessed dataset with time-averaged variables
@@ -83,6 +116,25 @@ def load_and_preprocess_ptrc(
             else:
                 ptrc_ds[var] = ptrc_ds[var].squeeze().compute()
             print(f"  Processed {var}")
+
+    # Compute AOU if requested and grid_T file provided
+    if compute_aou and grid_t_file is not None and grid_t_file.exists():
+        if 'O2' in ptrc_ds:
+            temp, sal = load_grid_t_for_aou(grid_t_file)
+            # Get raw O2 (before unit conversion) for AOU calculation
+            o2_raw = ptrc_ds['O2']
+            if 'time_counter' in o2_raw.dims:
+                o2_raw = o2_raw.mean(dim='time_counter').squeeze()
+            # Calculate AOU at 300m (depth level 17) using plotter method
+            ptrc_ds['_AOU'] = plotter.calculate_aou(o2_raw, temp, sal, depth_index=17).compute()
+            print(f"  Processed _AOU")
+            # Also calculate 3D AOU for transects if needed
+            ptrc_ds['_AOU_3D'] = calculate_3d_aou(o2_raw, temp, sal).compute()
+            print(f"  Processed _AOU_3D (for transects)")
+        else:
+            print("  Warning: O2 not found in ptrc_ds, skipping AOU calculation")
+    elif compute_aou:
+        print("  Warning: grid_t_file not provided or doesn't exist, skipping AOU calculation")
 
     return ptrc_ds
 

@@ -82,7 +82,7 @@ def load_transect_data(model_dir, model_id, year, variable, plotter):
         model_dir: Base directory for model output
         model_id: Model run name
         year: Year to load
-        variable: Variable name (e.g., 'PIC', 'BAC', '_NO3', '_PO4')
+        variable: Variable name (e.g., 'PIC', 'BAC', '_NO3', '_PO4', '_AOU')
         plotter: OceanMapPlotter instance
 
     Returns:
@@ -94,6 +94,10 @@ def load_transect_data(model_dir, model_id, year, variable, plotter):
     if not ptrc_file.exists():
         print_warning(f"File not found: {ptrc_file}")
         return None
+
+    # Special handling for AOU - needs 3D calculation from O2, T, S
+    if variable == '_AOU':
+        return load_aou_transect_data(model_dir, model_id, year, plotter)
 
     try:
         ds = xr.open_dataset(ptrc_file, decode_times=False)
@@ -138,6 +142,62 @@ def load_transect_data(model_dir, model_id, year, variable, plotter):
         return None
 
 
+def load_aou_transect_data(model_dir, model_id, year, plotter):
+    """
+    Load and compute 3D AOU data for transect plotting.
+
+    Args:
+        model_dir: Base directory for model output
+        model_id: Model run name
+        year: Year to load
+        plotter: OceanMapPlotter instance
+
+    Returns:
+        xarray.DataArray with depth-resolved AOU data
+    """
+    from map_utils import calculate_3d_aou
+
+    run_dir = Path(model_dir) / model_id
+    ptrc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc"
+    grid_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_grid_T.nc"
+
+    if not ptrc_file.exists():
+        print_warning(f"ptrc_T file not found for AOU: {ptrc_file}")
+        return None
+
+    if not grid_file.exists():
+        print_warning(f"grid_T file not found for AOU: {grid_file}")
+        return None
+
+    try:
+        # Load O2 from ptrc_T
+        ptrc_ds = xr.open_dataset(str(ptrc_file), decode_times=False)
+        o2 = ptrc_ds['O2'].mean(dim='time_counter')
+
+        # Load T and S from grid_T
+        grid_ds = xr.open_dataset(str(grid_file), decode_times=False)
+        temp = grid_ds['votemper'].mean(dim='time_counter')
+        sal = grid_ds['vosaline'].mean(dim='time_counter')
+
+        # Calculate 3D AOU
+        aou = calculate_3d_aou(o2, temp, sal)
+
+        # Remove bottom level if needed
+        if 'deptht' in aou.dims:
+            aou = aou.isel(deptht=slice(None, -1))
+
+        aou = aou.squeeze()
+
+        ptrc_ds.close()
+        grid_ds.close()
+
+        return aou
+
+    except Exception as e:
+        print_error(f"Computing AOU transect: {e}")
+        return None
+
+
 def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=None):
     """
     Create multi-model nutrient transect comparison plots.
@@ -153,7 +213,7 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
     n_models = len(models)
     has_anomaly = (n_models == 2)
     n_cols = n_models + (1 if has_anomaly else 0)
-    nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
+    nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
 
     # Get DPI and format from config
     dpi = config.get("figure", {}).get("dpi", 300) if config else 300

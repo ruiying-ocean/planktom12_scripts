@@ -20,6 +20,7 @@ import cartopy.crs as ccrs
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple, Union
+import gsw
 
 
 class OceanMapPlotter:
@@ -317,6 +318,61 @@ class OceanMapPlotter:
         else:
             # Fallback: mask where data is NaN or zero
             return data.where(data != 0)
+
+    def calculate_aou(
+        self,
+        o2_data: xr.DataArray,
+        temp_data: xr.DataArray,
+        sal_data: xr.DataArray,
+        depth_index: int = 17
+    ) -> xr.DataArray:
+        """
+        Calculate Apparent Oxygen Utilization (AOU) at a specific depth.
+
+        AOU = O2_saturation - O2_measured
+
+        Args:
+            o2_data: Oxygen concentration from ptrc_T (mol/L)
+            temp_data: Temperature from grid_T (votemper, degrees C)
+            sal_data: Salinity from grid_T (vosaline, PSU)
+            depth_index: Depth level index (default 17 for ~300m)
+
+        Returns:
+            AOU in µmol/L
+        """
+        # ORCA2 depth values for pressure calculation (dbar ≈ meters)
+        depth_values = np.array([
+            5.0, 15.0, 25.0, 35.5, 46.5, 58.5, 71.5, 86.0,
+            102.5, 121.5, 143.5, 169.0, 198.5, 233.0, 273.5,
+            321.5, 378.5, 446.0, 526.5, 622.5, 737.5, 875.5,
+            1041.5, 1241.5, 1482.5, 1772.5, 2121.5, 2541.5,
+            3046.5, 3653.5, 4383.5
+        ])
+
+        pressure = depth_values[depth_index]
+
+        # Extract data at specified depth
+        depth_dim = 'deptht' if 'deptht' in o2_data.dims else 'nav_lev'
+        o2_at_depth = o2_data.isel({depth_dim: depth_index})
+        temp_at_depth = temp_data.isel({depth_dim: depth_index})
+        sal_at_depth = sal_data.isel({depth_dim: depth_index})
+
+        # Calculate O2 saturation using GSW
+        # gsw.O2sol expects SA (absolute salinity), CT (conservative temp), p, lon, lat
+        # For practical purposes, use practical salinity and in-situ temperature
+        # gsw.O2sol returns saturation in µmol/kg
+        o2_sat = gsw.O2sol(sal_at_depth, temp_at_depth, pressure, 0, 0)
+
+        # Convert O2 from mol/L to µmol/L (multiply by 1e6)
+        o2_measured = o2_at_depth * 1e6
+
+        # Convert O2_sat from µmol/kg to µmol/L (multiply by density ~1.025)
+        o2_sat_umol_L = o2_sat * 1.025
+
+        # Calculate AOU
+        aou = o2_sat_umol_L - o2_measured
+
+        return aou
 
     def create_subplot_grid(
         self,
@@ -617,6 +673,14 @@ ECOSYSTEM_VARS = {
         'vmin': 0,
         'depth_index': None,
         'cmap': 'viridis'
+    },
+    '_AOU': {
+        'long_name': 'AOU',
+        'units': 'µmol L⁻¹',
+        'vmax': 150,
+        'vmin': -50,
+        'depth_index': 17,  # ~300m depth (same as O2)
+        'cmap': 'RdBu_r'  # Diverging colormap since AOU can be negative
     }
 }
 
@@ -776,3 +840,60 @@ def convert_units(data: xr.DataArray, var_name: str) -> xr.DataArray:
 
     # Default: no conversion
     return data
+
+
+def calculate_3d_aou(
+    o2: xr.DataArray,
+    temp: xr.DataArray,
+    sal: xr.DataArray
+) -> xr.DataArray:
+    """
+    Calculate 3D AOU field for all depths (used for transects).
+
+    Args:
+        o2: 3D oxygen concentration (mol/L)
+        temp: 3D temperature (degrees C)
+        sal: 3D salinity (PSU)
+
+    Returns:
+        3D AOU field in µmol/L
+    """
+    # ORCA2 depth values for pressure calculation (dbar ≈ meters)
+    depth_values = np.array([
+        5.0, 15.0, 25.0, 35.5, 46.5, 58.5, 71.5, 86.0,
+        102.5, 121.5, 143.5, 169.0, 198.5, 233.0, 273.5,
+        321.5, 378.5, 446.0, 526.5, 622.5, 737.5, 875.5,
+        1041.5, 1241.5, 1482.5, 1772.5, 2121.5, 2541.5,
+        3046.5, 3653.5, 4383.5
+    ])
+
+    depth_dim = 'deptht' if 'deptht' in o2.dims else 'nav_lev'
+    n_depths = len(o2[depth_dim])
+
+    # Calculate AOU at each depth level
+    aou_list = []
+    for k in range(min(n_depths, len(depth_values))):
+        pressure = depth_values[k]
+        o2_k = o2.isel({depth_dim: k})
+        temp_k = temp.isel({depth_dim: k})
+        sal_k = sal.isel({depth_dim: k})
+
+        # Calculate O2 saturation using GSW (returns µmol/kg)
+        o2_sat = gsw.O2sol(sal_k, temp_k, pressure, 0, 0)
+
+        # Convert units
+        o2_sat_umol_L = o2_sat * 1.025  # µmol/kg to µmol/L
+        o2_measured = o2_k * 1e6  # mol/L to µmol/L
+
+        # AOU at this depth
+        aou_k = o2_sat_umol_L - o2_measured
+        aou_list.append(aou_k)
+
+    # Stack along depth dimension
+    aou = xr.concat(aou_list, dim=depth_dim)
+
+    # Preserve original coordinates
+    aou = aou.assign_coords({depth_dim: o2[depth_dim]})
+    aou.name = '_AOU'
+
+    return aou

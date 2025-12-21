@@ -612,7 +612,8 @@ def plot_derived_variables(
     plotter: OceanMapPlotter,
     diad_ds: xr.Dataset,
     output_path: Path,
-    variables: list = ['_SPINT', '_RECYCLEINT', '_eratio', '_Teff']
+    ptrc_ds: xr.Dataset = None,
+    variables: list = ['_SPINT', '_RECYCLEINT', '_eratio', '_Teff', '_AOU']
 ):
     """
     Create multi-panel map of derived ecosystem variables.
@@ -621,27 +622,36 @@ def plot_derived_variables(
         plotter: OceanMapPlotter instance
         diad_ds: Dataset with diagnostic variables
         output_path: Where to save the figure
+        ptrc_ds: Dataset with tracer variables (optional, used for AOU)
         variables: List of variables to plot
     """
-    # Create 2x2 subplot grid
+    # Create 2x3 subplot grid for 5 variables
     fig, axs = plotter.create_subplot_grid(
-        nrows=2, ncols=2,
+        nrows=2, ncols=3,
         projection=ccrs.PlateCarree(),
-        figsize=(10, 6)
+        figsize=(15, 6)
     )
 
     # Flatten axes for easier indexing
     axs_flat = axs.flatten()
 
     for idx, var_name in enumerate(variables):
-        if idx >= 4:  # Only plot first 4 variables
+        if idx >= 6:  # Only plot first 6 variables (2x3 grid)
             break
 
         ax = axs_flat[idx]
 
-        if var_name in diad_ds:
+        # Check which dataset contains the variable
+        if var_name == '_AOU' and ptrc_ds is not None and var_name in ptrc_ds:
+            ds = ptrc_ds
+        elif var_name in diad_ds:
+            ds = diad_ds
+        else:
+            ds = None
+
+        if ds is not None and var_name in ds:
             meta = get_variable_metadata(var_name)
-            data = diad_ds[var_name]
+            data = ds[var_name]
 
             # Time average if needed
             if 'time_counter' in data.dims:
@@ -680,6 +690,10 @@ def plot_derived_variables(
             ax.text(0.5, 0.5, f'{var_name}\nnot available',
                    ha='center', va='center', transform=ax.transAxes)
             ax.set_title(var_name, fontsize=12)
+
+    # Hide unused subplots (e.g., 6th position in 2x3 grid with 5 variables)
+    for idx in range(len(variables), len(axs_flat)):
+        axs_flat[idx].set_visible(False)
 
     # Note: tight_layout() is incompatible with colorbars; bbox_inches='tight' handles layout
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -726,6 +740,7 @@ def main():
     date_str = f"{args.year}0101_{args.year}1231"
     ptrc_file = run_dir / f"ORCA2_1m_{date_str}_ptrc_T.nc"
     diad_file = run_dir / f"ORCA2_1m_{date_str}_diad_T.nc"
+    grid_t_file = run_dir / f"ORCA2_1m_{date_str}_grid_T.nc"
 
     # Check files exist
     if not ptrc_file.exists():
@@ -742,11 +757,18 @@ def main():
     plotter = OceanMapPlotter(mask_path=args.mask_path)
 
     # Load and preprocess datasets using preprocessing module
+    # Compute AOU if grid_T file is available
+    compute_aou = grid_t_file.exists()
+    if not compute_aou:
+        print(f"Note: grid_T file not found at {grid_t_file}, AOU will not be computed")
+
     ptrc_ds = load_and_preprocess_ptrc(
         ptrc_file=ptrc_file,
         plotter=plotter,
         compute_integrated=True,  # Need integrated vars for PFT maps
-        compute_concentrations=True  # Need concentration vars for transects
+        compute_concentrations=True,  # Need concentration vars for transects
+        compute_aou=compute_aou,
+        grid_t_file=grid_t_file
     )
 
     diad_ds = load_and_preprocess_diad(
@@ -912,11 +934,12 @@ def main():
         plt.close(fig)
         print(f"Saved: {output_path}")
 
-    # 5. Derived variables (SP, RECYCLE, e-ratio, Teff)
+    # 5. Derived variables (SP, RECYCLE, e-ratio, Teff, AOU)
     print("5. Derived ecosystem variables...")
     plot_derived_variables(
         plotter=plotter,
         diad_ds=diad_ds,
+        ptrc_ds=ptrc_ds,
         output_path=output_dir / f"{args.run_name}_{args.year}_derived.png"
     )
 

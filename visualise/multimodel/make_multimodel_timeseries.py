@@ -1215,12 +1215,15 @@ class DerivedSummaryPlotter(PlotGenerator):
 
     def generate(self):
         fig, axes = plt.subplots(
-            2, 2, figsize=(2 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
+            2, 3, figsize=(3 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
             constrained_layout=USE_CONSTRAINED_LAYOUT
         )
         axes = axes.flatten()
 
-        setup_axes(axes)
+        # Hide unused 6th subplot
+        axes[5].set_visible(False)
+
+        setup_axes(axes[:5])  # Only setup first 5 axes
 
         self.plot_all_models(fig, axes, self._plot_model)
 
@@ -1282,8 +1285,25 @@ class DerivedSummaryPlotter(PlotGenerator):
             axes[3].plot(year, teff, color=color, linewidth=LINE_WIDTH)
             axes[3].set_title("Transfer Efficiency", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
             axes[3].set_ylabel("Dimensionless")
-            # Add xlabel to bottom row (indices 2, 3 in 2x2 grid)
             axes[3].set_xlabel("Year", fontweight='bold')
+
+        # AOU from average file (if available)
+        ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
+        if ave_data is not None:
+            aou = DataLoader.safe_load_column(ave_data, "AOU", indices)
+            if aou is not None:
+                axes[4].plot(year, aou, color=color, linewidth=LINE_WIDTH)
+                axes[4].set_title("AOU at 300m", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[4].set_ylabel("µmol/L")
+                axes[4].set_xlabel("Year", fontweight='bold')
+            else:
+                # Show placeholder if AOU not available
+                if not hasattr(axes[4], '_aou_placeholder_added'):
+                    axes[4].text(0.5, 0.5, 'AOU\nnot available',
+                               ha='center', va='center', transform=axes[4].transAxes, fontsize=9, color='gray')
+                    axes[4].set_title("AOU at 300m", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                    axes[4].set_xlabel("Year", fontweight='bold')
+                    axes[4]._aou_placeholder_added = True
 
 
 class DerivedSummaryNormalizedPlotter(PlotGenerator):

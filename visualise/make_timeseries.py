@@ -69,6 +69,10 @@ class ModelDataLoader:
         avg_data["SST"] = avg_data["tos"]
         avg_data["SSS"] = avg_data["sos"]
         avg_data["MLD"] = avg_data["mldr10_1"]
+        # Try to load AOU if available in analyser output
+        if average_df is not None and "AOU" in average_df.columns:
+            aou_data = self._extract_arrays(average_df, ["AOU"])
+            avg_data.update(aou_data)
         data.update(avg_data)
 
         int_df = self._read_analyser_file("int")
@@ -283,15 +287,18 @@ class FigureCreator:
     def create_derived_summary(self, data):
         """Create summary plots for derived ecosystem variables."""
         year_limits = self._get_global_year_limits(data)
-        layout = {'rows': 2, 'cols': 2}
+        layout = {'rows': 2, 'cols': 3}
         subplot_width = self.config['layout']['subplot_width']
         subplot_height = self.config['layout']['subplot_height']
 
+        # Build derived_configs with available data
+        # AOU might not be available if not computed by analyser
         derived_configs = [
-            (data["SP"], self.colors[0], "Secondary Production", "PgC/yr", None, None),
-            (data["recycle"], self.colors[1], "Residual Production", "PgC/yr", None, None),
-            (data["eratio"], self.colors[2], "Export Ratio (e-ratio)", "Dimensionless", None, None),
-            (data["Teff"], self.colors[3], "Transfer Efficiency", "Dimensionless", None, None),
+            ("SP", self.colors[0], "Secondary Production", "PgC/yr", None, None),
+            ("recycle", self.colors[1], "Residual Production", "PgC/yr", None, None),
+            ("eratio", self.colors[2], "Export Ratio (e-ratio)", "Dimensionless", None, None),
+            ("Teff", self.colors[3], "Transfer Efficiency", "Dimensionless", None, None),
+            ("AOU", self.colors[4] if len(self.colors) > 4 else self.colors[0], "AOU at 300m", "µmol/L", None, None),
         ]
 
         fig, axes = plt.subplots(
@@ -301,10 +308,23 @@ class FigureCreator:
         )
         axes = axes.flatten()
 
-        for i, (plot_data, color, title, ylabel, obs_range, obs_line) in enumerate(derived_configs):
+        for i, (var_name, color, title, ylabel, obs_range, obs_line) in enumerate(derived_configs):
             is_bottom_row = i >= layout['cols']
-            self._setup_axis(axes[i], data["year"], plot_data, color, title, ylabel,
-                           obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
+            # Check if data is available
+            if var_name in data and data[var_name] is not None and len(data[var_name]) > 0:
+                self._setup_axis(axes[i], data["year"], data[var_name], color, title, ylabel,
+                               obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
+            else:
+                # Variable not available - show placeholder
+                axes[i].text(0.5, 0.5, f'{title}\nnot available',
+                           ha='center', va='center', transform=axes[i].transAxes, fontsize=9, color='gray')
+                axes[i].set_title(title, fontweight='bold', pad=5)
+                if is_bottom_row:
+                    axes[i].set_xlabel("Year", fontweight='bold')
+
+        # Hide unused subplot (6th position in 2x3 grid with 5 variables)
+        for idx in range(len(derived_configs), len(axes)):
+            axes[idx].set_visible(False)
 
         self._save_figure(fig, f"{self.model_name}_summary_derived.png")
 

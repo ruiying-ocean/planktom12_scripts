@@ -41,7 +41,7 @@ def plot_basin_transects(
     output_dir: Path,
     run_name: str,
     year: str,
-    nutrients: list = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
+    nutrients: list = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
 ):
     """
     Create Atlantic and Pacific nutrient transect plots with observations and differences.
@@ -89,8 +89,10 @@ def plot_basin_transects(
 
             # Model transect
             model_transect = None
-            if nut in ptrc_ds:
-                model_data = ptrc_ds[nut]
+            # For AOU, use the 3D AOU field if available
+            model_var = '_AOU_3D' if nut == '_AOU' and '_AOU_3D' in ptrc_ds else nut
+            if model_var in ptrc_ds:
+                model_data = ptrc_ds[model_var]
 
                 # Time average if needed
                 if 'time_counter' in model_data.dims:
@@ -328,6 +330,7 @@ def main():
     # Construct file paths
     date_str = f"{args.year}0101_{args.year}1231"
     ptrc_file = run_dir / f"ORCA2_1m_{date_str}_ptrc_T.nc"
+    grid_t_file = run_dir / f"ORCA2_1m_{date_str}_grid_T.nc"
 
     # Check files exist
     if not ptrc_file.exists():
@@ -348,20 +351,27 @@ def main():
         sys.exit(1)
 
     # Load and preprocess data
-    nutrients = ['_NO3', '_PO4', '_Si', '_Fer']
+    # Compute AOU if grid_T file is available
+    compute_aou = grid_t_file.exists()
+    if not compute_aou:
+        print(f"Note: grid_T file not found at {grid_t_file}, AOU will not be computed")
+
     ptrc_ds = load_and_preprocess_ptrc(
         ptrc_file=ptrc_file,
         plotter=plotter,
         compute_integrated=False,  # Don't need integrated vars for transects
-        compute_concentrations=True  # Need concentration vars for transects
+        compute_concentrations=True,  # Need concentration vars for transects
+        compute_aou=compute_aou,
+        grid_t_file=grid_t_file
     )
 
     print("Data processing complete.")
 
     # Load observational datasets (including O2)
-    nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
+    # Note: AOU observations not loaded - model only for AOU
+    nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
     obs_dir = Path(args.obs_dir)
-    obs_datasets = load_observations(obs_dir, nutrients=nutrients)
+    obs_datasets = load_observations(obs_dir, nutrients=['_NO3', '_PO4', '_Si', '_Fer', '_O2'])
 
     # Generate transects
     print("\n=== Generating Transects ===\n")
