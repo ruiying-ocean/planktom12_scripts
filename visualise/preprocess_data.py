@@ -215,6 +215,8 @@ def load_observations(
             obs_datasets['_Si'] = woa_ds['si']
         if 'o2' in woa_ds and '_O2' in nutrients:
             obs_datasets['_O2'] = woa_ds['o2']
+        if 'aou' in woa_ds and '_AOU' in nutrients:
+            obs_datasets['_AOU'] = woa_ds['aou']
     else:
         print(f"Warning: WOA file not found at {woa_file}")
 

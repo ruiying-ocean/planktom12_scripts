@@ -468,24 +468,34 @@ def plot_three_panel_transect(
     # Unpack axes
     ax_model, ax_obs, ax_diff = axs
 
-    # Mask very small values
-    model_masked = model_data.where(model_data > 1e-10) if model_data is not None else None
-    obs_masked = obs_data.where(obs_data > 1e-10) if obs_data is not None else None
+    # Mask land values (exactly 0 indicates land, NaN indicates missing data)
+    # Use != 0 instead of > 1e-10 to preserve negative values (e.g., AOU can be negative)
+    model_masked = model_data.where(model_data != 0) if model_data is not None else None
+    obs_masked = obs_data.where(obs_data != 0) if obs_data is not None else None
 
-    # Calculate common vmax for model and obs
+    # Calculate common vmin/vmax for model and obs
+    # Use percentiles to handle variables that can be negative (like AOU)
+    vmin = None
     vmax = None
     if model_masked is not None:
+        vmin = float(np.nanpercentile(model_masked.values, 5))
         vmax = float(np.nanpercentile(model_masked.values, 95))
     if obs_masked is not None:
+        obs_vmin = float(np.nanpercentile(obs_masked.values, 5))
         obs_vmax = float(np.nanpercentile(obs_masked.values, 95))
+        vmin = min(vmin, obs_vmin) if vmin is not None else obs_vmin
         vmax = max(vmax, obs_vmax) if vmax is not None else obs_vmax
+
+    # For strictly positive variables, use 0 as vmin
+    if vmin is not None and vmin > 0:
+        vmin = 0
 
     # Panel 1: Model
     if model_masked is not None:
         model_masked.plot.pcolormesh(
             ax=ax_model,
             cmap=cmap,
-            vmin=0,
+            vmin=vmin,
             vmax=vmax,
             add_colorbar=True,
             cbar_kwargs={'label': var_unit, 'shrink': 0.8, 'pad': 0.02}
@@ -502,7 +512,7 @@ def plot_three_panel_transect(
         obs_masked.plot.pcolormesh(
             ax=ax_obs,
             cmap=cmap,
-            vmin=0,
+            vmin=vmin,
             vmax=vmax,
             add_colorbar=True,
             cbar_kwargs={'label': var_unit, 'shrink': 0.8, 'pad': 0.02}
@@ -628,25 +638,33 @@ def plot_multimodel_transect_row(
     var_unit = meta.get('units', '')
     cmap = meta.get('cmap', 'Spectral_r')
 
-    # Calculate common vmax across all models
+    # Calculate common vmin/vmax across all models
+    # Use != 0 to mask land while preserving negative values (e.g., AOU)
+    vmin = None
     vmax = None
     for transect in model_transects:
         if transect is not None:
-            transect_masked = transect.where(transect > 1e-10)
+            transect_masked = transect.where(transect != 0)
+            model_vmin = float(np.nanpercentile(transect_masked.values, 5))
             model_vmax = float(np.nanpercentile(transect_masked.values, 95))
+            vmin = min(vmin, model_vmin) if vmin is not None else model_vmin
             vmax = max(vmax, model_vmax) if vmax is not None else model_vmax
+
+    # For strictly positive variables, use 0 as vmin
+    if vmin is not None and vmin > 0:
+        vmin = 0
 
     # Plot each model
     for model_idx, (transect, label) in enumerate(zip(model_transects, model_labels)):
         ax = axs[model_idx]
 
         if transect is not None:
-            transect_masked = transect.where(transect > 1e-10)
+            transect_masked = transect.where(transect != 0)
 
             transect_masked.plot.pcolormesh(
                 ax=ax,
                 cmap=cmap,
-                vmin=0,
+                vmin=vmin,
                 vmax=vmax,
                 add_colorbar=True,
                 cbar_kwargs={'label': var_unit, 'shrink': 0.8, 'pad': 0.02}
