@@ -79,6 +79,7 @@ def main():
     date_str = f"{args.year}0101_{args.year}1231"
     ptrc_file = run_dir / f"ORCA2_1m_{date_str}_ptrc_T.nc"
     diad_file = run_dir / f"ORCA2_1m_{date_str}_diad_T.nc"
+    grid_t_file = run_dir / f"ORCA2_1m_{date_str}_grid_T.nc"
 
     # Check files exist
     if not ptrc_file.exists():
@@ -87,6 +88,11 @@ def main():
     if not diad_file.exists():
         print(f"Error: {diad_file} not found")
         sys.exit(1)
+
+    # Check if grid_T exists for AOU calculation
+    compute_aou = grid_t_file.exists()
+    if not compute_aou:
+        print(f"Note: {grid_t_file} not found, AOU will not be computed")
 
     print_header("NEMO/PlankTom Model Visualization")
     print(f"  Run:         {args.run_name}")
@@ -109,7 +115,9 @@ def main():
         ptrc_file=ptrc_file,
         plotter=plotter,
         compute_integrated=True,  # For PFT maps
-        compute_concentrations=need_transects  # For transects (skip if not needed)
+        compute_concentrations=need_transects,  # For transects (skip if not needed)
+        compute_aou=compute_aou,
+        grid_t_file=grid_t_file
     )
 
     diad_ds = load_and_preprocess_diad(
@@ -215,10 +223,11 @@ def main():
             # Could call a simplified nutrient plotting function here if needed
 
         # 2.5 Derived variables maps
-        print_step(5, 6, "Derived ecosystem variables (SP, Residual, e-ratio, Teff)")
+        print_step(5, 6, "Derived ecosystem variables (SP, Residual, e-ratio, Teff, AOU)")
         plot_derived_variables(
             plotter=plotter,
             diad_ds=diad_ds,
+            ptrc_ds=ptrc_ds,
             output_path=output_dir / f"{args.run_name}_{args.year}_derived.png"
         )
 
