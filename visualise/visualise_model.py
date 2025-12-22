@@ -272,8 +272,8 @@ def main():
             # 3.1 Nutrient transects
             if not args.skip_observations:
                 print_step(1, 2, "Nutrient transects (Atlantic 35°W, Pacific 170°W)")
-                nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
-                obs_datasets = load_observations(obs_dir, nutrients=nutrients)
+                nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
+                obs_datasets = load_observations(obs_dir, nutrients=['_NO3', '_PO4', '_Si', '_Fer', '_O2'])
 
                 plot_basin_transects(
                     plotter=plotter,
