@@ -967,9 +967,9 @@ class NutrientPlotter(PlotGenerator):
     """Generates nutrient summary plots"""
 
     def generate(self):
-        # Use full 2x3 grid for 6 nutrients (matching single-model)
+        # Use 3x3 grid for 7 nutrients (matching single-model)
         fig, axes = plt.subplots(
-            2, 3, figsize=(3 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
+            3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=True,
             constrained_layout=USE_CONSTRAINED_LAYOUT
         )
         flat_axes = axes.flatten()
@@ -1003,6 +1003,7 @@ class NutrientPlotter(PlotGenerator):
             ("Si", axes[3], "Surface Silica", "μmol/L", 1, False),
             ("O2", axes[4], "Oxygen at 300m", "μmol/L", 1, False),
             ("Alkalini", axes[5], "Surface Alkalinity", "μmol/L", 1, False),
+            ("AOU", axes[6], "AOU at 300m", "μmol/L", 1, False),
         ]
 
         for idx, (col_name, ax, title, ylabel, scale, add_label) in enumerate(plot_configs):
@@ -1018,18 +1019,21 @@ class NutrientPlotter(PlotGenerator):
                 )
                 ax.set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 ax.set_ylabel(ylabel)
-                # Add xlabel only to bottom row (indices 3, 4, 5 in 2x3 grid)
-                if idx >= 3:
+                # Add xlabel only to bottom row (indices 6, 7, 8 in 3x3 grid)
+                if idx >= 6:
                     ax.set_xlabel("Year", fontweight='bold')
 
     def _add_observational_data(self, axes):
-        # Add observation lines for all 6 nutrients
-        nutrient_keys = ["PO4", "NO3", "Fer", "Si", "O2", "Alkalini"]
+        # Add observation lines for all 7 nutrients
+        nutrient_keys = ["PO4", "NO3", "Fer", "Si", "O2", "Alkalini", "AOU"]
         for i, key in enumerate(nutrient_keys):
             if i < len(axes) and key in ObservationData.NUTRIENTS:
                 obs_value = ObservationData.NUTRIENTS[key]
                 if obs_value is not None:
                     axes[i].axhline(obs_value, **LINE_STYLE)
+
+        for idx in range(len(nutrient_keys), len(axes)):
+            axes[idx].set_visible(False)
 
 
 class PCO2Plotter(RegionalPlotter):
@@ -1220,10 +1224,11 @@ class DerivedSummaryPlotter(PlotGenerator):
         )
         axes = axes.flatten()
 
-        # Hide unused 6th subplot
+        # Hide unused subplots
+        axes[4].set_visible(False)
         axes[5].set_visible(False)
 
-        setup_axes(axes[:5])  # Only setup first 5 axes
+        setup_axes(axes[:4])  # Only setup first 4 axes
 
         self.plot_all_models(fig, axes, self._plot_model)
 
@@ -1277,7 +1282,7 @@ class DerivedSummaryPlotter(PlotGenerator):
             axes[2].plot(year, eratio, color=color, linewidth=LINE_WIDTH)
             axes[2].set_title("Export Ratio (e-ratio)", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
             axes[2].set_ylabel("Dimensionless")
-            # Add xlabel to bottom row (indices 2, 3 in 2x2 grid)
+            # Add xlabel to bottom row for the 4-panel layout
             axes[2].set_xlabel("Year", fontweight='bold')
 
         if exp1000 is not None and exp is not None:
@@ -1287,23 +1292,6 @@ class DerivedSummaryPlotter(PlotGenerator):
             axes[3].set_ylabel("Dimensionless")
             axes[3].set_xlabel("Year", fontweight='bold')
 
-        # AOU from average file (if available)
-        ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
-        if ave_data is not None:
-            aou = DataLoader.safe_load_column(ave_data, "AOU", indices)
-            if aou is not None:
-                axes[4].plot(year, aou, color=color, linewidth=LINE_WIDTH)
-                axes[4].set_title("AOU at 300m", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-                axes[4].set_ylabel("µmol/L")
-                axes[4].set_xlabel("Year", fontweight='bold')
-            else:
-                # Show placeholder if AOU not available
-                if not hasattr(axes[4], '_aou_placeholder_added'):
-                    axes[4].text(0.5, 0.5, 'AOU\nnot available',
-                               ha='center', va='center', transform=axes[4].transAxes, fontsize=9, color='gray')
-                    axes[4].set_title("AOU at 300m", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-                    axes[4].set_xlabel("Year", fontweight='bold')
-                    axes[4]._aou_placeholder_added = True
 
 
 class DerivedSummaryNormalizedPlotter(PlotGenerator):

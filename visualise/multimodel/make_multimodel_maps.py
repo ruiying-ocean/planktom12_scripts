@@ -201,10 +201,10 @@ def plot_multimodel_maps(models, output_dir, config):
     # Use derived variables (with underscore) for integrated/processed values
     var_groups = {
         'ecosystem': ['_TChl', '_EXP', '_PPINT'],
-        'nutrients': ['_PO4', '_NO3', '_Si', '_Fer', '_O2'],
+        'nutrients': ['_PO4', '_NO3', '_Si', '_Fer', '_O2', '_AOU'],
         'phytoplankton': ['_PICINT', '_FIXINT', '_COCINT', '_DIAINT', '_MIXINT', '_PHAINT'],
         'zooplankton': ['_BACINT', '_PROINT', '_MESINT', '_PTEINT', '_CRUINT', '_GELINT'],
-        'derived': ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff', '_AOU'],
+        'derived': ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff'],
     }
 
     projection = ccrs.PlateCarree()

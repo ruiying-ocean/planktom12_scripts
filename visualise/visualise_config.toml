@@ -43,7 +43,7 @@ rows = 4
 cols = 3
 
 [layout.nutrient_summary]
-rows = 2
+rows = 3
 cols = 3
 
 [layout.physics_summary]

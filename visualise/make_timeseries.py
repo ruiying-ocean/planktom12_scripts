@@ -232,18 +232,21 @@ class FigureCreator:
         nut_obs = ObservationData.NUTRIENTS
 
         nutrient_configs = [
-            (data["nPO4"], self.colors[0], "Surface Phosphate", "μmol/L", None,
-             ObservationLine(nut_obs["PO4"]) if nut_obs["PO4"] else None),
-            (data["NO3"], self.colors[1], "Surface Nitrate", "μmol/L", None,
-             ObservationLine(nut_obs["NO3"]) if nut_obs["NO3"] else None),
-            (data["nFer"], self.colors[2], "Surface Iron", "nmol/L", None,
-             ObservationLine(nut_obs["Fer"]) if nut_obs["Fer"] else None),
-            (data["Si"], self.colors[3], "Surface Silica", "μmol/L", None,
-             ObservationLine(nut_obs["Si"]) if nut_obs["Si"] else None),
-            (data["O2"], self.colors[4], "Oxygen at 300m", "μmol/L", None,
-             ObservationLine(nut_obs["O2"]) if nut_obs["O2"] else None),
-            (data["Alkalini"], self.colors[5], "Surface Alkalinity", "μmol/L", None,
-             ObservationLine(nut_obs["Alkalini"]) if nut_obs["Alkalini"] else None),
+            ("nPO4", self.colors[0], "Surface Phosphate", "μmol/L",
+             ObservationLine(nut_obs["PO4"]) if nut_obs.get("PO4") else None),
+            ("NO3", self.colors[1], "Surface Nitrate", "μmol/L",
+             ObservationLine(nut_obs["NO3"]) if nut_obs.get("NO3") else None),
+            ("nFer", self.colors[2], "Surface Iron", "nmol/L",
+             ObservationLine(nut_obs["Fer"]) if nut_obs.get("Fer") else None),
+            ("Si", self.colors[3], "Surface Silica", "μmol/L",
+             ObservationLine(nut_obs["Si"]) if nut_obs.get("Si") else None),
+            ("O2", self.colors[4], "Oxygen at 300m", "μmol/L",
+             ObservationLine(nut_obs["O2"]) if nut_obs.get("O2") else None),
+            ("Alkalini", self.colors[5], "Surface Alkalinity", "μmol/L",
+             ObservationLine(nut_obs["Alkalini"]) if nut_obs.get("Alkalini") else None),
+            ("AOU", self.colors[6] if len(self.colors) > 6 else self.colors[0],
+             "AOU at 300m", "μmol/L",
+             ObservationLine(nut_obs["AOU"]) if nut_obs.get("AOU") else None),
         ]
 
         fig, axes = plt.subplots(
@@ -253,10 +256,20 @@ class FigureCreator:
         )
         axes = axes.flatten()
 
-        for i, (plot_data, color, title, ylabel, obs_range, obs_line) in enumerate(nutrient_configs):
+        for i, (var_name, color, title, ylabel, obs_line) in enumerate(nutrient_configs):
             is_bottom_row = i >= (layout['rows'] - 1) * layout['cols']
-            self._setup_axis(axes[i], data["year"], plot_data, color, title, ylabel,
-                           obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
+            if var_name in data and data[var_name] is not None and len(data[var_name]) > 0:
+                self._setup_axis(axes[i], data["year"], data[var_name], color, title, ylabel,
+                               None, obs_line, year_limits, add_xlabel=is_bottom_row)
+            else:
+                axes[i].text(0.5, 0.5, f'{title}\nnot available',
+                           ha='center', va='center', transform=axes[i].transAxes, fontsize=9, color='gray')
+                axes[i].set_title(title, fontweight='bold', pad=5)
+                if is_bottom_row:
+                    axes[i].set_xlabel("Year", fontweight='bold')
+
+        for idx in range(len(nutrient_configs), len(axes)):
+            axes[idx].set_visible(False)
 
         self._save_figure(fig, f"{self.model_name}_summary_nutrients.png")
 
@@ -292,13 +305,11 @@ class FigureCreator:
         subplot_height = self.config['layout']['subplot_height']
 
         # Build derived_configs with available data
-        # AOU might not be available if not computed by analyser
         derived_configs = [
             ("SP", self.colors[0], "Secondary Production", "PgC/yr", None, None),
             ("recycle", self.colors[1], "Residual Production", "PgC/yr", None, None),
             ("eratio", self.colors[2], "Export Ratio (e-ratio)", "Dimensionless", None, None),
             ("Teff", self.colors[3], "Transfer Efficiency", "Dimensionless", None, None),
-            ("AOU", self.colors[4] if len(self.colors) > 4 else self.colors[0], "AOU at 300m", "µmol/L", None, None),
         ]
 
         fig, axes = plt.subplots(
@@ -322,7 +333,7 @@ class FigureCreator:
                 if is_bottom_row:
                     axes[i].set_xlabel("Year", fontweight='bold')
 
-        # Hide unused subplot (6th position in 2x3 grid with 5 variables)
+        # Hide unused subplots
         for idx in range(len(derived_configs), len(axes)):
             axes[idx].set_visible(False)
 

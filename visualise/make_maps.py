@@ -291,7 +291,7 @@ def plot_nutrient_comparison(
     ptrc_ds: xr.Dataset,
     obs_datasets: dict,
     output_path: Path,
-    nutrients: list = ['_NO3', '_PO4', '_Si', '_Fer']
+    nutrients: list = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
 ):
     """
     Create model vs observations comparison for nutrients with difference maps.
@@ -371,11 +371,12 @@ def plot_nutrient_comparison(
             vmax = vmax_model
 
         # Plot model (Column 0)
+        vmin = meta.get('vmin', 0)
         im = plotter.plot_variable(
             ax=ax_model,
             data=model_data,
             cmap=meta['cmap'],
-            vmin=0,
+            vmin=vmin,
             vmax=vmax,
             add_colorbar=False
         )
@@ -390,7 +391,7 @@ def plot_nutrient_comparison(
                 ax=ax_obs,
                 data=obs_data,
                 cmap=meta['cmap'],
-                vmin=0,
+                vmin=vmin,
                 vmax=vmax,
                 add_colorbar=False
             )
@@ -613,7 +614,7 @@ def plot_derived_variables(
     diad_ds: xr.Dataset,
     output_path: Path,
     ptrc_ds: xr.Dataset = None,
-    variables: list = ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff', '_AOU']
+    variables: list = ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff']
 ):
     """
     Create multi-panel map of derived ecosystem variables.
@@ -622,10 +623,10 @@ def plot_derived_variables(
         plotter: OceanMapPlotter instance
         diad_ds: Dataset with diagnostic variables
         output_path: Where to save the figure
-        ptrc_ds: Dataset with tracer variables (optional, used for AOU)
+        ptrc_ds: Dataset with tracer variables (optional)
         variables: List of variables to plot
     """
-    # Create 2x3 subplot grid for 5 variables
+    # Create 2x3 subplot grid for up to 6 variables
     fig, axs = plotter.create_subplot_grid(
         nrows=2, ncols=3,
         projection=ccrs.PlateCarree(),
@@ -642,9 +643,7 @@ def plot_derived_variables(
         ax = axs_flat[idx]
 
         # Check which dataset contains the variable
-        if var_name == '_AOU' and ptrc_ds is not None and var_name in ptrc_ds:
-            ds = ptrc_ds
-        elif var_name in diad_ds:
+        if var_name in diad_ds:
             ds = diad_ds
         else:
             ds = None
@@ -691,7 +690,7 @@ def plot_derived_variables(
                    ha='center', va='center', transform=ax.transAxes)
             ax.set_title(var_name, fontsize=12)
 
-    # Hide unused subplots (e.g., 6th position in 2x3 grid with 5 variables)
+    # Hide unused subplots
     for idx in range(len(variables), len(axs_flat)):
         axs_flat[idx].set_visible(False)
 
@@ -824,9 +823,9 @@ def main():
     if not args.no_nutrient_comparison:
         print("4. Nutrients (model vs observations)...")
 
-        # Load observational datasets using preprocessing module (including O2)
+        # Load observational datasets using preprocessing module (including O2 and AOU)
         obs_dir = Path(args.obs_dir)
-        nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
+        nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
         obs_datasets = load_observations(obs_dir, nutrients=nutrients)
 
         # Generate comparison plot
@@ -872,9 +871,9 @@ def main():
     else:
         print("4. Nutrients (model only)...")
 
-        # Create a simple model-only nutrient plot (including O2)
-        nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
-        # Use 3 columns, 2 rows for 5 nutrients
+        # Create a simple model-only nutrient plot (including O2 and AOU)
+        nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
+        # Use 3 columns, 2 rows for 6 nutrients
         fig, axs = plotter.create_subplot_grid(
             nrows=2, ncols=3,
             projection=ccrs.PlateCarree(),
@@ -908,12 +907,14 @@ def main():
             data = plotter.apply_mask(data)
 
             # Plot
+            vmin = meta.get('vmin', 0)
+            vmax = meta.get('vmax', None)
             im = plotter.plot_variable(
                 ax=ax,
                 data=data,
                 cmap=meta['cmap'],
-                vmin=0,
-                vmax=meta['vmax'],
+                vmin=vmin,
+                vmax=vmax,
                 add_colorbar=False
             )
 
@@ -934,7 +935,7 @@ def main():
         plt.close(fig)
         print(f"Saved: {output_path}")
 
-    # 5. Derived variables (SP, Residual, e-ratio, Teff, AOU)
+    # 5. Derived variables (SP, Residual, e-ratio, Teff)
     print("5. Derived ecosystem variables...")
     plot_derived_variables(
         plotter=plotter,

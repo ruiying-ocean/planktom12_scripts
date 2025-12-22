@@ -73,6 +73,7 @@ class ObservationData:
         "Fer": None,  # Iron [nmol/L] - no reliable global observation
         "Si": 7.227,  # Silica [μmol/L] - surface
         "O2": 168.3,  # Oxygen [μmol/L] - at 300m depth
+        "AOU": None,  # AOU [μmol/L] - no reliable global observation
         "Alkalini": 2352.49,  # Alkalinity [μmol/L] - GLODAP value converted from μmol/kg
     }
 

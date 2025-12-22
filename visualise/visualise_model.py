@@ -173,7 +173,7 @@ def main():
 
         # 2.4 Nutrient maps
         print_step(4, 6, "Nutrient distributions")
-        nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2']
+        nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
 
         if not args.skip_observations:
             # Load observations for comparison
@@ -223,7 +223,7 @@ def main():
             # Could call a simplified nutrient plotting function here if needed
 
         # 2.5 Derived variables maps
-        print_step(5, 6, "Derived ecosystem variables (SP, Residual, e-ratio, Teff, AOU)")
+        print_step(5, 6, "Derived ecosystem variables (SP, Residual, e-ratio, Teff)")
         plot_derived_variables(
             plotter=plotter,
             diad_ds=diad_ds,
@@ -273,7 +273,10 @@ def main():
             if not args.skip_observations:
                 print_step(1, 2, "Nutrient transects (Atlantic 35°W, Pacific 170°W)")
                 nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
-                obs_datasets = load_observations(obs_dir, nutrients=['_NO3', '_PO4', '_Si', '_Fer', '_O2'])
+                obs_datasets = load_observations(
+                    obs_dir,
+                    nutrients=['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
+                )
 
                 plot_basin_transects(
                     plotter=plotter,
