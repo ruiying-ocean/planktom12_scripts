@@ -129,7 +129,9 @@ def load_and_preprocess_ptrc(
             ptrc_ds['_AOU'] = plotter.calculate_aou(o2_raw, temp, sal, depth_index=17).compute()
             print(f"  Processed _AOU")
             # Also calculate 3D AOU for transects if needed
-            ptrc_ds['_AOU_3D'] = calculate_3d_aou(o2_raw, temp, sal).compute()
+            aou_3d = calculate_3d_aou(o2_raw, temp, sal)
+            # Mask land areas where O2 is 0
+            ptrc_ds['_AOU_3D'] = aou_3d.where(o2_raw != 0).compute()
             print(f"  Processed _AOU_3D (for transects), shape: {ptrc_ds['_AOU_3D'].shape}")
         else:
             print("  Warning: O2 not found in ptrc_ds, skipping AOU calculation")

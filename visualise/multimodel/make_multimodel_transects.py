@@ -179,8 +179,9 @@ def load_aou_transect_data(model_dir, model_id, year, plotter):
         temp = grid_ds['votemper'].mean(dim='time_counter')
         sal = grid_ds['vosaline'].mean(dim='time_counter')
 
-        # Calculate 3D AOU
+        # Calculate 3D AOU and mask land areas where O2 is 0
         aou = calculate_3d_aou(o2, temp, sal)
+        aou = aou.where(o2 != 0)
 
         # Remove bottom level if needed
         if 'deptht' in aou.dims:
