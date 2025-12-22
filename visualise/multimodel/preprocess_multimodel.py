@@ -219,7 +219,7 @@ def load_surface_data(
     """
     # Determine file type based on variable
     diagnostic_vars = ['Cflx', 'TChl', '_TChl', 'PPT', 'EXP', '_EXP', '_PPINT',
-                       '_SP', '_RECYCLE', '_eratio', '_Teff']
+                       '_SP', '_RESIDUALINT', '_eratio', '_Teff']
 
     file_type = 'diad_T' if variable in diagnostic_vars else 'ptrc_T'
 

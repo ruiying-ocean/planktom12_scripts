@@ -613,7 +613,7 @@ def plot_derived_variables(
     diad_ds: xr.Dataset,
     output_path: Path,
     ptrc_ds: xr.Dataset = None,
-    variables: list = ['_SPINT', '_RECYCLEINT', '_eratio', '_Teff', '_AOU']
+    variables: list = ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff', '_AOU']
 ):
     """
     Create multi-panel map of derived ecosystem variables.
@@ -934,7 +934,7 @@ def main():
         plt.close(fig)
         print(f"Saved: {output_path}")
 
-    # 5. Derived variables (SP, RECYCLE, e-ratio, Teff, AOU)
+    # 5. Derived variables (SP, Residual, e-ratio, Teff, AOU)
     print("5. Derived ecosystem variables...")
     plot_derived_variables(
         plotter=plotter,

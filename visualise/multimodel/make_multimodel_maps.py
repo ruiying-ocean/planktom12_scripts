@@ -64,7 +64,7 @@ def load_model_data(model_dir, model_id, year, var_name, plotter):
     # Diagnostic variables are in diad_T.nc
     # Tracer variables (nutrients, PFTs) are in ptrc_T.nc
     diagnostic_vars = ['Cflx', 'TChl', '_TChl', 'PPT', 'EXP', '_EXP', '_PPINT',
-                       '_SPINT', '_RECYCLEINT', '_eratio', '_Teff']
+                       '_SPINT', '_RESIDUALINT', '_eratio', '_Teff']
 
     if var_name in diagnostic_vars:
         file_type = 'diad_T'
@@ -141,6 +141,10 @@ def load_aou_data(model_dir, model_id, year, plotter):
     try:
         # Load O2 from ptrc_T
         ptrc_ds = xr.open_dataset(str(ptrc_file), decode_times=False)
+        if 'O2' not in ptrc_ds:
+            print_warning(f"O2 variable not found in {ptrc_file}")
+            ptrc_ds.close()
+            return None
         o2 = ptrc_ds['O2'].mean(dim='time_counter')
 
         # Load T and S from grid_T
@@ -200,7 +204,7 @@ def plot_multimodel_maps(models, output_dir, config):
         'nutrients': ['_PO4', '_NO3', '_Si', '_Fer', '_O2'],
         'phytoplankton': ['_PICINT', '_FIXINT', '_COCINT', '_DIAINT', '_MIXINT', '_PHAINT'],
         'zooplankton': ['_BACINT', '_PROINT', '_MESINT', '_PTEINT', '_CRUINT', '_GELINT'],
-        'derived': ['_SPINT', '_RECYCLEINT', '_eratio', '_Teff', '_AOU'],
+        'derived': ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff', '_AOU'],
     }
 
     projection = ccrs.PlateCarree()

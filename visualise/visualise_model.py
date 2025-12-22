@@ -215,7 +215,7 @@ def main():
             # Could call a simplified nutrient plotting function here if needed
 
         # 2.5 Derived variables maps
-        print_step(5, 6, "Derived ecosystem variables (SP, RECYCLE, e-ratio, Teff)")
+        print_step(5, 6, "Derived ecosystem variables (SP, Residual, e-ratio, Teff)")
         plot_derived_variables(
             plotter=plotter,
             diad_ds=diad_ds,

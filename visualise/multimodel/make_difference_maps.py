@@ -91,7 +91,7 @@ def calculate_derived_variables(model_dir, model_id, year, plotter):
 
     # Load preprocessed derived variables from diad file
     # These are automatically created by plotter.load_data() via map_utils.py
-    derived_vars = ['_SPINT', '_RECYCLEINT', '_eratio', '_Teff']
+    derived_vars = ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff']
 
     for var_name in derived_vars:
         data = load_annual_mean(model_dir, model_id, year, var_name, file_type='diad_T', plotter=plotter)
@@ -106,7 +106,7 @@ def calculate_derived_variables(model_dir, model_id, year, plotter):
                 data = data.isel({depth_dim: depth_index})
 
             # Remove underscore prefix for compatibility with existing code
-            clean_name = var_name.replace('_SPINT', 'SP').replace('_RECYCLEINT', 'recycle').replace('_', '')
+            clean_name = var_name.replace('_SPINT', 'SP').replace('_RESIDUALINT', 'residual').replace('_', '')
             derived[clean_name] = data
 
     return derived
