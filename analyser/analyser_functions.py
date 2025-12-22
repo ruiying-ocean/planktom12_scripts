@@ -5,6 +5,12 @@ import math
 from scipy.ndimage import gaussian_filter
 import logging
 
+try:
+    import gsw
+    HAS_GSW = True
+except ImportError:
+    HAS_GSW = False
+
 log = logging.getLogger("Functions")
 
 # Constants for missing value thresholds
@@ -581,3 +587,113 @@ def trophic(var, var_lons, var_lats, missingVal, lonLim, latLim):
 		mean_m_monthly[t]= np.nanmean(trophicVals[3,t,:,:])
 
 	return mean0, mean1, mean2, mean_m, ['level1','level2', 'level3', 'meanSlope'], mean_m_monthly
+
+
+# ---------- 11 AOU COMPUTATION ----------
+# ORCA2 depth values (meters) for pressure calculation
+ORCA2_DEPTHS = np.array([
+    5.0, 15.0, 25.0, 35.5, 46.5, 58.5, 71.5, 86.0,
+    102.5, 121.5, 143.5, 169.0, 198.5, 233.0, 273.5,
+    321.5, 378.5, 446.0, 526.5, 622.5, 737.5, 875.5,
+    1041.5, 1241.5, 1482.5, 1772.5, 2121.5, 2541.5,
+    3046.5, 3653.5, 4383.5
+])
+
+
+def computeAOU(o2_data, temp_data, sal_data, depth_index=17, missingVal=1e20):
+    """
+    Compute Apparent Oxygen Utilization (AOU) at a specific depth.
+
+    AOU = O2_saturation - O2_measured
+
+    Args:
+        o2_data: Oxygen concentration (time, depth, y, x) in mol/L
+        temp_data: Temperature (time, depth, y, x) in degrees C
+        sal_data: Salinity (time, depth, y, x) in PSU
+        depth_index: Depth level index (default 17 for ~300m)
+        missingVal: Missing value indicator
+
+    Returns:
+        AOU in µmol/L as (time, y, x) array
+    """
+    if not HAS_GSW:
+        log.warning("GSW library not available, cannot compute AOU")
+        return None
+
+    # Get pressure from depth (dbar ≈ meters)
+    pressure = ORCA2_DEPTHS[depth_index]
+
+    # Extract data at specified depth
+    o2_at_depth = o2_data[:, depth_index, :, :]
+    temp_at_depth = temp_data[:, depth_index, :, :]
+    sal_at_depth = sal_data[:, depth_index, :, :]
+
+    # Mask missing values
+    o2_at_depth = np.where(o2_at_depth > missingVal / MISSING_VAL_THRESHOLD_LOOSE, np.nan, o2_at_depth)
+    temp_at_depth = np.where(temp_at_depth > missingVal / MISSING_VAL_THRESHOLD_LOOSE, np.nan, temp_at_depth)
+    sal_at_depth = np.where(sal_at_depth > missingVal / MISSING_VAL_THRESHOLD_LOOSE, np.nan, sal_at_depth)
+
+    # Calculate O2 saturation using GSW
+    # gsw.O2sol returns saturation in µmol/kg
+    o2_sat = gsw.O2sol(sal_at_depth, temp_at_depth, pressure, 0, 0)
+
+    # Convert O2 from mol/L to µmol/L (multiply by 1e6)
+    o2_measured = o2_at_depth * 1e6
+
+    # Convert O2_sat from µmol/kg to µmol/L (multiply by density ~1.025)
+    o2_sat_umol_L = o2_sat * 1.025
+
+    # Calculate AOU
+    aou = o2_sat_umol_L - o2_measured
+
+    return aou
+
+
+def aouData(o2_data, temp_data, sal_data, var_lons, var_lats, landMask, volMask, missingVal, lonLim, latLim, depth_index=17):
+    """
+    Compute AOU statistics for analyser output.
+
+    Args:
+        o2_data: Oxygen concentration (time, depth, y, x) in mol/L
+        temp_data: Temperature (time, depth, y, x) in degrees C
+        sal_data: Salinity (time, depth, y, x) in PSU
+        var_lons: Longitude coordinates
+        var_lats: Latitude coordinates
+        landMask: 2D land mask
+        volMask: 3D volume mask
+        missingVal: Missing value indicator
+        lonLim: Longitude limits [min, max]
+        latLim: Latitude limits [min, max]
+        depth_index: Depth level index (default 17 for ~300m)
+
+    Returns:
+        Tuple of (annual_mean, monthly_stats) matching volumeDataAverage format
+    """
+    # Compute AOU
+    aou = computeAOU(o2_data, temp_data, sal_data, depth_index, missingVal)
+
+    if aou is None:
+        return -1, np.full((12, 6), -1.0)
+
+    tDim = aou.shape[0]
+
+    # Apply spatial domain masking
+    aou = subDomainORCA(lonLim, latLim, var_lons, var_lats, aou, landMask, volMask, missingVal)
+
+    # Filter missing values
+    aou[aou > missingVal / MISSING_VAL_THRESHOLD_LOOSE] = np.nan
+    aou[aou < -missingVal / MISSING_VAL_THRESHOLD_LOOSE] = np.nan
+
+    # Compute annual mean (global average)
+    total = np.nanmean(aou)
+
+    # Compute monthly statistics
+    monthly_means = np.nanmean(aou, axis=(1, 2))
+    percentiles = np.nanquantile(aou, [0.05, 0.25, 0.5, 0.75, 0.95], axis=(1, 2))
+    monthly_min, monthly_first, monthly_median, monthly_third, monthly_max = percentiles
+
+    # Build monthly list
+    monthly = [[monthly_means[t], monthly_min[t], monthly_first[t], monthly_median[t], monthly_third[t], monthly_max[t]]
+               for t in range(tDim)]
+
+    return total, monthly

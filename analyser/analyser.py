@@ -21,7 +21,7 @@ from analyser_processor import (
     process_variables, process_average_variables_special,
     precompute_region_masks, create_region_mask_cache
 )
-from analyser_functions import surfaceData, volumeData, integrateData, volumeDataAverage, levelData
+from analyser_functions import surfaceData, volumeData, integrateData, volumeDataAverage, levelData, aouData
 
 # ---------- 1 SETUP AND INITIALIZATION ----------
 
@@ -308,6 +308,41 @@ for year in range(year_from, year_to + 1):
         mask_vol, missing_val, region_mask_cache
     )
 
+    # 3.5 Compute AOU (derived variable requiring O2, temperature, salinity)
+    log.info("Computing AOU...")
+    aou_result = None
+    try:
+        from analyser_io import find_variable_in_files
+        # Find O2, votemper, vosaline in the loaded files
+        found_o2, o2_data, lats, lons, _ = find_variable_in_files(
+            nc_run_ids[0], nc_runFileNames[0], 'O2'
+        )
+        found_temp, temp_data, _, _, _ = find_variable_in_files(
+            nc_run_ids[0], nc_runFileNames[0], 'votemper'
+        )
+        found_sal, sal_data, _, _, _ = find_variable_in_files(
+            nc_run_ids[0], nc_runFileNames[0], 'vosaline'
+        )
+
+        if found_o2 and found_temp and found_sal:
+            aou_result = aouData(
+                o2_data, temp_data, sal_data,
+                lons, lats, landMask, volMask, missing_val,
+                [-180, 180], [-90, 90], depth_index=17
+            )
+            log.info(f"AOU computed: annual mean = {aou_result[0]:.2f} µmol/L")
+        else:
+            missing = []
+            if not found_o2:
+                missing.append('O2')
+            if not found_temp:
+                missing.append('votemper')
+            if not found_sal:
+                missing.append('vosaline')
+            log.warning(f"Cannot compute AOU: missing {', '.join(missing)}")
+    except Exception as e:
+        log.warning(f"Error computing AOU: {e}")
+
     # 4. Write this year's results to CSV immediately
     log.info(f"Writing results for year {year}...")
     writer.write_annual_csv_streaming("analyser.sur.annual.csv", config.surface_vars, year)
@@ -315,6 +350,26 @@ for year in range(year_from, year_to + 1):
     writer.write_annual_csv_streaming("analyser.vol.annual.csv", config.volume_vars, year)
     writer.write_annual_csv_streaming("analyser.int.annual.csv", config.integration_vars, year)
     writer.write_annual_csv_streaming("analyser.ave.annual.csv", config.average_vars, year)
+
+    # Write AOU to average file (append column)
+    aou_file = Path("analyser.ave.annual.csv")
+    if aou_result is not None:
+        # Read existing content and add AOU column
+        if aou_file.exists():
+            with open(aou_file, 'r') as f:
+                lines = f.readlines()
+
+            # First year: add header
+            if year == year_from:
+                if lines:
+                    lines[0] = lines[0].rstrip('\n') + ',AOU\n'
+
+            # Add AOU value to the last line (current year)
+            if lines:
+                lines[-1] = lines[-1].rstrip('\n') + f',{aou_result[0]:.4e}\n'
+
+            with open(aou_file, 'w') as f:
+                f.writelines(lines)
 
     # 5. Close NetCDF files to free memory
     for file_list in nc_run_ids:
