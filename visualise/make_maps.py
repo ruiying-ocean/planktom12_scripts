@@ -330,15 +330,17 @@ def plot_nutrient_comparison(
         # Get metadata
         meta = get_variable_metadata(nut)
 
-        # Get surface model data (already time-averaged from preprocessing if available)
+        # Get model data (already time-averaged from preprocessing if available)
         model_data = ptrc_ds[nut]
 
         # If time dimension still exists, average it
         if 'time_counter' in model_data.dims:
             model_data = model_data.mean(dim='time_counter')
 
+        # Get depth level from metadata (default to surface)
+        depth_index = meta.get('depth_index', 0) or 0
         if 'deptht' in model_data.dims:
-            model_data = model_data.isel(deptht=0)
+            model_data = model_data.isel(deptht=depth_index)
 
         # Remove any singleton dimensions
         model_data = model_data.squeeze()
@@ -356,11 +358,12 @@ def plot_nutrient_comparison(
         obs_data = None
         if nut in obs_datasets and obs_datasets[nut] is not None:
             obs_data = obs_datasets[nut]
-            # Get surface level
+            # Get depth level from metadata (default to surface)
+            depth_index = meta.get('depth_index', 0) or 0
             if 'depth' in obs_data.dims:
-                obs_data = obs_data.isel(depth=0)
+                obs_data = obs_data.isel(depth=depth_index)
             elif 'deptht' in obs_data.dims:
-                obs_data = obs_data.isel(deptht=0)
+                obs_data = obs_data.isel(deptht=depth_index)
             # Remove any singleton dimensions
             obs_data = obs_data.squeeze()
             # Apply mask
