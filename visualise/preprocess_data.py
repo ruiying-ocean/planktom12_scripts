@@ -130,7 +130,7 @@ def load_and_preprocess_ptrc(
             print(f"  Processed _AOU")
             # Also calculate 3D AOU for transects if needed
             ptrc_ds['_AOU_3D'] = calculate_3d_aou(o2_raw, temp, sal).compute()
-            print(f"  Processed _AOU_3D (for transects)")
+            print(f"  Processed _AOU_3D (for transects), shape: {ptrc_ds['_AOU_3D'].shape}")
         else:
             print("  Warning: O2 not found in ptrc_ds, skipping AOU calculation")
     elif compute_aou:

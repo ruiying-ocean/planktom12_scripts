@@ -91,6 +91,8 @@ def plot_basin_transects(
             model_transect = None
             # For AOU, use the 3D AOU field if available
             model_var = '_AOU_3D' if nut == '_AOU' and '_AOU_3D' in ptrc_ds else nut
+            if nut == '_AOU':
+                print(f"  AOU: looking for '{model_var}', available: {'_AOU_3D' in ptrc_ds}")
             if model_var in ptrc_ds:
                 model_data = ptrc_ds[model_var]
 
