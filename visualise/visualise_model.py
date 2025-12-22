@@ -122,7 +122,9 @@ def main():
 
     diad_ds = load_and_preprocess_diad(
         diad_file=diad_file,
-        plotter=plotter
+        plotter=plotter,
+        compute_edepth=grid_t_file.exists(),
+        grid_t_file=grid_t_file
     )
 
     print_success("Data preprocessing complete\n")

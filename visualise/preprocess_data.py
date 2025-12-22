@@ -8,7 +8,7 @@ from pathlib import Path
 import xarray as xr
 from typing import Optional, List, Tuple
 
-from map_utils import OceanMapPlotter, PHYTOS, ZOOS, calculate_3d_aou
+from map_utils import OceanMapPlotter, PHYTOS, ZOOS, calculate_3d_aou, calculate_e_depth
 
 
 def load_grid_t_for_aou(
@@ -144,7 +144,9 @@ def load_and_preprocess_ptrc(
 def load_and_preprocess_diad(
     diad_file: Path,
     plotter: OceanMapPlotter,
-    variables: Optional[List[str]] = None
+    variables: Optional[List[str]] = None,
+    compute_edepth: bool = False,
+    grid_t_file: Optional[Path] = None
 ) -> xr.Dataset:
     """
     Load and preprocess diagnostic (diad_T) dataset.
@@ -153,6 +155,8 @@ def load_and_preprocess_diad(
         diad_file: Path to diad_T NetCDF file
         plotter: OceanMapPlotter instance with volume data
         variables: Specific variables to load (None = standard diagnostics)
+        compute_edepth: Whether to compute e-depth (requires grid_t_file for MLD)
+        grid_t_file: Path to grid_T file for MLD (required if compute_edepth=True)
 
     Returns:
         Preprocessed dataset with time-averaged variables
@@ -179,6 +183,32 @@ def load_and_preprocess_diad(
             else:
                 diad_ds[var] = diad_ds[var].squeeze().compute()
             print(f"  Processed {var}")
+
+    # Compute e-depth if requested
+    if compute_edepth and grid_t_file is not None and grid_t_file.exists():
+        if 'EXP' in diad_ds:
+            print("Computing e-depth...")
+            # Load MLD from grid_T
+            grid_ds = xr.open_dataset(str(grid_t_file), decode_times=False)
+            mld = grid_ds['mldr10_1']
+            if 'time_counter' in mld.dims:
+                mld = mld.mean(dim='time_counter').squeeze()
+
+            # Get EXP (3D, time-averaged)
+            exp_flux = diad_ds['EXP']
+            if 'time_counter' in exp_flux.dims:
+                exp_flux = exp_flux.mean(dim='time_counter').squeeze()
+
+            # Calculate e-depth
+            diad_ds['_edepth'] = calculate_e_depth(
+                exp_flux, mld, plotter.land_mask_2d
+            ).compute()
+            print(f"  Processed _edepth")
+            grid_ds.close()
+        else:
+            print("  Warning: EXP not found in diad_ds, skipping e-depth calculation")
+    elif compute_edepth:
+        print("  Warning: grid_t_file not provided or doesn't exist, skipping e-depth calculation")
 
     return diad_ds
 

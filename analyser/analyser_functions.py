@@ -697,3 +697,61 @@ def aouData(o2_data, temp_data, sal_data, var_lons, var_lats, landMask, volMask,
                for t in range(tDim)]
 
     return total, monthly
+
+
+# ---------- 12 E-DEPTH (Z_STAR) COMPUTATION ----------
+def calculate_e_depth(exp_flux, depth_vals, mld_2d, landMask, missingVal):
+    """
+    Calculate e-folding depth (z_star) for carbon export flux remineralization.
+
+    z_star is the depth scale over which export flux decreases by a factor of e,
+    measured from a reference depth z0 = MLD + 10m.
+
+    Args:
+        exp_flux: Export flux (depth, y, x) - time-averaged
+        depth_vals: 1D array of depth values in meters
+        mld_2d: Mixed layer depth (y, x) in meters - time-averaged
+        landMask: 2D land mask (1 = ocean, NaN = land)
+        missingVal: Missing value indicator
+
+    Returns:
+        z_star: 2D array (y, x) of e-folding depths in meters
+    """
+    nz, ny, nx = exp_flux.shape
+    z_star = np.full((ny, nx), np.nan)
+
+    for i in range(ny):
+        for j in range(nx):
+            if np.isnan(landMask[i, j]):
+                continue
+
+            mld_val = mld_2d[i, j]
+            if np.isnan(mld_val) or mld_val <= 0:
+                continue
+
+            z0_depth = mld_val + 10.0
+            z0_idx = np.argmin(np.abs(depth_vals - z0_depth))
+
+            flux_z0 = exp_flux[z0_idx, i, j]
+            if np.isnan(flux_z0) or flux_z0 <= 0 or flux_z0 > missingVal / MISSING_VAL_THRESHOLD_LOOSE:
+                continue
+
+            target_flux = flux_z0 / np.e
+
+            for k in range(z0_idx, nz):
+                flux_k = exp_flux[k, i, j]
+                if np.isnan(flux_k) or flux_k > missingVal / MISSING_VAL_THRESHOLD_LOOSE:
+                    continue
+
+                if flux_k <= target_flux:
+                    if k == z0_idx:
+                        z_star[i, j] = depth_vals[k] - z0_depth
+                    else:
+                        flux_before = exp_flux[k-1, i, j]
+                        if not np.isnan(flux_before) and flux_before > flux_k:
+                            frac = (flux_before - target_flux) / (flux_before - flux_k)
+                            depth_at_target = depth_vals[k-1] + frac * (depth_vals[k] - depth_vals[k-1])
+                            z_star[i, j] = depth_at_target - z0_depth
+                    break
+
+    return z_star

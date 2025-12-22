@@ -617,7 +617,7 @@ def plot_derived_variables(
     diad_ds: xr.Dataset,
     output_path: Path,
     ptrc_ds: xr.Dataset = None,
-    variables: list = ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff']
+    variables: list = ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff', '_edepth']
 ):
     """
     Create multi-panel map of derived ecosystem variables.
@@ -629,18 +629,18 @@ def plot_derived_variables(
         ptrc_ds: Dataset with tracer variables (optional)
         variables: List of variables to plot
     """
-    # Create 2x2 subplot grid
+    # Create 2x3 subplot grid to accommodate up to 6 variables
     fig, axs = plotter.create_subplot_grid(
-        nrows=2, ncols=2,
+        nrows=2, ncols=3,
         projection=ccrs.PlateCarree(),
-        figsize=(10, 6)
+        figsize=(15, 6)
     )
 
     # Flatten axes for easier indexing
     axs_flat = axs.flatten()
 
     for idx, var_name in enumerate(variables):
-        if idx >= 4:  # Only plot first 4 variables (2x2 grid)
+        if idx >= 6:  # Only plot first 6 variables (2x3 grid)
             break
 
         ax = axs_flat[idx]
@@ -775,7 +775,9 @@ def main():
 
     diad_ds = load_and_preprocess_diad(
         diad_file=diad_file,
-        plotter=plotter
+        plotter=plotter,
+        compute_edepth=grid_t_file.exists(),
+        grid_t_file=grid_t_file
     )
 
     print("Data processing complete.")

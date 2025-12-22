@@ -21,7 +21,7 @@ from analyser_processor import (
     process_variables, process_average_variables_special,
     precompute_region_masks, create_region_mask_cache
 )
-from analyser_functions import surfaceData, volumeData, integrateData, volumeDataAverage, levelData, aouData
+from analyser_functions import surfaceData, volumeData, integrateData, volumeDataAverage, levelData, aouData, calculate_e_depth, ORCA2_DEPTHS
 
 # ---------- 1 SETUP AND INITIALIZATION ----------
 
@@ -343,6 +343,42 @@ for year in range(year_from, year_to + 1):
     except Exception as e:
         log.warning(f"Error computing AOU: {e}")
 
+    # 3.6 Compute e-depth (z_star) from EXP and MLD
+    log.info("Computing e-depth...")
+    edepth_result = None
+    try:
+        from analyser_io import find_variable_in_files
+        # Find EXP and mldr10_1 in the loaded files
+        found_exp, exp_data, lats, lons, _ = find_variable_in_files(
+            nc_run_ids[0], nc_runFileNames[0], 'EXP'
+        )
+        found_mld, mld_data, _, _, _ = find_variable_in_files(
+            nc_run_ids[0], nc_runFileNames[0], 'mldr10_1'
+        )
+
+        if found_exp and found_mld:
+            # Time-average the data
+            exp_mean = np.nanmean(exp_data, axis=0)
+            mld_mean = np.nanmean(mld_data, axis=0)
+            # Filter missing values in MLD
+            mld_mean[mld_mean > missing_val / 10] = np.nan
+
+            # Calculate e-depth
+            z_star = calculate_e_depth(exp_mean, ORCA2_DEPTHS, mld_mean, landMask, missing_val)
+
+            # Compute global mean
+            edepth_result = np.nanmean(z_star)
+            log.info(f"E-depth computed: annual mean = {edepth_result:.2f} m")
+        else:
+            missing = []
+            if not found_exp:
+                missing.append('EXP')
+            if not found_mld:
+                missing.append('mldr10_1')
+            log.warning(f"Cannot compute e-depth: missing {', '.join(missing)}")
+    except Exception as e:
+        log.warning(f"Error computing e-depth: {e}")
+
     # 4. Write this year's results to CSV immediately
     log.info(f"Writing results for year {year}...")
     writer.write_annual_csv_streaming("analyser.sur.annual.csv", config.surface_vars, year)
@@ -351,22 +387,32 @@ for year in range(year_from, year_to + 1):
     writer.write_annual_csv_streaming("analyser.int.annual.csv", config.integration_vars, year)
     writer.write_annual_csv_streaming("analyser.ave.annual.csv", config.average_vars, year)
 
-    # Write AOU to average file (append column)
+    # Write AOU and e-depth to average file (append columns)
     aou_file = Path("analyser.ave.annual.csv")
-    if aou_result is not None:
-        # Read existing content and add AOU column
+    if aou_result is not None or edepth_result is not None:
+        # Read existing content and add columns
         if aou_file.exists():
             with open(aou_file, 'r') as f:
                 lines = f.readlines()
 
-            # First year: add header
+            # First year: add headers
             if year == year_from:
                 if lines:
-                    lines[0] = lines[0].rstrip('\n') + ',AOU\n'
+                    header_suffix = ''
+                    if aou_result is not None:
+                        header_suffix += ',AOU'
+                    if edepth_result is not None:
+                        header_suffix += ',e-depth'
+                    lines[0] = lines[0].rstrip('\n') + header_suffix + '\n'
 
-            # Add AOU value to the last line (current year)
+            # Add values to the last line (current year)
             if lines:
-                lines[-1] = lines[-1].rstrip('\n') + f',{aou_result[0]:.4e}\n'
+                value_suffix = ''
+                if aou_result is not None:
+                    value_suffix += f',{aou_result[0]:.4e}'
+                if edepth_result is not None:
+                    value_suffix += f',{edepth_result:.2f}'
+                lines[-1] = lines[-1].rstrip('\n') + value_suffix + '\n'
 
             with open(aou_file, 'w') as f:
                 f.writelines(lines)

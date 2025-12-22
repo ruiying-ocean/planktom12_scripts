@@ -706,6 +706,14 @@ ECOSYSTEM_VARS = {
         'vmin': -50,
         'depth_index': 17,  # ~300m depth (same as O2)
         'cmap': 'RdBu_r'  # Diverging colormap since AOU can be negative
+    },
+    '_edepth': {
+        'long_name': 'E-depth',
+        'units': 'm',
+        'vmax': 500,
+        'vmin': 0,
+        'depth_index': None,
+        'cmap': 'viridis'
     }
 }
 
@@ -865,6 +873,91 @@ def convert_units(data: xr.DataArray, var_name: str) -> xr.DataArray:
 
     # Default: no conversion
     return data
+
+
+def calculate_e_depth(
+    exp_flux: xr.DataArray,
+    mld: xr.DataArray,
+    land_mask: Optional[xr.DataArray] = None
+) -> xr.DataArray:
+    """
+    Calculate e-folding depth (z_star) for carbon export flux remineralization.
+
+    z_star is the depth scale over which export flux decreases by a factor of e,
+    measured from a reference depth z0 = MLD + 10m.
+
+    Args:
+        exp_flux: Export flux (depth, y, x) or (deptht, y, x) - time-averaged
+        mld: Mixed layer depth (y, x) in meters - time-averaged
+        land_mask: Optional 2D land mask (True = ocean)
+
+    Returns:
+        z_star: DataArray (y, x) of e-folding depths in meters
+    """
+    # ORCA2 depth values
+    depth_values = np.array([
+        5.0, 15.0, 25.0, 35.5, 46.5, 58.5, 71.5, 86.0,
+        102.5, 121.5, 143.5, 169.0, 198.5, 233.0, 273.5,
+        321.5, 378.5, 446.0, 526.5, 622.5, 737.5, 875.5,
+        1041.5, 1241.5, 1482.5, 1772.5, 2121.5, 2541.5,
+        3046.5, 3653.5, 4383.5
+    ])
+
+    # Get numpy arrays
+    exp_vals = exp_flux.values
+    mld_vals = mld.values
+
+    # Ensure 3D
+    if exp_vals.ndim != 3:
+        raise ValueError(f"exp_flux must be 3D (depth, y, x), got shape {exp_vals.shape}")
+
+    nz, ny, nx = exp_vals.shape
+    z_star = np.full((ny, nx), np.nan)
+
+    for i in range(ny):
+        for j in range(nx):
+            # Skip land if mask provided
+            if land_mask is not None and not land_mask.values[i, j]:
+                continue
+
+            mld_val = mld_vals[i, j]
+            if np.isnan(mld_val) or mld_val <= 0:
+                continue
+
+            z0_depth = mld_val + 10.0
+            z0_idx = np.argmin(np.abs(depth_values[:nz] - z0_depth))
+
+            flux_z0 = exp_vals[z0_idx, i, j]
+            if np.isnan(flux_z0) or flux_z0 <= 0:
+                continue
+
+            target_flux = flux_z0 / np.e
+
+            for k in range(z0_idx, nz):
+                flux_k = exp_vals[k, i, j]
+                if np.isnan(flux_k):
+                    continue
+
+                if flux_k <= target_flux:
+                    if k == z0_idx:
+                        z_star[i, j] = depth_values[k] - z0_depth
+                    else:
+                        flux_before = exp_vals[k-1, i, j]
+                        if not np.isnan(flux_before) and flux_before > flux_k:
+                            frac = (flux_before - target_flux) / (flux_before - flux_k)
+                            depth_at_target = depth_values[k-1] + frac * (depth_values[k] - depth_values[k-1])
+                            z_star[i, j] = depth_at_target - z0_depth
+                    break
+
+    # Create DataArray with same coordinates as mld
+    result = xr.DataArray(
+        z_star,
+        dims=mld.dims,
+        coords=mld.coords,
+        name='_edepth'
+    )
+
+    return result
 
 
 def calculate_3d_aou(
