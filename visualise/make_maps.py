@@ -626,18 +626,18 @@ def plot_derived_variables(
         ptrc_ds: Dataset with tracer variables (optional)
         variables: List of variables to plot
     """
-    # Create 2x3 subplot grid for up to 6 variables
+    # Create 2x2 subplot grid
     fig, axs = plotter.create_subplot_grid(
-        nrows=2, ncols=3,
+        nrows=2, ncols=2,
         projection=ccrs.PlateCarree(),
-        figsize=(15, 6)
+        figsize=(10, 6)
     )
 
     # Flatten axes for easier indexing
     axs_flat = axs.flatten()
 
     for idx, var_name in enumerate(variables):
-        if idx >= 6:  # Only plot first 6 variables (2x3 grid)
+        if idx >= 4:  # Only plot first 4 variables (2x2 grid)
             break
 
         ax = axs_flat[idx]
