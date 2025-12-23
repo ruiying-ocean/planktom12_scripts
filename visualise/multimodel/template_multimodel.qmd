@@ -87,6 +87,18 @@ Derived variable anomalies relative to the first-decade mean.
 
 ${DERIVED_SECTION}
 
+# Organic Matter Pools
+
+Comparison of dissolved and particulate organic carbon pools across models.
+
+![](multimodel_summary_organic_matter.png)
+
+## Normalized Anomalies
+
+Organic matter pool anomalies relative to the first-decade mean.
+
+![](multimodel_summary_organic_matter_normalized.png)
+
 ---
 
 # Spatial Maps

@@ -1373,6 +1373,117 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
             axes[3].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
 
+class OrganicMatterPlotter(PlotGenerator):
+    """Generates organic matter (DOC, POC, GOC, HOC) summary plots"""
+
+    def generate(self):
+        # Use 2x2 grid for 4 organic matter pools
+        fig, axes = plt.subplots(
+            2, 2, figsize=(2 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
+            constrained_layout=USE_CONSTRAINED_LAYOUT
+        )
+        axes = axes.flatten()
+
+        setup_axes(axes)
+
+        self.plot_all_models(fig, axes, self._plot_model)
+
+        self.add_legend(fig)
+        self.save_figure(fig, "multimodel_summary_organic_matter.png")
+
+    def _plot_model(self, model, axes, color):
+        int_data = DataLoader.load_analyser_data(model, "int", "annual")
+        if int_data is None:
+            return
+
+        actual_years = DataLoader.get_actual_years(int_data)
+        indices = model.get_year_range_indices(actual_years)
+        if indices[0] is None:
+            return
+
+        year = DataLoader.safe_load_column(int_data, "year", indices)
+        if year is None:
+            return
+
+        om_mapping = [
+            ("DOC", "Dissolved Organic Carbon"),
+            ("POC", "Particulate Organic Carbon"),
+            ("GOC", "Large Particulate OC"),
+            ("HOC", "Huge Particulate OC"),
+        ]
+
+        for i, (col_name, title) in enumerate(om_mapping):
+            values = DataLoader.safe_load_column(int_data, col_name, indices)
+            if values is not None and len(values) == len(year):
+                label = model.label if i == 1 else None
+                axes[i].plot(
+                    year,
+                    values,
+                    color=color,
+                    label=label,
+                    linewidth=LINE_WIDTH,
+                )
+                axes[i].set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[i].set_ylabel("PgC")
+                # Add xlabel only to bottom row (indices 2, 3 in 2x2 grid)
+                if i >= 2:
+                    axes[i].set_xlabel("Year", fontweight='bold')
+
+
+class OrganicMatterNormalizedPlotter(PlotGenerator):
+    """Generates normalized/anomaly plots for organic matter pools"""
+
+    def generate(self):
+        fig, axes = plt.subplots(
+            2, 2, figsize=(2 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
+            constrained_layout=USE_CONSTRAINED_LAYOUT
+        )
+        axes = axes.flatten()
+
+        setup_axes(axes)
+
+        self.plot_all_models(fig, axes, self._plot_model)
+
+        self.add_legend(fig)
+        self.save_figure(fig, "multimodel_summary_organic_matter_normalized.png")
+
+    def _plot_model(self, model, axes, color):
+        int_data = DataLoader.load_analyser_data(model, "int", "annual")
+        if int_data is None:
+            return
+
+        actual_years = DataLoader.get_actual_years(int_data)
+        indices = model.get_year_range_indices(actual_years)
+        if indices[0] is None:
+            return
+
+        year = DataLoader.safe_load_column(int_data, "year", indices)
+        if year is None:
+            return
+
+        om_mapping = [
+            ("DOC", "DOC anomaly"),
+            ("POC", "POC anomaly"),
+            ("GOC", "GOC anomaly"),
+            ("HOC", "HOC anomaly"),
+        ]
+
+        for i, (col_name, title) in enumerate(om_mapping):
+            values = DataLoader.safe_load_column(int_data, col_name, indices)
+            if values is None or len(values) != len(year):
+                continue
+
+            normalized = GlobalSummaryNormalizedPlotter._normalize_series(values)
+            label = model.label if i == 1 else None
+            axes[i].plot(year, normalized, color=color, label=label, linewidth=LINE_WIDTH)
+            axes[i].set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+            axes[i].set_ylabel("PgC anomaly")
+            # Add xlabel only to bottom row (indices 2, 3 in 2x2 grid)
+            if i >= 2:
+                axes[i].set_xlabel("Year", fontweight='bold')
+            axes[i].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+
+
 class MultiModelPlotter:
     """Main class coordinating all plot generation"""
 
@@ -1398,6 +1509,8 @@ class MultiModelPlotter:
             PhysicsPlotter(self.models, self.save_dir),
             DerivedSummaryPlotter(self.models, self.save_dir),
             DerivedSummaryNormalizedPlotter(self.models, self.save_dir),
+            OrganicMatterPlotter(self.models, self.save_dir),
+            OrganicMatterNormalizedPlotter(self.models, self.save_dir),
         ]
 
         for plotter in plotters:
