@@ -50,7 +50,7 @@ spinupEnd:1930
 # Keep restarts and output frequency (years)
 spinupRestartKeepFrequency:30
 spinupOutputKeepFrequency:30
-runRestartKeepFrequency:10
+runRestartKeepFrequency:30
 runOutputKeepFrequency:10
 
 # Flags for keeping respective files (0 = delete, 1 = keep)

@@ -60,7 +60,7 @@ max_models = 8
 
 # Plot styling
 [style]
-linewidth = 1.5
+linewidth = 1.0
 alpha = 0.9
 grid_linewidth = 0.5
 grid_color = "#cccccc"
