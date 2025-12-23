@@ -230,6 +230,16 @@ class DataLoader:
             return None
 
     @staticmethod
+    def align_year_and_values(year, values):
+        """Align year and values arrays to common length when they differ."""
+        if year is None or values is None:
+            return None, None
+        min_len = min(len(year), len(values))
+        if min_len == 0:
+            return None, None
+        return year[:min_len], values[:min_len]
+
+    @staticmethod
     def get_actual_years(df):
         if df is None or "year" not in df.columns:
             return None
@@ -398,10 +408,11 @@ class GlobalSummaryPlotter(PlotGenerator):
 
         for idx, (ax, data_df, column, title, ylabel, add_label, custom_data) in enumerate(plot_configs):
             if custom_data is not None:
-                # Use custom calculated data
-                if len(custom_data) == len(year):
+                # Use custom calculated data - align with year array
+                plot_year, plot_data = DataLoader.align_year_and_values(year, custom_data)
+                if plot_year is not None:
                     label = model.label if add_label else None
-                    ax.plot(year, custom_data, color=color, label=label, linewidth=LINE_WIDTH)
+                    ax.plot(plot_year, plot_data, color=color, label=label, linewidth=LINE_WIDTH)
                     ax.set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                     ax.set_ylabel(ylabel)
                     # Add xlabel only to bottom row (indices 6, 7, 8 in 3x3 grid)
@@ -409,9 +420,10 @@ class GlobalSummaryPlotter(PlotGenerator):
                         ax.set_xlabel("Year", fontweight='bold')
             elif data_df is not None and column is not None:
                 values = DataLoader.safe_load_column(data_df, column, indices)
-                if values is not None and len(values) == len(year):
+                plot_year, plot_values = DataLoader.align_year_and_values(year, values)
+                if plot_year is not None:
                     label = model.label if add_label else None
-                    ax.plot(year, values, color=color, label=label, linewidth=LINE_WIDTH)
+                    ax.plot(plot_year, plot_values, color=color, label=label, linewidth=LINE_WIDTH)
                     ax.set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                     ax.set_ylabel(ylabel)
                     # Add xlabel only to bottom row (indices 6, 7, 8 in 3x3 grid)
@@ -518,13 +530,14 @@ class GlobalSummaryNormalizedPlotter(PlotGenerator):
             elif data_df is not None and column is not None:
                 values = DataLoader.safe_load_column(data_df, column, indices)
 
-            if values is None or len(values) != len(year):
+            plot_year, plot_values = DataLoader.align_year_and_values(year, values)
+            if plot_year is None:
                 continue
 
-            normalized_values = self._normalize_series(values)
+            normalized_values = self._normalize_series(plot_values)
             label = model.label if add_label else None
             ax.plot(
-                year,
+                plot_year,
                 normalized_values,
                 color=color,
                 label=label,
@@ -739,11 +752,12 @@ class PFTPlotter(PlotGenerator):
 
         for i, (col_name, title) in enumerate(pft_mapping):
             values = DataLoader.safe_load_column(int_data, col_name, indices)
-            if values is not None and len(values) == len(year):
+            plot_year, plot_values = DataLoader.align_year_and_values(year, values)
+            if plot_year is not None:
                 label = model.label if i == 10 else None
                 axes[i].plot(
-                    year,
-                    values,
+                    plot_year,
+                    plot_values,
                     color=color,
                     label=label,
                     linewidth=LINE_WIDTH,
@@ -832,12 +846,13 @@ class PFTNormalizedPlotter(PlotGenerator):
 
         for i, (col_name, title) in enumerate(pft_mapping):
             values = DataLoader.safe_load_column(int_data, col_name, indices)
-            if values is None or len(values) != len(year):
+            plot_year, plot_values = DataLoader.align_year_and_values(year, values)
+            if plot_year is None:
                 continue
 
-            normalized = GlobalSummaryNormalizedPlotter._normalize_series(values)
+            normalized = GlobalSummaryNormalizedPlotter._normalize_series(plot_values)
             label = model.label if i == 10 else None
-            axes[i].plot(year, normalized, color=color, label=label, linewidth=LINE_WIDTH)
+            axes[i].plot(plot_year, normalized, color=color, label=label, linewidth=LINE_WIDTH)
             axes[i].set_title(title, fontsize=TITLE_FONTSIZE, fontweight="bold", pad=5)
             axes[i].set_ylabel("PgC anomaly")
             axes[i].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
@@ -1008,11 +1023,12 @@ class NutrientPlotter(PlotGenerator):
 
         for idx, (col_name, ax, title, ylabel, scale, add_label) in enumerate(plot_configs):
             values = DataLoader.safe_load_column(ave_data, col_name, indices)
-            if values is not None and len(values) == len(year):
+            plot_year, plot_values = DataLoader.align_year_and_values(year, values)
+            if plot_year is not None:
                 label = model.label if add_label else None
                 ax.plot(
-                    year,
-                    values * scale,
+                    plot_year,
+                    plot_values * scale,
                     color=color,
                     label=label,
                     linewidth=LINE_WIDTH,
@@ -1267,27 +1283,33 @@ class DerivedSummaryPlotter(PlotGenerator):
         # Calculate derived variables
         if grazing_data:
             sp = sum(grazing_data.values())
-            axes[0].plot(year, sp, color=color, label=model.label, linewidth=LINE_WIDTH)
-            axes[0].set_title("Secondary Production", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-            axes[0].set_ylabel("PgC/yr")
+            plot_year, plot_sp = DataLoader.align_year_and_values(year, sp)
+            if plot_year is not None:
+                axes[0].plot(plot_year, plot_sp, color=color, label=model.label, linewidth=LINE_WIDTH)
+                axes[0].set_title("Secondary Production", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[0].set_ylabel("PgC/yr")
 
             if ppt is not None and exp is not None:
-                recycle = ppt - exp - sp
-                axes[1].plot(year, recycle, color=color, linewidth=LINE_WIDTH)
+                # Align all arrays to minimum common length
+                min_len = min(len(year), len(ppt), len(exp), len(sp))
+                recycle = ppt[:min_len] - exp[:min_len] - sp[:min_len]
+                axes[1].plot(year[:min_len], recycle, color=color, linewidth=LINE_WIDTH)
                 axes[1].set_title("Residual Production", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[1].set_ylabel("PgC/yr")
 
         if exp is not None and ppt is not None:
-            eratio = exp / ppt
-            axes[2].plot(year, eratio, color=color, linewidth=LINE_WIDTH)
+            min_len = min(len(year), len(exp), len(ppt))
+            eratio = exp[:min_len] / ppt[:min_len]
+            axes[2].plot(year[:min_len], eratio, color=color, linewidth=LINE_WIDTH)
             axes[2].set_title("Export Ratio (e-ratio)", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
             axes[2].set_ylabel("Dimensionless")
             # Add xlabel to bottom row for the 4-panel layout
             axes[2].set_xlabel("Year", fontweight='bold')
 
         if exp1000 is not None and exp is not None:
-            teff = exp1000 / exp
-            axes[3].plot(year, teff, color=color, linewidth=LINE_WIDTH)
+            min_len = min(len(year), len(exp1000), len(exp))
+            teff = exp1000[:min_len] / exp[:min_len]
+            axes[3].plot(year[:min_len], teff, color=color, linewidth=LINE_WIDTH)
             axes[3].set_title("Transfer Efficiency", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
             axes[3].set_ylabel("Dimensionless")
             axes[3].set_xlabel("Year", fontweight='bold')
@@ -1340,33 +1362,38 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
 
         if grazing_data:
             sp = sum(grazing_data.values())
-            sp_norm = GlobalSummaryNormalizedPlotter._normalize_series(sp)
-            axes[0].plot(year, sp_norm, color=color, label=model.label, linewidth=LINE_WIDTH)
-            axes[0].set_title("Secondary Production anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-            axes[0].set_ylabel("PgC/yr")
-            axes[0].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+            plot_year, plot_sp = DataLoader.align_year_and_values(year, sp)
+            if plot_year is not None:
+                sp_norm = GlobalSummaryNormalizedPlotter._normalize_series(plot_sp)
+                axes[0].plot(plot_year, sp_norm, color=color, label=model.label, linewidth=LINE_WIDTH)
+                axes[0].set_title("Secondary Production anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[0].set_ylabel("PgC/yr")
+                axes[0].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
             if ppt is not None and exp is not None:
-                recycle = ppt - exp - sp
+                min_len = min(len(year), len(ppt), len(exp), len(sp))
+                recycle = ppt[:min_len] - exp[:min_len] - sp[:min_len]
                 recycle_norm = GlobalSummaryNormalizedPlotter._normalize_series(recycle)
-                axes[1].plot(year, recycle_norm, color=color, linewidth=LINE_WIDTH)
+                axes[1].plot(year[:min_len], recycle_norm, color=color, linewidth=LINE_WIDTH)
                 axes[1].set_title("Residual Production anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[1].set_ylabel("PgC/yr")
                 axes[1].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
         if exp is not None and ppt is not None:
-            eratio = exp / ppt
+            min_len = min(len(year), len(exp), len(ppt))
+            eratio = exp[:min_len] / ppt[:min_len]
             eratio_norm = GlobalSummaryNormalizedPlotter._normalize_series(eratio)
-            axes[2].plot(year, eratio_norm, color=color, linewidth=LINE_WIDTH)
+            axes[2].plot(year[:min_len], eratio_norm, color=color, linewidth=LINE_WIDTH)
             axes[2].set_title("Export Ratio anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
             axes[2].set_ylabel("Dimensionless")
             axes[2].set_xlabel("Year", fontweight='bold')
             axes[2].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
         if exp1000 is not None and exp is not None:
-            teff = exp1000 / exp
+            min_len = min(len(year), len(exp1000), len(exp))
+            teff = exp1000[:min_len] / exp[:min_len]
             teff_norm = GlobalSummaryNormalizedPlotter._normalize_series(teff)
-            axes[3].plot(year, teff_norm, color=color, linewidth=LINE_WIDTH)
+            axes[3].plot(year[:min_len], teff_norm, color=color, linewidth=LINE_WIDTH)
             axes[3].set_title("Transfer Efficiency anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
             axes[3].set_ylabel("Dimensionless")
             axes[3].set_xlabel("Year", fontweight='bold')
@@ -1414,11 +1441,12 @@ class OrganicMatterPlotter(PlotGenerator):
 
         for i, (col_name, title) in enumerate(om_mapping):
             values = DataLoader.safe_load_column(int_data, col_name, indices)
-            if values is not None and len(values) == len(year):
+            plot_year, plot_values = DataLoader.align_year_and_values(year, values)
+            if plot_year is not None:
                 label = model.label if i == 1 else None
                 axes[i].plot(
-                    year,
-                    values,
+                    plot_year,
+                    plot_values,
                     color=color,
                     label=label,
                     linewidth=LINE_WIDTH,
@@ -1470,12 +1498,13 @@ class OrganicMatterNormalizedPlotter(PlotGenerator):
 
         for i, (col_name, title) in enumerate(om_mapping):
             values = DataLoader.safe_load_column(int_data, col_name, indices)
-            if values is None or len(values) != len(year):
+            plot_year, plot_values = DataLoader.align_year_and_values(year, values)
+            if plot_year is None:
                 continue
 
-            normalized = GlobalSummaryNormalizedPlotter._normalize_series(values)
+            normalized = GlobalSummaryNormalizedPlotter._normalize_series(plot_values)
             label = model.label if i == 1 else None
-            axes[i].plot(year, normalized, color=color, label=label, linewidth=LINE_WIDTH)
+            axes[i].plot(plot_year, normalized, color=color, label=label, linewidth=LINE_WIDTH)
             axes[i].set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
             axes[i].set_ylabel("PgC anomaly")
             # Add xlabel only to bottom row (indices 2, 3 in 2x2 grid)

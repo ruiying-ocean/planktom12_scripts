@@ -58,6 +58,10 @@ figure_ratio = 2.5
 # Maximum number of models to compare
 max_models = 8
 
+# Maximum number of models for spatial plots (maps/transects)
+# Beyond this threshold, maps and transects are skipped (too wide to be useful)
+max_models_for_spatial = 3
+
 # Plot styling
 [style]
 linewidth = 1.0

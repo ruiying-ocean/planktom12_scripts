@@ -190,48 +190,59 @@ def main():
     # ========================================================================
     # STEP 2: Spatial Comparison Maps
     # ========================================================================
+    # Get max models threshold for spatial plots from config
+    max_models_for_spatial = config.get("multimodel", {}).get("max_models_for_spatial", 3) if config else 3
+
     if not args.skip_maps:
-        print_header("Step 2: Spatial Comparison Maps")
-
-        script_dir = Path(__file__).parent
-        maps_script = script_dir / 'make_multimodel_maps.py'
-
-        if maps_script.exists():
-            import subprocess
-            cmd = [sys.executable, str(maps_script),
-                   str(output_dir / 'modelsToPlot.csv'),
-                   str(output_dir)]
-
-            result = subprocess.run(cmd)
-            if result.returncode != 0:
-                print_warning("Maps generation failed")
-            else:
-                print_success("Spatial maps complete\n")
+        if n_models > max_models_for_spatial:
+            print_header("Step 2: Spatial Comparison Maps")
+            print_warning(f"Skipping maps: {n_models} models exceeds threshold of {max_models_for_spatial}\n")
         else:
-            print_warning(f"{maps_script} not found, skipping\n")
+            print_header("Step 2: Spatial Comparison Maps")
+
+            script_dir = Path(__file__).parent
+            maps_script = script_dir / 'make_multimodel_maps.py'
+
+            if maps_script.exists():
+                import subprocess
+                cmd = [sys.executable, str(maps_script),
+                       str(output_dir / 'modelsToPlot.csv'),
+                       str(output_dir)]
+
+                result = subprocess.run(cmd)
+                if result.returncode != 0:
+                    print_warning("Maps generation failed")
+                else:
+                    print_success("Spatial maps complete\n")
+            else:
+                print_warning(f"{maps_script} not found, skipping\n")
 
     # ========================================================================
     # STEP 3: Transect Comparisons
     # ========================================================================
     if not args.skip_transects:
-        print_header("Step 3: Vertical Transect Comparisons")
-
-        script_dir = Path(__file__).parent
-        transects_script = script_dir / 'make_multimodel_transects.py'
-
-        if transects_script.exists():
-            import subprocess
-            cmd = [sys.executable, str(transects_script),
-                   str(output_dir / 'modelsToPlot.csv'),
-                   str(output_dir)]
-
-            result = subprocess.run(cmd)
-            if result.returncode != 0:
-                print_warning("Transects generation failed")
-            else:
-                print_success("Transects complete\n")
+        if n_models > max_models_for_spatial:
+            print_header("Step 3: Vertical Transect Comparisons")
+            print_warning(f"Skipping transects: {n_models} models exceeds threshold of {max_models_for_spatial}\n")
         else:
-            print_warning(f"{transects_script} not found, skipping\n")
+            print_header("Step 3: Vertical Transect Comparisons")
+
+            script_dir = Path(__file__).parent
+            transects_script = script_dir / 'make_multimodel_transects.py'
+
+            if transects_script.exists():
+                import subprocess
+                cmd = [sys.executable, str(transects_script),
+                       str(output_dir / 'modelsToPlot.csv'),
+                       str(output_dir)]
+
+                result = subprocess.run(cmd)
+                if result.returncode != 0:
+                    print_warning("Transects generation failed")
+                else:
+                    print_success("Transects complete\n")
+            else:
+                print_warning(f"{transects_script} not found, skipping\n")
 
     # ========================================================================
     # STEP 4: Configuration Comparison (2-model only)
