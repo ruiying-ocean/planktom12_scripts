@@ -1240,11 +1240,10 @@ class DerivedSummaryPlotter(PlotGenerator):
         )
         axes = axes.flatten()
 
-        # Hide unused subplots
-        axes[4].set_visible(False)
+        # Hide unused subplot (6th position)
         axes[5].set_visible(False)
 
-        setup_axes(axes[:4])  # Only setup first 4 axes
+        setup_axes(axes[:5])  # Setup first 5 axes
 
         self.plot_all_models(fig, axes, self._plot_model)
 
@@ -1314,6 +1313,16 @@ class DerivedSummaryPlotter(PlotGenerator):
             axes[3].set_ylabel("Dimensionless")
             axes[3].set_xlabel("Year", fontweight='bold')
 
+        # E-depth from average file
+        ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
+        if ave_data is not None:
+            edepth = DataLoader.safe_load_column(ave_data, "e-depth", indices)
+            plot_year, plot_edepth = DataLoader.align_year_and_values(year, edepth)
+            if plot_year is not None:
+                axes[4].plot(plot_year, plot_edepth, color=color, linewidth=LINE_WIDTH)
+                axes[4].set_title("E-depth", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[4].set_ylabel("m")
+                axes[4].set_xlabel("Year", fontweight='bold')
 
 
 class DerivedSummaryNormalizedPlotter(PlotGenerator):
@@ -1321,12 +1330,15 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
 
     def generate(self):
         fig, axes = plt.subplots(
-            2, 2, figsize=(2 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
+            2, 3, figsize=(3 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
             constrained_layout=USE_CONSTRAINED_LAYOUT
         )
         axes = axes.flatten()
 
-        setup_axes(axes)
+        # Hide unused subplot (6th position)
+        axes[5].set_visible(False)
+
+        setup_axes(axes[:5])
 
         self.plot_all_models(fig, axes, self._plot_model)
 
@@ -1398,6 +1410,19 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
             axes[3].set_ylabel("Dimensionless")
             axes[3].set_xlabel("Year", fontweight='bold')
             axes[3].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+
+        # E-depth from average file
+        ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
+        if ave_data is not None:
+            edepth = DataLoader.safe_load_column(ave_data, "e-depth", indices)
+            plot_year, plot_edepth = DataLoader.align_year_and_values(year, edepth)
+            if plot_year is not None:
+                edepth_norm = GlobalSummaryNormalizedPlotter._normalize_series(plot_edepth)
+                axes[4].plot(plot_year, edepth_norm, color=color, linewidth=LINE_WIDTH)
+                axes[4].set_title("E-depth anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[4].set_ylabel("m")
+                axes[4].set_xlabel("Year", fontweight='bold')
+                axes[4].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
 
 class OrganicMatterPlotter(PlotGenerator):

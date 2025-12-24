@@ -73,6 +73,10 @@ class ModelDataLoader:
         if average_df is not None and "AOU" in average_df.columns:
             aou_data = self._extract_arrays(average_df, ["AOU"])
             avg_data.update(aou_data)
+        # Try to load e-depth if available in analyser output
+        if average_df is not None and "e-depth" in average_df.columns:
+            edepth_data = self._extract_arrays(average_df, ["e-depth"])
+            avg_data["edepth"] = edepth_data["e-depth"]
         data.update(avg_data)
 
         int_df = self._read_analyser_file("int")
@@ -310,6 +314,7 @@ class FigureCreator:
             ("recycle", self.colors[1], "Residual Production", "PgC/yr", None, None),
             ("eratio", self.colors[2], "Export Ratio (e-ratio)", "Dimensionless", None, None),
             ("Teff", self.colors[3], "Transfer Efficiency", "Dimensionless", None, None),
+            ("edepth", self.colors[4], "E-depth", "m", None, None),
         ]
 
         fig, axes = plt.subplots(
