@@ -29,6 +29,7 @@ from make_maps import (
     plot_derived_variables
 )
 from make_transects import plot_basin_transects, plot_pft_transects
+from make_vertical_profiles import plot_vertical_profiles
 from difference_utils import plot_comparison_panel
 from logging_utils import print_header, print_step, print_success, print_warning
 
@@ -47,6 +48,9 @@ def main():
     parser.add_argument('--mask-path',
                        default='/gpfs/data/greenocean/software/resources/breakdown/basin_mask.nc',
                        help='Path to basin mask file')
+    parser.add_argument('--mask-dir',
+                       default='/gpfs/home/vhf24tbu/masks',
+                       help='Directory containing mask files for vertical profiles')
     parser.add_argument('--obs-dir',
                        default='/gpfs/home/vhf24tbu/Observations',
                        help='Directory containing observational data files')
@@ -54,6 +58,8 @@ def main():
                        help='Skip generating spatial maps')
     parser.add_argument('--skip-transects', action='store_true',
                        help='Skip generating transects')
+    parser.add_argument('--skip-profiles', action='store_true',
+                       help='Skip generating vertical profiles')
     parser.add_argument('--skip-observations', action='store_true',
                        help='Skip loading and comparing with observations')
     parser.add_argument('--with-difference-maps', action='store_true',
@@ -313,6 +319,31 @@ def main():
         except ValueError as e:
             print_warning(f"{e}")
             print(f"  Skipping transects\n")
+
+    # ========================================================================
+    # STEP 4: Generate Vertical Profiles
+    # ========================================================================
+    if not args.skip_profiles:
+        print_header("Step 4: Generating Vertical Profiles")
+
+        # Standard nutrient variables for vertical profiles
+        profile_vars = ['no3', 'po4', 'si', 'o2', 'fe', 'alk', 'dic']
+
+        try:
+            plot_vertical_profiles(
+                model_ids=[args.run_name],
+                year=args.year,
+                variables=profile_vars,
+                model_dir=model_run_dir,
+                output_dir=output_dir,
+                obs_dir=args.obs_dir,
+                mask_dir=args.mask_dir,
+                run_name=args.run_name
+            )
+            print_success("Vertical profiles complete\n")
+        except Exception as e:
+            print_warning(f"Could not generate vertical profiles: {e}")
+            print(f"  Skipping vertical profiles\n")
 
     # ========================================================================
     # Summary

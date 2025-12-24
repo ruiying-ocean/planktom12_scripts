@@ -202,8 +202,133 @@ def process_and_convert_data(ptrcT_path, gridT_path, land_mask_3d):
 def get_model_data(dir, model_id, year, land_mask_3d):
     ptrcT_path = f"{dir}/{model_id}/ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc"
     gridT_path = f"{dir}/{model_id}/ORCA2_1m_{year}0101_{year}1231_grid_T.nc"
-    
+
     return process_and_convert_data(ptrcT_path, gridT_path, land_mask_3d)
+
+
+# Variable display info for plot titles
+VAR_INFO = {
+    'no3': 'Nitrate [µmol/kg]',
+    'po4': 'Phosphate [µmol/kg]',
+    'si': 'Silicate [µmol/kg]',
+    'fe': 'Iron [mol/L]',
+    'o2': 'Oxygen [µmol/kg]',
+    'alk': 'Alkalinity [µmol/kg]',
+    'dic': 'DIC [µmol/kg]',
+    'temp': 'Temperature [°C]',
+    'sal': 'Salinity [PSU]',
+}
+
+
+def plot_vertical_profiles(
+    model_ids,
+    year,
+    variables,
+    model_dir,
+    output_dir,
+    obs_dir=None,
+    mask_dir=None,
+    run_name=None
+):
+    """
+    Plot vertical profiles for multiple variables.
+
+    Args:
+        model_ids: List of model IDs to plot
+        year: Year to process
+        variables: List of variables to plot (e.g., ['no3', 'po4', 'si', 'o2'])
+        model_dir: Path to model run directory
+        output_dir: Path to output directory
+        obs_dir: Path to observations directory (default: DEFAULT_OBS_DIR)
+        mask_dir: Path to mask files directory (default: DEFAULT_MASK_DIR)
+        run_name: Run name for output file naming (default: join model_ids)
+
+    Returns:
+        List of paths to generated figures
+    """
+    model_dir = Path(model_dir).expanduser()
+    output_dir = Path(output_dir).expanduser()
+    obs_dir = Path(obs_dir).expanduser() if obs_dir else DEFAULT_OBS_DIR
+    mask_dir = Path(mask_dir).expanduser() if mask_dir else DEFAULT_MASK_DIR
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Load reference data
+    print("  Loading reference data for vertical profiles...")
+    woa_data, glodap_data, huang2022, ocn_mask, area, volume, land_mask_2d, land_mask_3d = \
+        load_reference_data(obs_dir, mask_dir)
+
+    basins = ['atl', 'ind', 'pac', 'arc', 'so', 'global']
+    output_files = []
+
+    for var in variables:
+        print(f"  Plotting vertical profile for {var}...")
+
+        fig, axs = plt.subplots(2, 3, tight_layout=True, figsize=(6, 6), sharey=True)
+
+        for i, basin in enumerate(basins):
+            ax = axs.flatten()[i]
+
+            # Plot reference data
+            if var == 'fe':
+                huang2022['fe'].where(ocn_mask[basin] == 1).weighted(area) \
+                    .mean(dim=['x','y']).plot(
+                        ax=ax, label='Huang2022', y='depth', color='k', linestyle='-'
+                    )
+            elif var not in ['alk', 'dic']:
+                if var in ['temp', 'sal', 'no3', 'po4', 'o2', 'si']:
+                    woa_data[var].where(ocn_mask[basin] == 1).weighted(area) \
+                        .mean(dim=['x','y']).plot(
+                            ax=ax, label='WOA', y='depth', color='k', linestyle='-'
+                        )
+            else:
+                glodap_data[var].where(ocn_mask[basin] == 1).weighted(area) \
+                    .mean(dim=['x','y']).plot(
+                        ax=ax, label='GLODAP', y='depth_surface', color='k', linestyle='-'
+                    )
+
+            # Plot each model
+            for mid in model_ids:
+                data_model = get_model_data(
+                    str(model_dir),
+                    mid, year, land_mask_3d
+                )
+                data_model[var].where(ocn_mask[basin] == 1).weighted(area) \
+                    .mean(dim=['x','y']).plot(
+                        ax=ax, label=mid, y='deptht'
+                    )
+
+            ax.set_title(basin)
+            ax.set_ylabel('Depth (m)')
+
+        axs[0, 0].invert_yaxis()
+
+        # Add legend
+        handles, labels = axs.flatten()[0].get_legend_handles_labels()
+        fig.legend(
+            handles, labels,
+            loc='lower center',
+            ncol=len(model_ids) + 1,
+            frameon=False,
+            bbox_to_anchor=(0.5, -0.05)
+        )
+        fig.subplots_adjust(bottom=0.15)
+
+        # Add suptitle with variable info
+        var_title = VAR_INFO.get(var, var)
+        fig.suptitle(var_title, fontsize=12, y=1.02)
+
+        # Save figure
+        if run_name:
+            file_name = output_dir / f"{run_name}_{year}_profile_{var}.png"
+        else:
+            file_name = output_dir / f"{'_'.join(model_ids)}_{var}_vertical_profile.png"
+        fig.savefig(file_name, bbox_inches='tight', dpi=300)
+        plt.close(fig)
+        output_files.append(file_name)
+        print(f"    Saved: {file_name.name}")
+
+    return output_files
 
 
 def main():
