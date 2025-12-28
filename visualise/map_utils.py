@@ -897,4 +897,3 @@ def calculate_rls(
     return result
 
 
-# calculate_3d_aou is now imported from shared.aou and re-exported for backwards compatibility

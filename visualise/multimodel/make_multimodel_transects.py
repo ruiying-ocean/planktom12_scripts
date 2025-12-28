@@ -155,7 +155,7 @@ def load_aou_transect_data(model_dir, model_id, year, plotter):
     Returns:
         xarray.DataArray with depth-resolved AOU data
     """
-    from map_utils import calculate_3d_aou
+    from map_utils import calculate_aou_3d
 
     run_dir = Path(model_dir) / model_id
     ptrc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc"
@@ -180,7 +180,7 @@ def load_aou_transect_data(model_dir, model_id, year, plotter):
         sal = grid_ds['vosaline'].mean(dim='time_counter')
 
         # Calculate 3D AOU and mask land areas where O2 is 0
-        aou = calculate_3d_aou(o2, temp, sal)
+        aou = calculate_aou_3d(o2, temp, sal)
         aou = aou.where(o2 != 0)
 
         # Remove bottom level if needed
