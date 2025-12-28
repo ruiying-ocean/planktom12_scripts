@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=analysemodel        # Job name
+#SBATCH --job-name=breakdown        # Job name
 #SBATCH --output=job_%j.out          # Output file name (%j expands to jobID)
 #SBATCH --error=job_%j.err           # Error file name (%j expands to jobID)
 #SBATCH --time=20:00:00              # Run time (hh:mm:ss) - 1 hour
@@ -24,15 +24,13 @@ unset __mamba_setup
 
 mamba activate base
 
-cd /gpfs/home/vhf24tbu/scratch/ModelRuns/TOM12_RY_JRAA
+cd /gpfs/home/vhf24tbu/scratch/ModelRuns/TOM12_RY_JRA3
+
+rm -f analyser*
 
 cp ~/setUpRuns/planktom12_scripts/analyser/* .
-ln -fs ~/setUpRuns/planktom12_scripts/shared shared
 
-rm -f breakdown.*.dat
-rm -f breakdown.*.csv
-rm -f breakdown.*.log
-
+ln -fs /gpfs/home/vhf24tbu/setUpRuns/planktom12_scripts/shared shared
 python3 analyser.py analyser_config.toml 1940 2100
 
 # Print completion time

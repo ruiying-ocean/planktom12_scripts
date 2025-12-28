@@ -148,35 +148,35 @@ lat_range = [ -90, 90 ]
 
 [[level]]
 variable = "EXP"
-level = 10
+depth_m = 100.0
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[level]]
 variable = "ExpARA"
-level = 10
+depth_m = 100.0
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[level]]
 variable = "ExpCO3"
-level = 10
+depth_m = 100.0
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[level]]
 variable = "sinksil"
-level = 10
+depth_m = 100.0
 units = "TmolPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[level]]
 variable = "EXP"
-level = 21
+depth_m = 1000.0
 units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]

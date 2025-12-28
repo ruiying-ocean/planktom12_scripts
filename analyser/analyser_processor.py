@@ -9,7 +9,7 @@ eliminating code duplication in the original analyser.py
 import logging
 import numpy as np
 from typing import List, Tuple, Callable, Any, Union
-from analyser_io import find_variable_in_files
+from analyser_io import find_variable_in_files, get_depth_coordinate
 from analyser_functions import surfaceData, volumeData, integrateData, volumeDataAverage, levelData
 
 log = logging.getLogger("Processor")
@@ -244,6 +244,19 @@ def process_variables(
                 log.info(f"Unit: {units} not found, using raw data")
                 units_to_use = 1
 
+            # For level processing, convert depth_m to level index
+            if processor_type == 'level' and 'depth_m' in extra_params:
+                depth_vals = get_depth_coordinate(nc_run_ids[n], nc_filenames[n])
+                if depth_vals is not None:
+                    target_depth = extra_params['depth_m']
+                    level_idx = np.argmin(np.abs(depth_vals - target_depth))
+                    actual_depth = depth_vals[level_idx]
+                    log.info(f"{var_name}: using level {level_idx} = {actual_depth:.1f}m (target: {target_depth}m)")
+                    extra_params['level'] = level_idx
+                else:
+                    log.warning(f"Cannot find depth coordinate, using default level 0")
+                    extra_params['level'] = 0
+
             # Prepare region masks (use cache if available)
             if region_mask_cache is not None:
                 region_land_mask = region_mask_cache[f'land_{reg}']
@@ -294,7 +307,7 @@ def _extract_var_config(var, processor_type: str) -> Tuple:
         lat_lim = var.lat_limit
 
         if processor_type == 'level':
-            extra_params = {'level': var.level}
+            extra_params = {'depth_m': var.depth_m}
         elif processor_type == 'integration':
             extra_params = {'depth_from': var.depth_from, 'depth_to': var.depth_to}
         elif processor_type == 'average':
@@ -317,7 +330,7 @@ def _extract_var_config(var, processor_type: str) -> Tuple:
             lon_lim = var[3]
             lat_lim = var[4]
             reg = var[6]
-            extra_params = {'level': var[1]}
+            extra_params = {'depth_m': var[1]}
         elif processor_type == 'volume':
             var_name = var[0]
             units = var[1]
@@ -404,10 +417,12 @@ def _call_processor(
         )
 
     elif processor_type == 'level':
+        # extra_params['level'] is computed from depth_m in process_variables
+        level_idx = extra_params.get('level', 0)
         return processor_func(
             data, val_lons, val_lats, units_to_use,
             mask_area, region_land_mask, region_vol_mask, missingVal,
-            lon_limit, lat_limit, extra_params['level']
+            lon_limit, lat_limit, level_idx
         )
 
     elif processor_type == 'volume':

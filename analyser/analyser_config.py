@@ -42,7 +42,7 @@ class SurfaceVariable(VariableConfig):
 @dataclass
 class LevelVariable(VariableConfig):
     """Configuration for level-specific variable processing."""
-    level: int = 0
+    depth_m: float = 100.0  # Target depth in meters
 
 
 @dataclass
@@ -193,7 +193,7 @@ def parse_toml_config(file_path: str) -> BreakdownConfig:
             lat_limit=tuple(map(str, lev.get('lat_range', ['-90', '90']))),
             results=[],
             column_name=lev.get('column_name', ''),
-            level=lev['level']
+            depth_m=lev['depth_m']
         ))
 
     # Parse volume variables
