@@ -21,7 +21,7 @@ from analyser_processor import (
     process_variables, process_average_variables_special,
     precompute_region_masks, create_region_mask_cache
 )
-from analyser_functions import surfaceData, volumeData, integrateData, volumeDataAverage, levelData, aouData, calculate_rls, ORCA2_DEPTHS
+from analyser_functions import surfaceData, volumeData, integrateData, volumeDataAverage, levelData, aouData, calculate_rls
 
 # ---------- 1 SETUP AND INITIALIZATION ----------
 
@@ -347,7 +347,7 @@ for year in range(year_from, year_to + 1):
     log.info("Computing RLS...")
     rls_result = None
     try:
-        from analyser_io import find_variable_in_files
+        from analyser_io import find_variable_in_files, get_depth_coordinate
         # Find EXP and mldr10_1 in the loaded files
         found_exp, exp_data, lats, lons, _ = find_variable_in_files(
             nc_run_ids[0], nc_runFileNames[0], 'EXP'
@@ -355,16 +355,18 @@ for year in range(year_from, year_to + 1):
         found_mld, mld_data, _, _, _ = find_variable_in_files(
             nc_run_ids[0], nc_runFileNames[0], 'mldr10_1'
         )
+        # Get actual depth values from file
+        depth_vals = get_depth_coordinate(nc_run_ids[0], nc_runFileNames[0])
 
-        if found_exp and found_mld:
+        if found_exp and found_mld and depth_vals is not None:
             # Time-average the data
             exp_mean = np.nanmean(exp_data, axis=0)
             mld_mean = np.nanmean(mld_data, axis=0)
             # Filter missing values in MLD
             mld_mean[mld_mean > missing_val / 10] = np.nan
 
-            # Calculate RLS
-            rls = calculate_rls(exp_mean, ORCA2_DEPTHS, mld_mean, landMask, missing_val)
+            # Calculate RLS using actual depth values from file
+            rls = calculate_rls(exp_mean, depth_vals, mld_mean, landMask, missing_val)
 
             # Compute global mean
             rls_result = np.nanmean(rls)
@@ -375,6 +377,8 @@ for year in range(year_from, year_to + 1):
                 missing.append('EXP')
             if not found_mld:
                 missing.append('mldr10_1')
+            if depth_vals is None:
+                missing.append('depth coordinate')
             log.warning(f"Cannot compute RLS: missing {', '.join(missing)}")
     except Exception as e:
         log.warning(f"Error computing RLS: {e}")

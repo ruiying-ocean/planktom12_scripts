@@ -225,6 +225,30 @@ def find_variable_in_files(nc_files: List, nc_filenames: List, var_name: str) ->
     return False, None, None, None, None
 
 
+def get_depth_coordinate(nc_files: List, nc_filenames: List) -> Any:
+    """
+    Extract depth coordinate (deptht) from NetCDF files.
+
+    Args:
+        nc_files: List of NetCDF Dataset objects to search
+        nc_filenames: List of corresponding filenames
+
+    Returns:
+        1D numpy array of depth values, or None if not found
+    """
+    depth_names = ['deptht', 'depth', 'z', 'lev']
+    for i, nc_file in enumerate(nc_files):
+        for depth_name in depth_names:
+            try:
+                depth = nc_file.variables[depth_name][:].data
+                log.info(f"Depth coordinate '{depth_name}' found in {nc_filenames[i]}")
+                return depth
+            except KeyError:
+                continue
+    log.warning("Depth coordinate not found in any file")
+    return None
+
+
 # ---------- OUTPUT FILE WRITING ----------
 
 class OutputWriter:
