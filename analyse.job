@@ -24,8 +24,8 @@ unset __mamba_setup
 
 mamba activate base
 
-# Get the directory where this script (and the analyser) lives
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Hardcoded path - BASH_SOURCE doesn't work in SLURM jobs (script gets copied to /tmp/slurmd/)
+SCRIPT_DIR=~/setUpRuns/planktom12_scripts
 
 cd /gpfs/home/vhf24tbu/scratch/ModelRuns/TOM12_RY_JRA3
 
