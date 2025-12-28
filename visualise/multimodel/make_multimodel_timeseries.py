@@ -1313,14 +1313,14 @@ class DerivedSummaryPlotter(PlotGenerator):
             axes[3].set_ylabel("Dimensionless")
             axes[3].set_xlabel("Year", fontweight='bold')
 
-        # E-depth from average file
+        # RLS from average file
         ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
         if ave_data is not None:
-            edepth = DataLoader.safe_load_column(ave_data, "e-depth", indices)
-            plot_year, plot_edepth = DataLoader.align_year_and_values(year, edepth)
+            rls = DataLoader.safe_load_column(ave_data, "RLS", indices)
+            plot_year, plot_rls = DataLoader.align_year_and_values(year, rls)
             if plot_year is not None:
-                axes[4].plot(plot_year, plot_edepth, color=color, linewidth=LINE_WIDTH)
-                axes[4].set_title("E-depth", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[4].plot(plot_year, plot_rls, color=color, linewidth=LINE_WIDTH)
+                axes[4].set_title("RLS", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[4].set_ylabel("m")
                 axes[4].set_xlabel("Year", fontweight='bold')
 
@@ -1411,15 +1411,15 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
             axes[3].set_xlabel("Year", fontweight='bold')
             axes[3].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
-        # E-depth from average file
+        # RLS from average file
         ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
         if ave_data is not None:
-            edepth = DataLoader.safe_load_column(ave_data, "e-depth", indices)
-            plot_year, plot_edepth = DataLoader.align_year_and_values(year, edepth)
+            rls = DataLoader.safe_load_column(ave_data, "RLS", indices)
+            plot_year, plot_rls = DataLoader.align_year_and_values(year, rls)
             if plot_year is not None:
-                edepth_norm = GlobalSummaryNormalizedPlotter._normalize_series(plot_edepth)
-                axes[4].plot(plot_year, edepth_norm, color=color, linewidth=LINE_WIDTH)
-                axes[4].set_title("E-depth anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                rls_norm = GlobalSummaryNormalizedPlotter._normalize_series(plot_rls)
+                axes[4].plot(plot_year, rls_norm, color=color, linewidth=LINE_WIDTH)
+                axes[4].set_title("RLS anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[4].set_ylabel("m")
                 axes[4].set_xlabel("Year", fontweight='bold')
                 axes[4].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)

@@ -20,7 +20,12 @@ import cartopy.crs as ccrs
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple, Union
+import sys
 import gsw
+
+# Add parent directory to path for shared module import
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from shared.rls import calculate_rls_numba
 
 
 class OceanMapPlotter:
@@ -707,8 +712,8 @@ ECOSYSTEM_VARS = {
         'depth_index': 17,  # ~300m depth (same as O2)
         'cmap': 'RdBu_r'  # Diverging colormap since AOU can be negative
     },
-    '_edepth': {
-        'long_name': 'E-depth',
+    '_rls': {
+        'long_name': 'Remineralization Length Scale',
         'units': 'm',
         'vmax': 500,
         'vmin': 0,
@@ -875,16 +880,18 @@ def convert_units(data: xr.DataArray, var_name: str) -> xr.DataArray:
     return data
 
 
-def calculate_e_depth(
+def calculate_rls(
     exp_flux: xr.DataArray,
     mld: xr.DataArray,
     land_mask: Optional[xr.DataArray] = None
 ) -> xr.DataArray:
     """
-    Calculate e-folding depth (z_star) for carbon export flux remineralization.
+    Calculate remineralization length scale (RLS/z*) for carbon export flux.
 
-    z_star is the depth scale over which export flux decreases by a factor of e,
+    RLS is the depth scale over which export flux decreases by a factor of e,
     measured from a reference depth z0 = MLD + 10m.
+
+    Uses Numba-optimized implementation for performance.
 
     Args:
         exp_flux: Export flux (depth, y, x) or (deptht, y, x) - time-averaged
@@ -892,7 +899,7 @@ def calculate_e_depth(
         land_mask: Optional 2D land mask (True = ocean)
 
     Returns:
-        z_star: DataArray (y, x) of e-folding depths in meters
+        rls: DataArray (y, x) of remineralization length scale in meters
     """
     # ORCA2 depth values
     depth_values = np.array([
@@ -905,56 +912,29 @@ def calculate_e_depth(
 
     # Get numpy arrays
     exp_vals = exp_flux.values
-    mld_vals = mld.values
+    mld_vals = mld.values.copy()
 
     # Ensure 3D
     if exp_vals.ndim != 3:
         raise ValueError(f"exp_flux must be 3D (depth, y, x), got shape {exp_vals.shape}")
 
-    nz, ny, nx = exp_vals.shape
-    z_star = np.full((ny, nx), np.nan)
+    # Apply land mask by setting MLD to NaN (Numba function skips NaN MLD)
+    if land_mask is not None:
+        mld_vals[~land_mask.values] = np.nan
 
-    for i in range(ny):
-        for j in range(nx):
-            # Skip land if mask provided
-            if land_mask is not None and not land_mask.values[i, j]:
-                continue
+    # Use only the depth levels present in the data
+    nz = exp_vals.shape[0]
+    depth_subset = depth_values[:nz]
 
-            mld_val = mld_vals[i, j]
-            if np.isnan(mld_val) or mld_val <= 0:
-                continue
-
-            z0_depth = mld_val + 10.0
-            z0_idx = np.argmin(np.abs(depth_values[:nz] - z0_depth))
-
-            flux_z0 = exp_vals[z0_idx, i, j]
-            if np.isnan(flux_z0) or flux_z0 <= 0:
-                continue
-
-            target_flux = flux_z0 / np.e
-
-            for k in range(z0_idx, nz):
-                flux_k = exp_vals[k, i, j]
-                if np.isnan(flux_k):
-                    continue
-
-                if flux_k <= target_flux:
-                    if k == z0_idx:
-                        z_star[i, j] = depth_values[k] - z0_depth
-                    else:
-                        flux_before = exp_vals[k-1, i, j]
-                        if not np.isnan(flux_before) and flux_before > flux_k:
-                            frac = (flux_before - target_flux) / (flux_before - flux_k)
-                            depth_at_target = depth_values[k-1] + frac * (depth_values[k] - depth_values[k-1])
-                            z_star[i, j] = depth_at_target - z0_depth
-                    break
+    # Call Numba-optimized function
+    rls = calculate_rls_numba(exp_vals, depth_subset, mld_vals)
 
     # Create DataArray with same coordinates as mld
     result = xr.DataArray(
-        z_star,
+        rls,
         dims=mld.dims,
         coords=mld.coords,
-        name='_edepth'
+        name='_rls'
     )
 
     return result

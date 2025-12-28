@@ -617,7 +617,7 @@ def plot_derived_variables(
     diad_ds: xr.Dataset,
     output_path: Path,
     ptrc_ds: xr.Dataset = None,
-    variables: list = ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff', '_edepth']
+    variables: list = ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff', '_rls']
 ):
     """
     Create multi-panel map of derived ecosystem variables.
@@ -776,7 +776,7 @@ def main():
     diad_ds = load_and_preprocess_diad(
         diad_file=diad_file,
         plotter=plotter,
-        compute_edepth=grid_t_file.exists(),
+        compute_rls=grid_t_file.exists(),
         grid_t_file=grid_t_file
     )
 

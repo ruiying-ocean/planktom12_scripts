@@ -4,6 +4,12 @@ from netCDF4 import Dataset
 import math
 from scipy.ndimage import gaussian_filter
 import logging
+import sys
+from pathlib import Path
+
+# Add parent directory to path for shared module import
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from shared.rls import calculate_rls_numba
 
 try:
     import gsw
@@ -699,13 +705,15 @@ def aouData(o2_data, temp_data, sal_data, var_lons, var_lats, landMask, volMask,
     return total, monthly
 
 
-# ---------- 12 E-DEPTH (Z_STAR) COMPUTATION ----------
-def calculate_e_depth(exp_flux, depth_vals, mld_2d, landMask, missingVal):
+# ---------- 12 RLS (REMINERALIZATION LENGTH SCALE) COMPUTATION ----------
+def calculate_rls(exp_flux, depth_vals, mld_2d, landMask, missingVal):
     """
-    Calculate e-folding depth (z_star) for carbon export flux remineralization.
+    Calculate remineralization length scale (RLS/z*) for carbon export flux.
 
-    z_star is the depth scale over which export flux decreases by a factor of e,
+    RLS is the depth scale over which export flux decreases by a factor of e,
     measured from a reference depth z0 = MLD + 10m.
+
+    Uses Numba-optimized implementation for performance.
 
     Args:
         exp_flux: Export flux (depth, y, x) - time-averaged
@@ -715,43 +723,20 @@ def calculate_e_depth(exp_flux, depth_vals, mld_2d, landMask, missingVal):
         missingVal: Missing value indicator
 
     Returns:
-        z_star: 2D array (y, x) of e-folding depths in meters
+        rls: 2D array (y, x) of remineralization length scale in meters
     """
-    nz, ny, nx = exp_flux.shape
-    z_star = np.full((ny, nx), np.nan)
+    # Preprocess: mask out missing values and land
+    exp_flux_clean = exp_flux.copy()
+    mld_clean = mld_2d.copy()
 
-    for i in range(ny):
-        for j in range(nx):
-            if np.isnan(landMask[i, j]):
-                continue
+    # Replace missing values with NaN
+    exp_flux_clean[exp_flux_clean > missingVal / MISSING_VAL_THRESHOLD_LOOSE] = np.nan
+    mld_clean[mld_clean > missingVal / MISSING_VAL_THRESHOLD_LOOSE] = np.nan
 
-            mld_val = mld_2d[i, j]
-            if np.isnan(mld_val) or mld_val <= 0:
-                continue
+    # Apply land mask to MLD (Numba function will skip NaN MLD values)
+    mld_clean[np.isnan(landMask)] = np.nan
 
-            z0_depth = mld_val + 10.0
-            z0_idx = np.argmin(np.abs(depth_vals - z0_depth))
+    # Call Numba-optimized function
+    rls = calculate_rls_numba(exp_flux_clean, depth_vals, mld_clean)
 
-            flux_z0 = exp_flux[z0_idx, i, j]
-            if np.isnan(flux_z0) or flux_z0 <= 0 or flux_z0 > missingVal / MISSING_VAL_THRESHOLD_LOOSE:
-                continue
-
-            target_flux = flux_z0 / np.e
-
-            for k in range(z0_idx, nz):
-                flux_k = exp_flux[k, i, j]
-                if np.isnan(flux_k) or flux_k > missingVal / MISSING_VAL_THRESHOLD_LOOSE:
-                    continue
-
-                if flux_k <= target_flux:
-                    if k == z0_idx:
-                        z_star[i, j] = depth_vals[k] - z0_depth
-                    else:
-                        flux_before = exp_flux[k-1, i, j]
-                        if not np.isnan(flux_before) and flux_before > flux_k:
-                            frac = (flux_before - target_flux) / (flux_before - flux_k)
-                            depth_at_target = depth_vals[k-1] + frac * (depth_vals[k] - depth_vals[k-1])
-                            z_star[i, j] = depth_at_target - z0_depth
-                    break
-
-    return z_star
+    return rls
