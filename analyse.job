@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=breakdown        # Job name
+#SBATCH --job-name=analyse        # Job name
 #SBATCH --output=job_%j.out          # Output file name (%j expands to jobID)
 #SBATCH --error=job_%j.err           # Error file name (%j expands to jobID)
 #SBATCH --time=20:00:00              # Run time (hh:mm:ss) - 1 hour
@@ -24,13 +24,16 @@ unset __mamba_setup
 
 mamba activate base
 
+# Get the directory where this script (and the analyser) lives
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 cd /gpfs/home/vhf24tbu/scratch/ModelRuns/TOM12_RY_JRA3
 
 rm -f analyser*
 
-cp ~/setUpRuns/planktom12_scripts/analyser/* .
+cp "$SCRIPT_DIR/analyser/"* .
 
-ln -fs /gpfs/home/vhf24tbu/setUpRuns/planktom12_scripts/shared shared
+ln -fs "$SCRIPT_DIR/shared" shared
 python3 analyser.py analyser_config.toml 1940 2100
 
 # Print completion time
