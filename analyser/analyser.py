@@ -312,7 +312,7 @@ for year in range(year_from, year_to + 1):
     log.info("Computing AOU...")
     aou_result = None
     try:
-        from analyser_io import find_variable_in_files
+        from analyser_io import find_variable_in_files, get_depth_coordinate
         # Find O2, votemper, vosaline in the loaded files
         found_o2, o2_data, lats, lons, _ = find_variable_in_files(
             nc_run_ids[0], nc_runFileNames[0], 'O2'
@@ -323,12 +323,14 @@ for year in range(year_from, year_to + 1):
         found_sal, sal_data, _, _, _ = find_variable_in_files(
             nc_run_ids[0], nc_runFileNames[0], 'vosaline'
         )
+        # Get actual depth values from file
+        depth_vals = get_depth_coordinate(nc_run_ids[0], nc_runFileNames[0])
 
-        if found_o2 and found_temp and found_sal:
+        if found_o2 and found_temp and found_sal and depth_vals is not None:
             aou_result = aouData(
                 o2_data, temp_data, sal_data,
                 lons, lats, landMask, volMask, missing_val,
-                [-180, 180], [-90, 90], depth_index=17
+                [-180, 180], [-90, 90], depth_vals, target_depth_m=300.0
             )
             log.info(f"AOU computed: annual mean = {aou_result[0]:.2f} µmol/L")
         else:
@@ -339,6 +341,8 @@ for year in range(year_from, year_to + 1):
                 missing.append('votemper')
             if not found_sal:
                 missing.append('vosaline')
+            if depth_vals is None:
+                missing.append('depth coordinate')
             log.warning(f"Cannot compute AOU: missing {', '.join(missing)}")
     except Exception as e:
         log.warning(f"Error computing AOU: {e}")

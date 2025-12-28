@@ -606,7 +606,7 @@ ORCA2_DEPTHS = np.array([
 ])
 
 
-def computeAOU(o2_data, temp_data, sal_data, depth_index=17, missingVal=1e20):
+def computeAOU(o2_data, temp_data, sal_data, depth_vals, target_depth_m=300.0, missingVal=1e20):
     """
     Compute Apparent Oxygen Utilization (AOU) at a specific depth.
 
@@ -616,7 +616,8 @@ def computeAOU(o2_data, temp_data, sal_data, depth_index=17, missingVal=1e20):
         o2_data: Oxygen concentration (time, depth, y, x) in mol/L
         temp_data: Temperature (time, depth, y, x) in degrees C
         sal_data: Salinity (time, depth, y, x) in PSU
-        depth_index: Depth level index (default 17 for ~300m)
+        depth_vals: 1D array of depth values in meters
+        target_depth_m: Target depth in meters (default 300m)
         missingVal: Missing value indicator
 
     Returns:
@@ -626,8 +627,10 @@ def computeAOU(o2_data, temp_data, sal_data, depth_index=17, missingVal=1e20):
         log.warning("GSW library not available, cannot compute AOU")
         return None
 
-    # Get pressure from depth (dbar ≈ meters)
-    pressure = ORCA2_DEPTHS[depth_index]
+    # Find closest depth index to target depth
+    depth_index = np.argmin(np.abs(depth_vals - target_depth_m))
+    pressure = depth_vals[depth_index]
+    log.info(f"AOU using depth index {depth_index} = {pressure:.1f}m (target: {target_depth_m}m)")
 
     # Extract data at specified depth
     o2_at_depth = o2_data[:, depth_index, :, :]
@@ -655,7 +658,7 @@ def computeAOU(o2_data, temp_data, sal_data, depth_index=17, missingVal=1e20):
     return aou
 
 
-def aouData(o2_data, temp_data, sal_data, var_lons, var_lats, landMask, volMask, missingVal, lonLim, latLim, depth_index=17):
+def aouData(o2_data, temp_data, sal_data, var_lons, var_lats, landMask, volMask, missingVal, lonLim, latLim, depth_vals, target_depth_m=300.0):
     """
     Compute AOU statistics for analyser output.
 
@@ -670,13 +673,14 @@ def aouData(o2_data, temp_data, sal_data, var_lons, var_lats, landMask, volMask,
         missingVal: Missing value indicator
         lonLim: Longitude limits [min, max]
         latLim: Latitude limits [min, max]
-        depth_index: Depth level index (default 17 for ~300m)
+        depth_vals: 1D array of depth values in meters
+        target_depth_m: Target depth in meters (default 300m)
 
     Returns:
         Tuple of (annual_mean, monthly_stats) matching volumeDataAverage format
     """
     # Compute AOU
-    aou = computeAOU(o2_data, temp_data, sal_data, depth_index, missingVal)
+    aou = computeAOU(o2_data, temp_data, sal_data, depth_vals, target_depth_m, missingVal)
 
     if aou is None:
         return -1, np.full((12, 6), -1.0)
