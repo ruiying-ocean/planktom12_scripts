@@ -40,20 +40,53 @@ def calculate_rls_numba(exp_flux, depth_vals, mld_vals):
 
             target_flux = flux_z0 / np.e
 
-            for k in range(z0_idx, nz):
-                flux_k = exp_flux[k, i, j]
-                if np.isnan(flux_k):
-                    continue  # Skip NaN values, keep searching deeper
-                if flux_k <= target_flux:
-                    if k == z0_idx:
-                        rls[i, j] = depth_vals[k] - z0_depth
-                    else:
-                        flux_before = exp_flux[k - 1, i, j]
-                        # Only interpolate if flux is decreasing (flux_before > flux_k)
-                        if not np.isnan(flux_before) and flux_before > flux_k:
-                            frac = (flux_before - target_flux) / (flux_before - flux_k)
-                            depth_at_target = depth_vals[k - 1] + frac * (depth_vals[k] - depth_vals[k - 1])
-                            rls[i, j] = depth_at_target - z0_depth
+            # Extract flux and depth below z0, filter to valid (non-NaN, positive) values
+            flux_below = exp_flux[z0_idx:, i, j]
+            depth_below = depth_vals[z0_idx:]
+
+            # Count valid points and build filtered arrays
+            valid_count = 0
+            for k in range(len(flux_below)):
+                if not np.isnan(flux_below[k]) and flux_below[k] > 0:
+                    valid_count += 1
+
+            if valid_count < 2:
+                continue
+
+            # Build filtered arrays
+            flux_valid = np.empty(valid_count)
+            depth_valid = np.empty(valid_count)
+            idx = 0
+            for k in range(len(flux_below)):
+                if not np.isnan(flux_below[k]) and flux_below[k] > 0:
+                    flux_valid[idx] = flux_below[k]
+                    depth_valid[idx] = depth_below[k]
+                    idx += 1
+
+            # Check if flux ever drops below target
+            if flux_valid[-1] > target_flux:
+                continue
+
+            # Find first crossing point in valid array
+            crossing_idx = -1
+            for k in range(valid_count):
+                if flux_valid[k] <= target_flux:
+                    crossing_idx = k
                     break
+
+            if crossing_idx == -1:
+                continue
+
+            if crossing_idx == 0:
+                rls[i, j] = depth_valid[0] - z0_depth
+            else:
+                flux_before = flux_valid[crossing_idx - 1]
+                flux_after = flux_valid[crossing_idx]
+                depth_before = depth_valid[crossing_idx - 1]
+                depth_after = depth_valid[crossing_idx]
+
+                frac = (flux_before - target_flux) / (flux_before - flux_after)
+                depth_at_target = depth_before + frac * (depth_after - depth_before)
+                rls[i, j] = depth_at_target - z0_depth
 
     return rls
