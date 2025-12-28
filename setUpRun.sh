@@ -284,6 +284,7 @@ ln -fs ${SCRIPT_DIR}/tidyup.job tidyup.job
 # Get analyser scripts
 cp ${SCRIPT_DIR}/analyser/analyser*.py .
 cp ${SCRIPT_DIR}/analyser/analyser_config.toml .
+ln -fs ${SCRIPT_DIR}/shared shared
 if [ -f ${SCRIPT_DIR}/iodef_tom12piicc14.xml ]; then
 	cp ${SCRIPT_DIR}/iodef_tom12piicc14.xml .
 fi
