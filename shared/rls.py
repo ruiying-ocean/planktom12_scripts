@@ -13,8 +13,8 @@ def calculate_rls_numba(poc_flux, depth, mld_field):
     """
     Calculate remineralization length scale (RLS/z*).
 
-    Handles both time-dependent and time-averaged data,
-    returning an xarray DataArray with appropriate coordinates.
+    Handles both numpy arrays and xarray DataArrays, with or without time dimension.
+    Returns xarray DataArray when inputs are xarray, numpy array otherwise.
 
     Args:
         poc_flux: Export flux array - either (time, depth, y, x) or (depth, y, x)
@@ -22,22 +22,38 @@ def calculate_rls_numba(poc_flux, depth, mld_field):
         mld_field: Mixed layer depth array - either (time, y, x) or (y, x)
 
     Returns:
-        xr.DataArray: z* values with coordinates from mld_field
+        z* values - xarray DataArray if inputs are xarray, numpy array otherwise
     """
-    if 'time_counter' in poc_flux.dims and 'time_counter' in mld_field.dims:
-        z_star = np.zeros_like(mld_field.values) * np.nan
+    # Check if inputs are xarray
+    is_xarray = hasattr(poc_flux, 'dims')
 
-        for t in range(poc_flux.shape[0]):
-            for i in range(poc_flux.shape[2]):
-                for j in range(poc_flux.shape[3]):
-                    mld_val = mld_field.values[t, i, j]
+    # Check for time dimension (only possible with xarray)
+    has_time = is_xarray and 'time_counter' in poc_flux.dims and 'time_counter' in mld_field.dims
+
+    # Extract numpy arrays from xarray if needed
+    if is_xarray:
+        poc_flux_vals = poc_flux.values
+        depth_vals = depth.values if hasattr(depth, 'values') else depth
+        mld_vals = mld_field.values
+    else:
+        poc_flux_vals = poc_flux
+        depth_vals = depth
+        mld_vals = mld_field
+
+    if has_time:
+        z_star = np.zeros_like(mld_vals) * np.nan
+
+        for t in range(poc_flux_vals.shape[0]):
+            for i in range(poc_flux_vals.shape[2]):
+                for j in range(poc_flux_vals.shape[3]):
+                    mld_val = mld_vals[t, i, j]
                     if np.isnan(mld_val):
                         continue
 
                     z0_depth = mld_val + 10
-                    z0_idx = np.argmin(np.abs(depth.values - z0_depth))
+                    z0_idx = np.argmin(np.abs(depth_vals - z0_depth))
 
-                    flux_column = poc_flux[t, :, i, j].values
+                    flux_column = poc_flux_vals[t, :, i, j]
                     flux_z0 = flux_column[z0_idx]
 
                     if np.isnan(flux_z0) or flux_z0 <= 0:
@@ -46,7 +62,7 @@ def calculate_rls_numba(poc_flux, depth, mld_field):
                     target_flux = flux_z0 / np.e
 
                     flux_below = flux_column[z0_idx:]
-                    depth_below = depth.values[z0_idx:]
+                    depth_below = depth_vals[z0_idx:]
 
                     valid = ~np.isnan(flux_below) & (flux_below > 0)
                     if valid.sum() < 2:
@@ -75,26 +91,29 @@ def calculate_rls_numba(poc_flux, depth, mld_field):
                         depth_at_target = depth_before + frac * (depth_after - depth_before)
                         z_star[t, i, j] = depth_at_target - z0_depth
 
-        result = xr.DataArray(
-            z_star,
-            dims=mld_field.dims,
-            coords=mld_field.coords,
-            name='z_star',
-            attrs={'units': 'm', 'long_name': 'Remineralization length scale'}
-        )
+        if is_xarray:
+            return xr.DataArray(
+                z_star,
+                dims=mld_field.dims,
+                coords=mld_field.coords,
+                name='z_star',
+                attrs={'units': 'm', 'long_name': 'Remineralization length scale'}
+            )
+        return z_star
     else:
-        z_star = np.zeros_like(mld_field.values) * np.nan
+        # No time dimension case
+        z_star = np.zeros_like(mld_vals) * np.nan
 
-        for i in range(poc_flux.shape[1]):
-            for j in range(poc_flux.shape[2]):
-                mld_val = mld_field.values[i, j]
+        for i in range(poc_flux_vals.shape[1]):
+            for j in range(poc_flux_vals.shape[2]):
+                mld_val = mld_vals[i, j]
                 if np.isnan(mld_val):
                     continue
 
                 z0_depth = mld_val + 10
-                z0_idx = np.argmin(np.abs(depth.values - z0_depth))
+                z0_idx = np.argmin(np.abs(depth_vals - z0_depth))
 
-                flux_column = poc_flux[:, i, j].values
+                flux_column = poc_flux_vals[:, i, j]
                 flux_z0 = flux_column[z0_idx]
 
                 if np.isnan(flux_z0) or flux_z0 <= 0:
@@ -103,7 +122,7 @@ def calculate_rls_numba(poc_flux, depth, mld_field):
                 target_flux = flux_z0 / np.e
 
                 flux_below = flux_column[z0_idx:]
-                depth_below = depth.values[z0_idx:]
+                depth_below = depth_vals[z0_idx:]
 
                 valid = ~np.isnan(flux_below) & (flux_below > 0)
                 if valid.sum() < 2:
@@ -132,15 +151,15 @@ def calculate_rls_numba(poc_flux, depth, mld_field):
                     depth_at_target = depth_before + frac * (depth_after - depth_before)
                     z_star[i, j] = depth_at_target - z0_depth
 
-        result = xr.DataArray(
-            z_star,
-            dims=mld_field.dims,
-            coords=mld_field.coords,
-            name='z_star',
-            attrs={'units': 'm', 'long_name': 'Remineralization length scale'}
-        )
-
-    return result
+        if is_xarray:
+            return xr.DataArray(
+                z_star,
+                dims=mld_field.dims,
+                coords=mld_field.coords,
+                name='z_star',
+                attrs={'units': 'm', 'long_name': 'Remineralization length scale'}
+            )
+        return z_star
 
 
 def calculate_dic_inv(ptrc, volume, land_mask_3d):
