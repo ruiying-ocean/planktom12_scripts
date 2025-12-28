@@ -7,6 +7,54 @@ measured from a reference depth z0 = MLD + 10m.
 
 import numpy as np
 import xarray as xr
+from numba import njit
+
+
+@njit
+def _calculate_rls_core(exp_flux, depth_vals, mld_vals):
+    """
+    Numba-optimized core RLS calculation for 3D data (depth, y, x).
+
+    Args:
+        exp_flux: 3D numpy array (depth, y, x)
+        depth_vals: 1D numpy array of depth values
+        mld_vals: 2D numpy array (y, x) of MLD values
+
+    Returns:
+        2D numpy array (y, x) of z* values
+    """
+    nz, ny, nx = exp_flux.shape
+    z_star = np.full((ny, nx), np.nan)
+
+    for i in range(ny):
+        for j in range(nx):
+            mld_val = mld_vals[i, j]
+            if np.isnan(mld_val):
+                continue
+
+            z0_depth = mld_val + 10
+            z0_idx = np.argmin(np.abs(depth_vals - z0_depth))
+
+            flux_z0 = exp_flux[z0_idx, i, j]
+            if np.isnan(flux_z0) or flux_z0 <= 0:
+                continue
+
+            target_flux = flux_z0 / np.e
+
+            for k in range(z0_idx, nz):
+                flux_k = exp_flux[k, i, j]
+                if not np.isnan(flux_k) and flux_k <= target_flux:
+                    if k == z0_idx:
+                        z_star[i, j] = depth_vals[k] - z0_depth
+                    else:
+                        flux_before = exp_flux[k - 1, i, j]
+                        if not np.isnan(flux_before):
+                            frac = (flux_before - target_flux) / (flux_before - flux_k)
+                            depth_at_target = depth_vals[k - 1] + frac * (depth_vals[k] - depth_vals[k - 1])
+                            z_star[i, j] = depth_at_target - z0_depth
+                    break
+
+    return z_star
 
 
 def calculate_rls_numba(poc_flux, depth, mld_field):
@@ -40,56 +88,20 @@ def calculate_rls_numba(poc_flux, depth, mld_field):
         depth_vals = depth
         mld_vals = mld_field
 
+    # Ensure depth_vals is contiguous float64 for numba
+    depth_vals = np.ascontiguousarray(depth_vals, dtype=np.float64)
+
     if has_time:
-        z_star = np.zeros_like(mld_vals) * np.nan
+        nt = poc_flux_vals.shape[0]
+        ny, nx = mld_vals.shape[1], mld_vals.shape[2]
+        z_star = np.full((nt, ny, nx), np.nan)
 
-        for t in range(poc_flux_vals.shape[0]):
-            for i in range(poc_flux_vals.shape[2]):
-                for j in range(poc_flux_vals.shape[3]):
-                    mld_val = mld_vals[t, i, j]
-                    if np.isnan(mld_val):
-                        continue
-
-                    z0_depth = mld_val + 10
-                    z0_idx = np.argmin(np.abs(depth_vals - z0_depth))
-
-                    flux_column = poc_flux_vals[t, :, i, j]
-                    flux_z0 = flux_column[z0_idx]
-
-                    if np.isnan(flux_z0) or flux_z0 <= 0:
-                        continue
-
-                    target_flux = flux_z0 / np.e
-
-                    flux_below = flux_column[z0_idx:]
-                    depth_below = depth_vals[z0_idx:]
-
-                    valid = ~np.isnan(flux_below) & (flux_below > 0)
-                    if valid.sum() < 2:
-                        continue
-
-                    flux_valid = flux_below[valid]
-                    depth_valid = depth_below[valid]
-
-                    if flux_valid[-1] > target_flux:
-                        continue
-
-                    idx_crossing = np.where(flux_valid <= target_flux)[0]
-                    if len(idx_crossing) == 0:
-                        continue
-
-                    idx = idx_crossing[0]
-                    if idx == 0:
-                        z_star[t, i, j] = depth_valid[0] - z0_depth
-                    else:
-                        flux_before = flux_valid[idx - 1]
-                        flux_after = flux_valid[idx]
-                        depth_before = depth_valid[idx - 1]
-                        depth_after = depth_valid[idx]
-
-                        frac = (flux_before - target_flux) / (flux_before - flux_after)
-                        depth_at_target = depth_before + frac * (depth_after - depth_before)
-                        z_star[t, i, j] = depth_at_target - z0_depth
+        for t in range(nt):
+            z_star[t] = _calculate_rls_core(
+                np.ascontiguousarray(poc_flux_vals[t]),
+                depth_vals,
+                np.ascontiguousarray(mld_vals[t])
+            )
 
         if is_xarray:
             return xr.DataArray(
@@ -101,55 +113,12 @@ def calculate_rls_numba(poc_flux, depth, mld_field):
             )
         return z_star
     else:
-        # No time dimension case
-        z_star = np.zeros_like(mld_vals) * np.nan
-
-        for i in range(poc_flux_vals.shape[1]):
-            for j in range(poc_flux_vals.shape[2]):
-                mld_val = mld_vals[i, j]
-                if np.isnan(mld_val):
-                    continue
-
-                z0_depth = mld_val + 10
-                z0_idx = np.argmin(np.abs(depth_vals - z0_depth))
-
-                flux_column = poc_flux_vals[:, i, j]
-                flux_z0 = flux_column[z0_idx]
-
-                if np.isnan(flux_z0) or flux_z0 <= 0:
-                    continue
-
-                target_flux = flux_z0 / np.e
-
-                flux_below = flux_column[z0_idx:]
-                depth_below = depth_vals[z0_idx:]
-
-                valid = ~np.isnan(flux_below) & (flux_below > 0)
-                if valid.sum() < 2:
-                    continue
-
-                flux_valid = flux_below[valid]
-                depth_valid = depth_below[valid]
-
-                if flux_valid[-1] > target_flux:
-                    continue
-
-                idx_crossing = np.where(flux_valid <= target_flux)[0]
-                if len(idx_crossing) == 0:
-                    continue
-
-                idx = idx_crossing[0]
-                if idx == 0:
-                    z_star[i, j] = depth_valid[0] - z0_depth
-                else:
-                    flux_before = flux_valid[idx - 1]
-                    flux_after = flux_valid[idx]
-                    depth_before = depth_valid[idx - 1]
-                    depth_after = depth_valid[idx]
-
-                    frac = (flux_before - target_flux) / (flux_before - flux_after)
-                    depth_at_target = depth_before + frac * (depth_after - depth_before)
-                    z_star[i, j] = depth_at_target - z0_depth
+        # No time dimension case - call core function directly
+        z_star = _calculate_rls_core(
+            np.ascontiguousarray(poc_flux_vals),
+            depth_vals,
+            np.ascontiguousarray(mld_vals)
+        )
 
         if is_xarray:
             return xr.DataArray(
