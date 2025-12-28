@@ -54,15 +54,15 @@ class VolumeVariable(VariableConfig):
 @dataclass
 class IntegrationVariable(VariableConfig):
     """Configuration for depth-integrated variable processing."""
-    depth_from: int = 0
-    depth_to: int = 0
+    depth_from_m: float = 0.0  # Start depth in meters
+    depth_to_m: float = 200.0  # End depth in meters
 
 
 @dataclass
 class AverageVariable(VariableConfig):
     """Configuration for depth-averaged variable processing."""
-    depth_from: int = 0
-    depth_to: int = 0
+    depth_from_m: float = 0.0  # Start depth in meters
+    depth_to_m: float = 200.0  # End depth in meters
 
 
 @dataclass
@@ -86,8 +86,8 @@ class Property:
     """Configuration for emergent property calculation."""
     prop_name: str  # "Bloom" or "Trophic"
     variables: any  # String or list depending on property type
-    depth_from: int
-    depth_to: int
+    depth_from_m: float  # Start depth in meters
+    depth_to_m: float  # End depth in meters
     lon_limit: Tuple[str, str]
     lat_limit: Tuple[str, str]
     key: str
@@ -220,8 +220,8 @@ def parse_toml_config(file_path: str) -> BreakdownConfig:
             lat_limit=tuple(map(str, integ.get('lat_range', ['-90', '90']))),
             results=[],
             column_name=integ.get('column_name', ''),
-            depth_from=integ['depth_from'],
-            depth_to=integ['depth_to']
+            depth_from_m=integ['depth_from_m'],
+            depth_to_m=integ['depth_to_m']
         ))
 
     # Parse average variables
@@ -235,8 +235,8 @@ def parse_toml_config(file_path: str) -> BreakdownConfig:
             lat_limit=tuple(map(str, avg.get('lat_range', ['-90', '90']))),
             results=[],
             column_name=avg.get('column_name', ''),
-            depth_from=avg['depth_from'],
-            depth_to=avg['depth_to']
+            depth_from_m=avg['depth_from_m'],
+            depth_to_m=avg['depth_to_m']
         ))
 
     # Parse observation comparisons (if any)
@@ -268,8 +268,8 @@ def parse_toml_config(file_path: str) -> BreakdownConfig:
         config.properties.append(Property(
             prop_name=prop_type,
             variables=variables,
-            depth_from=prop['depth_from'],
-            depth_to=prop['depth_to'],
+            depth_from_m=prop['depth_from_m'],
+            depth_to_m=prop['depth_to_m'],
             lon_limit=tuple(map(str, prop.get('lon_range', ['-180', '180']))),
             lat_limit=tuple(map(str, prop.get('lat_range', ['-90', '90']))),
             key=prop.get('key', ''),

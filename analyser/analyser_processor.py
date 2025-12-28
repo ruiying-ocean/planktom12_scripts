@@ -244,7 +244,7 @@ def process_variables(
                 log.info(f"Unit: {units} not found, using raw data")
                 units_to_use = 1
 
-            # For level processing, convert depth_m to level index
+            # For level/integration/average processing, convert depth_m to level index
             if processor_type == 'level' and 'depth_m' in extra_params:
                 depth_vals = get_depth_coordinate(nc_run_ids[n], nc_filenames[n])
                 if depth_vals is not None:
@@ -256,6 +256,21 @@ def process_variables(
                 else:
                     log.warning(f"Cannot find depth coordinate, using default level 0")
                     extra_params['level'] = 0
+
+            elif processor_type in ['integration', 'average'] and 'depth_from_m' in extra_params:
+                depth_vals = get_depth_coordinate(nc_run_ids[n], nc_filenames[n])
+                if depth_vals is not None:
+                    from_m = extra_params['depth_from_m']
+                    to_m = extra_params['depth_to_m']
+                    from_idx = np.argmin(np.abs(depth_vals - from_m))
+                    to_idx = np.argmin(np.abs(depth_vals - to_m))
+                    log.info(f"{var_name}: depth {from_m}-{to_m}m -> levels {from_idx}-{to_idx} ({depth_vals[from_idx]:.1f}-{depth_vals[to_idx]:.1f}m)")
+                    extra_params['depth_from'] = from_idx
+                    extra_params['depth_to'] = to_idx
+                else:
+                    log.warning(f"Cannot find depth coordinate, using default levels 0-0")
+                    extra_params['depth_from'] = 0
+                    extra_params['depth_to'] = 0
 
             # Prepare region masks (use cache if available)
             if region_mask_cache is not None:
@@ -309,9 +324,9 @@ def _extract_var_config(var, processor_type: str) -> Tuple:
         if processor_type == 'level':
             extra_params = {'depth_m': var.depth_m}
         elif processor_type == 'integration':
-            extra_params = {'depth_from': var.depth_from, 'depth_to': var.depth_to}
+            extra_params = {'depth_from_m': var.depth_from_m, 'depth_to_m': var.depth_to_m}
         elif processor_type == 'average':
-            extra_params = {'depth_from': var.depth_from, 'depth_to': var.depth_to}
+            extra_params = {'depth_from_m': var.depth_from_m, 'depth_to_m': var.depth_to_m}
         else:
             extra_params = {}
 
@@ -344,14 +359,14 @@ def _extract_var_config(var, processor_type: str) -> Tuple:
             lon_lim = var[4]
             lat_lim = var[5]
             reg = var[7]
-            extra_params = {'depth_from': var[1], 'depth_to': var[2]}
+            extra_params = {'depth_from_m': var[1], 'depth_to_m': var[2]}
         elif processor_type == 'average':
             var_name = var[0]
             units = var[3]
             lon_lim = var[4]
             lat_lim = var[5]
             reg = var[7]
-            extra_params = {'depth_from': var[1], 'depth_to': var[2]}
+            extra_params = {'depth_from_m': var[1], 'depth_to_m': var[2]}
         else:
             var_name = var[0]
             units = var[1]
@@ -476,20 +491,31 @@ def process_average_variables_special(
             # Extract configuration
             if hasattr(var, 'name'):
                 var_names = var.name.split('+')
-                depth_from = var.depth_from
-                depth_to = var.depth_to
+                depth_from_m = var.depth_from_m
+                depth_to_m = var.depth_to_m
                 units = var.units
                 reg = var.region
                 lon_lim = var.lon_limit
                 lat_lim = var.lat_limit
             else:
                 var_names = var[0].split('+')
-                depth_from = var[1]
-                depth_to = var[2]
+                depth_from_m = var[1]
+                depth_to_m = var[2]
                 units = var[3]
                 reg = var[7]
                 lon_lim = var[4]
                 lat_lim = var[5]
+
+            # Convert depth_m to level indices
+            depth_vals = get_depth_coordinate(nc_run_ids[n], nc_filenames[n])
+            if depth_vals is not None:
+                depth_from = np.argmin(np.abs(depth_vals - depth_from_m))
+                depth_to = np.argmin(np.abs(depth_vals - depth_to_m))
+                log.info(f"{var_names}: depth {depth_from_m}-{depth_to_m}m -> levels {depth_from}-{depth_to}")
+            else:
+                log.warning(f"Cannot find depth coordinate, using default levels 0-0")
+                depth_from = 0
+                depth_to = 0
 
             # Set lat/lon limits
             if reg == -1:

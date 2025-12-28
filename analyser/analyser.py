@@ -134,10 +134,10 @@ for var in config.volume_vars:
     varVolume.append([var.name, var.units, var.lon_limit, var.lat_limit, var.key, var.region, var.results])
 
 for var in config.integration_vars:
-    varInt.append([var.name, var.depth_from, var.depth_to, var.units, var.lon_limit, var.lat_limit, var.key, var.region, var.results])
+    varInt.append([var.name, var.depth_from_m, var.depth_to_m, var.units, var.lon_limit, var.lat_limit, var.key, var.region, var.results])
 
 for var in config.average_vars:
-    varTotalAve.append([var.name, var.depth_from, var.depth_to, var.units, var.lon_limit, var.lat_limit, var.key, var.region, var.results])
+    varTotalAve.append([var.name, var.depth_from_m, var.depth_to_m, var.units, var.lon_limit, var.lat_limit, var.key, var.region, var.results])
 
 # ---------- 5 LOAD NETCDF MASK AND GRID FILES ----------
 log.info("Loading mask and grid files...")

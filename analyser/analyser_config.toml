@@ -86,16 +86,16 @@
 #
 # [[integration]]
 # variable = "BAC"
-# depth_from = 0
-# depth_to = 15
+# depth_from_m = 0.0
+# depth_to_m = 200.0
 # units = "Conc->PgCarbon"
 # region = 14                        # Atlantic RECCAP province 0
 # column_name = "BAC_0_15m_atlantic_reccap_0"
 #
 # [[integration]]
 # variable = "BAC"
-# depth_from = 0
-# depth_to = 15
+# depth_from_m = 0.0
+# depth_to_m = 200.0
 # units = "Conc->PgCarbon"
 # region = 20                        # Pacific RECCAP province 0
 # column_name = "BAC_0_15m_pacific_reccap_0"
@@ -239,296 +239,296 @@ lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "BAC"
-depth_from = 0
-depth_to = 15
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "COC"
-depth_from = 0
-depth_to = 15
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "DIA"
-depth_from = 0
-depth_to = 15
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "FIX"
-depth_from = 0
-depth_to = 15
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "GEL"
-depth_from = 0
-depth_to = 15
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "CRU"
-depth_from = 0
-depth_to = 15
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "MES"
-depth_from = 0
-depth_to = 15
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "MIX"
-depth_from = 0
-depth_to = 15
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "PHA"
-depth_from = 0
-depth_to = 15
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "PIC"
-depth_from = 0
-depth_to = 15
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "PRO"
-depth_from = 0
-depth_to = 15
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "PTE"
-depth_from = 0
-depth_to = 15
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "DOC"
-depth_from = 0
-depth_to = 16
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "POC"
-depth_from = 0
-depth_to = 16
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "GOC"
-depth_from = 0
-depth_to = 16
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[integration]]
 variable = "HOC"
-depth_from = 0
-depth_to = 16
+depth_from_m = 0.0
+depth_to_m = 200.0
 units = "Conc->PgCarbon"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[average]]
 variable = "TChl"
-depth_from = 0
-depth_to = 0
+depth_from_m = 0.0
+depth_to_m = 0.0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 # [[average]]
 # variable = "TChl"
-# depth_from = 0
-# depth_to = 0
+# depth_from_m = 0.0
+# depth_to_m = 0.0
 # units = "u/L"
 # lon_range = [ -180, 180 ]
 # lat_range = [ 45, 90 ]
 
 # [[average]]
 # variable = "TChl"
-# depth_from = 0
-# depth_to = 0
+# depth_from_m = 0.0
+# depth_to_m = 0.0
 # units = "u/L"
 # lon_range = [ -180, 180 ]
 # lat_range = [ 15, 45 ]
 
 # [[average]]
 # variable = "TChl"
-# depth_from = 0
-# depth_to = 0
+# depth_from_m = 0.0
+# depth_to_m = 0.0
 # units = "u/L"
 # lon_range = [ -180, 180 ]
 # lat_range = [ -15, 15 ]
 
 # [[average]]
 # variable = "TChl"
-# depth_from = 0
-# depth_to = 0
+# depth_from_m = 0.0
+# depth_to_m = 0.0
 # units = "u/L"
 # lon_range = [ -180, 180 ]
 # lat_range = [ -45, -15 ]
 
 # [[average]]
 # variable = "TChl"
-# depth_from = 0
-# depth_to = 0
+# depth_from_m = 0.0
+# depth_to_m = 0.0
 # units = "u/L"
 # lon_range = [ -180, 180 ]
 # lat_range = [ -90, -45 ]
 
 [[average]]
 variable = "PO4"
-depth_from = 0
-depth_to = 0
+depth_from_m = 0.0
+depth_to_m = 0.0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[average]]
 variable = "NO3"
-depth_from = 0
-depth_to = 0
+depth_from_m = 0.0
+depth_to_m = 0.0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[average]]
 variable = "Fer"
-depth_from = 0
-depth_to = 0
+depth_from_m = 0.0
+depth_to_m = 0.0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[average]]
 variable = "Si"
-depth_from = 0
-depth_to = 0
+depth_from_m = 0.0
+depth_to_m = 0.0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[average]]
 variable = "O2"
-depth_from = 17
-depth_to = 17
+depth_from_m = 270.0
+depth_to_m = 300.0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[average]]
 variable = "tos"
-depth_from = 0
-depth_to = 0
+depth_from_m = 0.0
+depth_to_m = 0.0
 units = "1"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[average]]
 variable = "sos"
-depth_from = 0
-depth_to = 0
+depth_from_m = 0.0
+depth_to_m = 0.0
 units = "1"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[average]]
 variable = "mldr10_1"
-depth_from = 0
-depth_to = 0
+depth_from_m = 0.0
+depth_to_m = 0.0
 units = "1"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 [[average]]
 variable = "pCO2"
-depth_from = 0
-depth_to = 0
+depth_from_m = 0.0
+depth_to_m = 0.0
 units = "1"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
 # [[average]]
 # variable = "pCO2"
-# depth_from = 0
-# depth_to = 0
+# depth_from_m = 0.0
+# depth_to_m = 0.0
 # units = "1"
 # lon_range = [ -180, 180 ]
 # lat_range = [ 45, 90 ]
 
 # [[average]]
 # variable = "pCO2"
-# depth_from = 0
-# depth_to = 0
+# depth_from_m = 0.0
+# depth_to_m = 0.0
 # units = "1"
 # lon_range = [ -180, 180 ]
 # lat_range = [ 15, 45 ]
 
 # [[average]]
 # variable = "pCO2"
-# depth_from = 0
-# depth_to = 0
+# depth_from_m = 0.0
+# depth_to_m = 0.0
 # units = "1"
 # lon_range = [ -180, 180 ]
 # lat_range = [ -15, 15 ]
 
 # [[average]]
 # variable = "pCO2"
-# depth_from = 0
-# depth_to = 0
+# depth_from_m = 0.0
+# depth_to_m = 0.0
 # units = "1"
 # lon_range = [ -180, 180 ]
 # lat_range = [ -45, -15 ]
 
 # [[average]]
 # variable = "pCO2"
-# depth_from = 0
-# depth_to = 0
+# depth_from_m = 0.0
+# depth_to_m = 0.0
 # units = "1"
 # lon_range = [ -180, 180 ]
 # lat_range = [ -90, -45 ]
 
 [[average]]
 variable = "Alkalini"
-depth_from = 0
-depth_to = 0
+depth_from_m = 0.0
+depth_to_m = 0.0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
