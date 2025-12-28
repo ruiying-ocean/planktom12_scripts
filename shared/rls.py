@@ -42,12 +42,15 @@ def calculate_rls_numba(exp_flux, depth_vals, mld_vals):
 
             for k in range(z0_idx, nz):
                 flux_k = exp_flux[k, i, j]
-                if not np.isnan(flux_k) and flux_k <= target_flux:
+                if np.isnan(flux_k):
+                    continue  # Skip NaN values, keep searching deeper
+                if flux_k <= target_flux:
                     if k == z0_idx:
                         rls[i, j] = depth_vals[k] - z0_depth
                     else:
                         flux_before = exp_flux[k - 1, i, j]
-                        if not np.isnan(flux_before):
+                        # Only interpolate if flux is decreasing (flux_before > flux_k)
+                        if not np.isnan(flux_before) and flux_before > flux_k:
                             frac = (flux_before - target_flux) / (flux_before - flux_k)
                             depth_at_target = depth_vals[k - 1] + frac * (depth_vals[k] - depth_vals[k - 1])
                             rls[i, j] = depth_at_target - z0_depth
