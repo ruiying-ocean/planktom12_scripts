@@ -26,6 +26,7 @@ import gsw
 # Add parent directory to path for shared module import
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from shared.rls import calculate_rls_numba
+from shared.aou import calculate_aou as _calculate_aou_shared, calculate_aou_3d
 
 
 class OceanMapPlotter:
@@ -353,56 +354,12 @@ class OceanMapPlotter:
             lat: Latitude array (optional, uses nav_lat from data or 0)
 
         Returns:
-            AOU in µmol/L
+            AOU in umol/L
         """
-        # ORCA2 depth values for pressure calculation (dbar ≈ meters)
-        depth_values = np.array([
-            5.0, 15.0, 25.0, 35.5, 46.5, 58.5, 71.5, 86.0,
-            102.5, 121.5, 143.5, 169.0, 198.5, 233.0, 273.5,
-            321.5, 378.5, 446.0, 526.5, 622.5, 737.5, 875.5,
-            1041.5, 1241.5, 1482.5, 1772.5, 2121.5, 2541.5,
-            3046.5, 3653.5, 4383.5
-        ])
-
-        pressure = depth_values[depth_index]
-
-        # Extract data at specified depth
-        depth_dim = 'deptht' if 'deptht' in o2_data.dims else 'nav_lev'
-        o2_at_depth = o2_data.isel({depth_dim: depth_index})
-        temp_at_depth = temp_data.isel({depth_dim: depth_index})
-        sal_at_depth = sal_data.isel({depth_dim: depth_index})
-
-        # Get coordinates - try from data coords, then parameters, then default to 0
-        if lon is None:
-            lon = o2_data.coords.get('nav_lon', xr.zeros_like(sal_at_depth))
-        if lat is None:
-            lat = o2_data.coords.get('nav_lat', xr.zeros_like(sal_at_depth))
-
-        # TEOS-10 calculation:
-        # 1. Convert practical salinity (SP) to absolute salinity (SA)
-        SA = gsw.SA_from_SP(sal_at_depth, pressure, lon, lat)
-
-        # 2. Convert in-situ temperature to conservative temperature (CT)
-        CT = gsw.CT_from_t(SA, temp_at_depth, pressure)
-
-        # 3. Calculate O2 saturation using Garcia & Gordon (1992, 1993)
-        # gsw.O2sol returns saturation in µmol/kg
-        o2_sat = gsw.O2sol(SA, CT, pressure, lon, lat)
-
-        # 4. Calculate actual in-situ density for unit conversion
-        rho = gsw.rho(SA, CT, pressure)  # kg/m³
-
-        # Convert O2 from mol/L to µmol/L
-        o2_measured = o2_at_depth * 1e6
-
-        # Convert O2_sat from µmol/kg to µmol/L using actual density
-        # rho is in kg/m³, divide by 1000 to get kg/L
-        o2_sat_umol_L = o2_sat * (rho / 1000.0)
-
-        # Calculate AOU
-        aou = o2_sat_umol_L - o2_measured
-
-        return aou
+        return _calculate_aou_shared(
+            o2_data, temp_data, sal_data,
+            depth_index=depth_index, lon=lon, lat=lat
+        )
 
     def create_subplot_grid(
         self,
@@ -940,88 +897,4 @@ def calculate_rls(
     return result
 
 
-def calculate_3d_aou(
-    o2: xr.DataArray,
-    temp: xr.DataArray,
-    sal: xr.DataArray,
-    lon: Optional[xr.DataArray] = None,
-    lat: Optional[xr.DataArray] = None
-) -> xr.DataArray:
-    """
-    Calculate 3D AOU field for all depths (used for transects).
-
-    Uses full TEOS-10 standard following Garcia & Gordon (1992, 1993):
-    1. Convert practical salinity to absolute salinity
-    2. Convert in-situ temperature to conservative temperature
-    3. Calculate O2 saturation using gsw.O2sol
-    4. Use actual in-situ density for unit conversion
-
-    Args:
-        o2: 3D oxygen concentration (mol/L)
-        temp: 3D temperature (in-situ °C)
-        sal: 3D salinity (practical salinity)
-        lon: Longitude array (optional, uses nav_lon from data or 0)
-        lat: Latitude array (optional, uses nav_lat from data or 0)
-
-    Returns:
-        3D AOU field in µmol/L
-    """
-    # ORCA2 depth values for pressure calculation (dbar ≈ meters)
-    depth_values = np.array([
-        5.0, 15.0, 25.0, 35.5, 46.5, 58.5, 71.5, 86.0,
-        102.5, 121.5, 143.5, 169.0, 198.5, 233.0, 273.5,
-        321.5, 378.5, 446.0, 526.5, 622.5, 737.5, 875.5,
-        1041.5, 1241.5, 1482.5, 1772.5, 2121.5, 2541.5,
-        3046.5, 3653.5, 4383.5
-    ])
-
-    depth_dim = 'deptht' if 'deptht' in o2.dims else 'nav_lev'
-    n_depths = len(o2[depth_dim])
-
-    # Get coordinates - try from data coords, then parameters, then default to 0
-    if lon is None:
-        lon = o2.coords.get('nav_lon', None)
-    if lat is None:
-        lat = o2.coords.get('nav_lat', None)
-
-    # Calculate AOU at each depth level
-    aou_list = []
-    for k in range(min(n_depths, len(depth_values))):
-        pressure = depth_values[k]
-        o2_k = o2.isel({depth_dim: k})
-        temp_k = temp.isel({depth_dim: k})
-        sal_k = sal.isel({depth_dim: k})
-
-        # Use zeros if no coordinates available
-        lon_k = lon if lon is not None else xr.zeros_like(sal_k)
-        lat_k = lat if lat is not None else xr.zeros_like(sal_k)
-
-        # TEOS-10 calculation:
-        # 1. Convert practical salinity (SP) to absolute salinity (SA)
-        SA = gsw.SA_from_SP(sal_k, pressure, lon_k, lat_k)
-
-        # 2. Convert in-situ temperature to conservative temperature (CT)
-        CT = gsw.CT_from_t(SA, temp_k, pressure)
-
-        # 3. Calculate O2 saturation using Garcia & Gordon (1992, 1993)
-        o2_sat = gsw.O2sol(SA, CT, pressure, lon_k, lat_k)  # µmol/kg
-
-        # 4. Calculate actual in-situ density for unit conversion
-        rho = gsw.rho(SA, CT, pressure)  # kg/m³
-
-        # Convert units
-        o2_sat_umol_L = o2_sat * (rho / 1000.0)  # µmol/kg to µmol/L
-        o2_measured = o2_k * 1e6  # mol/L to µmol/L
-
-        # AOU at this depth
-        aou_k = o2_sat_umol_L - o2_measured
-        aou_list.append(aou_k)
-
-    # Stack along depth dimension
-    aou = xr.concat(aou_list, dim=depth_dim)
-
-    # Preserve original coordinates
-    aou = aou.assign_coords({depth_dim: o2[depth_dim]})
-    aou.name = '_AOU'
-
-    return aou
+# calculate_3d_aou is now imported from shared.aou and re-exported for backwards compatibility

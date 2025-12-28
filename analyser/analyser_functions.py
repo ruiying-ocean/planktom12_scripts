@@ -1,4 +1,5 @@
 import numpy as np
+import xarray as xr
 from scipy.interpolate import griddata
 from netCDF4 import Dataset
 import math
@@ -10,6 +11,7 @@ from pathlib import Path
 # Add parent directory to path for shared module import
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from shared.rls import calculate_rls_numba
+from shared.aou import calculate_aou as _calculate_aou_shared
 
 try:
     import gsw
@@ -596,32 +598,26 @@ def trophic(var, var_lons, var_lats, missingVal, lonLim, latLim):
 
 
 # ---------- 11 AOU COMPUTATION ----------
-# ORCA2 depth values (meters) for pressure calculation
-ORCA2_DEPTHS = np.array([
-    5.0, 15.0, 25.0, 35.0, 45.0, 55.0, 65.1, 75.1,
-    85.3, 95.5, 106.0, 116.9, 128.7, 142.2, 158.9,
-    182.0, 216.6, 272.5, 364.3, 511.5, 732.2, 1033.2,
-    1405.7, 1830.9, 2289.8, 2768.2, 3257.5, 3752.4,
-    4250.4, 4749.9, 5250.2
-])
 
 
-def computeAOU(o2_data, temp_data, sal_data, depth_vals, target_depth_m=300.0, missingVal=1e20):
+def computeAOU(o2_data, temp_data, sal_data, depth_vals, var_lons=None, var_lats=None, target_depth_m=300.0, missingVal=1e20):
     """
     Compute Apparent Oxygen Utilization (AOU) at a specific depth.
 
-    AOU = O2_saturation - O2_measured
+    Wrapper around shared.aou.calculate_aou for numpy array inputs.
 
     Args:
         o2_data: Oxygen concentration (time, depth, y, x) in mol/L
         temp_data: Temperature (time, depth, y, x) in degrees C
         sal_data: Salinity (time, depth, y, x) in PSU
         depth_vals: 1D array of depth values in meters
+        var_lons: Longitude coordinates (y, x) - optional
+        var_lats: Latitude coordinates (y, x) - optional
         target_depth_m: Target depth in meters (default 300m)
         missingVal: Missing value indicator
 
     Returns:
-        AOU in µmol/L as (time, y, x) array
+        AOU in umol/L as (time, y, x) array
     """
     if not HAS_GSW:
         log.warning("GSW library not available, cannot compute AOU")
@@ -629,33 +625,29 @@ def computeAOU(o2_data, temp_data, sal_data, depth_vals, target_depth_m=300.0, m
 
     # Find closest depth index to target depth
     depth_index = np.argmin(np.abs(depth_vals - target_depth_m))
-    pressure = depth_vals[depth_index]
-    log.info(f"AOU using depth index {depth_index} = {pressure:.1f}m (target: {target_depth_m}m)")
+    log.info(f"AOU using depth index {depth_index} = {depth_vals[depth_index]:.1f}m (target: {target_depth_m}m)")
 
-    # Extract data at specified depth
-    o2_at_depth = o2_data[:, depth_index, :, :]
-    temp_at_depth = temp_data[:, depth_index, :, :]
-    sal_at_depth = sal_data[:, depth_index, :, :]
+    # Mask missing values before conversion
+    o2_masked = np.where(o2_data > missingVal / MISSING_VAL_THRESHOLD_LOOSE, np.nan, o2_data)
+    temp_masked = np.where(temp_data > missingVal / MISSING_VAL_THRESHOLD_LOOSE, np.nan, temp_data)
+    sal_masked = np.where(sal_data > missingVal / MISSING_VAL_THRESHOLD_LOOSE, np.nan, sal_data)
 
-    # Mask missing values
-    o2_at_depth = np.where(o2_at_depth > missingVal / MISSING_VAL_THRESHOLD_LOOSE, np.nan, o2_at_depth)
-    temp_at_depth = np.where(temp_at_depth > missingVal / MISSING_VAL_THRESHOLD_LOOSE, np.nan, temp_at_depth)
-    sal_at_depth = np.where(sal_at_depth > missingVal / MISSING_VAL_THRESHOLD_LOOSE, np.nan, sal_at_depth)
+    # Convert numpy arrays to xarray for shared function
+    dims = ('time_counter', 'deptht', 'y', 'x')
+    coords = {'deptht': depth_vals}
+    if var_lons is not None:
+        coords['nav_lon'] = (('y', 'x'), var_lons)
+    if var_lats is not None:
+        coords['nav_lat'] = (('y', 'x'), var_lats)
 
-    # Calculate O2 saturation using GSW
-    # gsw.O2sol returns saturation in µmol/kg
-    o2_sat = gsw.O2sol(sal_at_depth, temp_at_depth, pressure, 0, 0)
+    o2_xr = xr.DataArray(o2_masked, dims=dims, coords=coords)
+    temp_xr = xr.DataArray(temp_masked, dims=dims, coords=coords)
+    sal_xr = xr.DataArray(sal_masked, dims=dims, coords=coords)
 
-    # Convert O2 from mol/L to µmol/L (multiply by 1e6)
-    o2_measured = o2_at_depth * 1e6
+    # Call shared function
+    aou_xr = _calculate_aou_shared(o2_xr, temp_xr, sal_xr, depth_index=depth_index)
 
-    # Convert O2_sat from µmol/kg to µmol/L (multiply by density ~1.025)
-    o2_sat_umol_L = o2_sat * 1.025
-
-    # Calculate AOU
-    aou = o2_sat_umol_L - o2_measured
-
-    return aou
+    return aou_xr.values
 
 
 def aouData(o2_data, temp_data, sal_data, var_lons, var_lats, landMask, volMask, missingVal, lonLim, latLim, depth_vals, target_depth_m=300.0):
@@ -680,7 +672,7 @@ def aouData(o2_data, temp_data, sal_data, var_lons, var_lats, landMask, volMask,
         Tuple of (annual_mean, monthly_stats) matching volumeDataAverage format
     """
     # Compute AOU
-    aou = computeAOU(o2_data, temp_data, sal_data, depth_vals, target_depth_m, missingVal)
+    aou = computeAOU(o2_data, temp_data, sal_data, depth_vals, var_lons, var_lats, target_depth_m, missingVal)
 
     if aou is None:
         return -1, np.full((12, 6), -1.0)
