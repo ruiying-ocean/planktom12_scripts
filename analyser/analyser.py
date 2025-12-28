@@ -128,7 +128,7 @@ for var in config.surface_vars:
     varSurface.append([var.name, var.units, var.lon_limit, var.lat_limit, var.key, var.region, var.results])
 
 for var in config.level_vars:
-    varLevel.append([var.name, var.level, var.units, var.lon_limit, var.lat_limit, var.key, var.region, var.results])
+    varLevel.append([var.name, var.depth_m, var.units, var.lon_limit, var.lat_limit, var.key, var.region, var.results])
 
 for var in config.volume_vars:
     varVolume.append([var.name, var.units, var.lon_limit, var.lat_limit, var.key, var.region, var.results])
