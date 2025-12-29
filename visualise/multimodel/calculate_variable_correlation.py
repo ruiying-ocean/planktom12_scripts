@@ -6,7 +6,13 @@ This script computes spatial means/integrals for two variables across all models
 and calculates cross-model correlations. This is useful for identifying emergent
 constraints where a measurable predictor (X) correlates with a target (Y).
 
-Supports latitude constraints for regional analysis:
+Two modes:
+1. Single-value mode (default): Compute area-weighted spatial means, then correlate
+   across models. Output: scatter plot + CSV.
+2. Spatial map mode (--spatial-map): Compute cross-model correlation at each grid
+   cell. Output: map showing where the emergent constraint relationship is strongest.
+
+Supports latitude constraints for regional analysis (single-value mode only):
 - Global: all latitudes
 - Tropical: 30°S to 30°N
 - High latitudes: poleward of 45°
@@ -22,6 +28,9 @@ Usage:
     # High latitude Southern Ocean
     python calculate_variable_correlation.py ./output --var-x _PPINT --var-y MES --lat-min -90 --lat-max -45
 
+    # Spatial map of cross-model correlations
+    python calculate_variable_correlation.py ./output --var-x _PPINT --var-y MES --spatial-map
+
     # X as historical mean, Y as future-historical change
     python calculate_variable_correlation.py ./output --var-x _PPINT --var-y MES --x-mode hist --y-mode change
 """
@@ -33,6 +42,8 @@ from pathlib import Path
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 from scipy import stats
 import os
 
@@ -100,9 +111,13 @@ COMPOSITE_VARIABLES = {
 }
 
 # ORCA2 depth levels (approximate depths in meters)
-ORCA2_DEPTHS = [5, 15, 25, 36, 47, 59, 72, 86, 103, 122, 144, 169, 199, 233,
-                274, 322, 379, 446, 527, 623, 738, 876, 1042, 1242, 1483,
-                1773, 2116, 2520, 2990, 3534, 4161, 4878, 5698]
+ORCA2_DEPTHS = [4.999938e+00, 1.500029e+01, 2.500176e+01, 3.500541e+01, 4.501332e+01,
+       5.502950e+01, 6.506181e+01, 7.512551e+01, 8.525037e+01, 9.549429e+01,
+       1.059699e+02, 1.168962e+02, 1.286979e+02, 1.421953e+02, 1.589606e+02,
+       1.819628e+02, 2.166479e+02, 2.724767e+02, 3.643030e+02, 5.115348e+02,
+       7.322009e+02, 1.033217e+03, 1.405698e+03, 1.830885e+03, 2.289768e+03,
+       2.768242e+03, 3.257479e+03, 3.752442e+03, 4.250401e+03, 4.749913e+03,
+       5.250227e+03]
 
 
 def load_config():
@@ -360,7 +375,7 @@ def get_variable_info(variable, depth_index=None):
 
 def calculate_correlation(models, config,
                           var_x, var_y,
-                          x_mode='hist', y_mode='change',
+                          x_mode='change', y_mode='change',
                           depth_x=None, depth_y=None,
                           lat_min=-90, lat_max=90,
                           hist_start=2000, hist_end=2010,
@@ -606,6 +621,294 @@ def plot_correlation(results, output_dir, config,
     print_success(f"Saved data: {csv_file}")
 
 
+def calculate_spatial_correlation_map(models, var_x, var_y,
+                                       x_mode='change', y_mode='change',
+                                       depth_x=None, depth_y=None,
+                                       hist_start=2000, hist_end=2010,
+                                       fut_start=2090, fut_end=2100,
+                                       min_models=3):
+    """
+    Memory-efficient spatial correlation map.
+
+    For each year, loads data from all models and computes cross-model
+    correlation at each grid cell. Accumulates running statistics.
+
+    Args:
+        models: List of model dicts
+        var_x: X-axis variable name
+        var_y: Y-axis variable name
+        x_mode: 'hist', 'fut', or 'change'
+        y_mode: 'hist', 'fut', or 'change'
+        depth_x, depth_y: Depth indices (None for 0-200m mean)
+        hist_start, hist_end: Historical period
+        fut_start, fut_end: Future period
+        min_models: Minimum number of valid models per grid cell
+
+    Returns:
+        Dict with correlation_map, nav_lon, nav_lat, n_valid_models
+    """
+    file_type_x = VARIABLE_FILE_MAPPING.get(var_x, 'ptrc_T')
+    file_type_y = VARIABLE_FILE_MAPPING.get(var_y, 'ptrc_T')
+
+    # Get coordinates and mask
+    nav_lon, nav_lat, land_mask = get_nav_coords_and_mask(models, file_type_x)
+    if nav_lon is None:
+        print_error("Could not load navigation coordinates")
+        return None
+
+    n_models = len(models)
+    grid_shape = nav_lon.shape
+
+    # Determine years to process based on modes
+    if x_mode == 'change' or y_mode == 'change':
+        # Need both periods
+        years_hist = list(range(hist_start, hist_end + 1))
+        years_fut = list(range(fut_start, fut_end + 1))
+    elif x_mode == 'hist' or y_mode == 'hist':
+        years_hist = list(range(hist_start, hist_end + 1))
+        years_fut = []
+    else:  # both are 'fut'
+        years_hist = []
+        years_fut = list(range(fut_start, fut_end + 1))
+
+    print_info(f"Processing {len(years_hist)} historical years, {len(years_fut)} future years")
+
+    # Accumulators for Pearson correlation using running sums
+    # r = (n*sum_xy - sum_x*sum_y) / sqrt((n*sum_x2 - sum_x^2)*(n*sum_y2 - sum_y^2))
+    sum_x = np.zeros(grid_shape, dtype=np.float64)
+    sum_y = np.zeros(grid_shape, dtype=np.float64)
+    sum_x2 = np.zeros(grid_shape, dtype=np.float64)
+    sum_y2 = np.zeros(grid_shape, dtype=np.float64)
+    sum_xy = np.zeros(grid_shape, dtype=np.float64)
+    n_valid = np.zeros(grid_shape, dtype=np.int32)
+
+    # For change mode, we need to compute period means first per model
+    # Then correlate across models
+    # This requires loading all model data for each period
+
+    print_header("Loading model data...")
+
+    # Storage for period means per model
+    x_fields = {}  # model_name -> 2D array
+    y_fields = {}  # model_name -> 2D array
+
+    for model in models:
+        model_name = model['name']
+        model_dir = model['model_dir']
+        print_info(f"Processing {model_name}...")
+
+        # Load X variable based on mode
+        if x_mode == 'hist':
+            x_field = load_period_mean_streaming(
+                model_dir, model_name, hist_start, hist_end,
+                var_x, file_type_x, depth_x, land_mask
+            )
+        elif x_mode == 'fut':
+            x_field = load_period_mean_streaming(
+                model_dir, model_name, fut_start, fut_end,
+                var_x, file_type_x, depth_x, land_mask
+            )
+        else:  # change
+            x_hist = load_period_mean_streaming(
+                model_dir, model_name, hist_start, hist_end,
+                var_x, file_type_x, depth_x, land_mask
+            )
+            x_fut = load_period_mean_streaming(
+                model_dir, model_name, fut_start, fut_end,
+                var_x, file_type_x, depth_x, land_mask
+            )
+            if x_hist is not None and x_fut is not None:
+                x_field = x_fut - x_hist
+            else:
+                x_field = None
+            del x_hist, x_fut
+
+        # Load Y variable based on mode
+        if y_mode == 'hist':
+            y_field = load_period_mean_streaming(
+                model_dir, model_name, hist_start, hist_end,
+                var_y, file_type_y, depth_y, land_mask
+            )
+        elif y_mode == 'fut':
+            y_field = load_period_mean_streaming(
+                model_dir, model_name, fut_start, fut_end,
+                var_y, file_type_y, depth_y, land_mask
+            )
+        else:  # change
+            y_hist = load_period_mean_streaming(
+                model_dir, model_name, hist_start, hist_end,
+                var_y, file_type_y, depth_y, land_mask
+            )
+            y_fut = load_period_mean_streaming(
+                model_dir, model_name, fut_start, fut_end,
+                var_y, file_type_y, depth_y, land_mask
+            )
+            if y_hist is not None and y_fut is not None:
+                y_field = y_fut - y_hist
+            else:
+                y_field = None
+            del y_hist, y_fut
+
+        if x_field is not None and y_field is not None:
+            x_fields[model_name] = x_field
+            y_fields[model_name] = y_field
+        else:
+            print_warning(f"  {model_name}: Could not load data, skipping")
+
+        gc.collect()
+
+    valid_models = list(x_fields.keys())
+    n_valid_models = len(valid_models)
+    print_info(f"Loaded data from {n_valid_models} models")
+
+    if n_valid_models < min_models:
+        print_error(f"Not enough valid models ({n_valid_models} < {min_models})")
+        return None
+
+    # Compute correlation at each grid cell across models
+    print_header("Computing spatial correlation map...")
+
+    # Stack into arrays: (n_models, y, x)
+    x_stack = np.stack([x_fields[m] for m in valid_models], axis=0)
+    y_stack = np.stack([y_fields[m] for m in valid_models], axis=0)
+
+    # Free memory
+    del x_fields, y_fields
+    gc.collect()
+
+    # Compute Pearson correlation at each grid cell
+    # Using vectorized formula
+    n = n_valid_models
+
+    # Count valid (non-NaN) models at each grid cell
+    valid_mask = ~np.isnan(x_stack) & ~np.isnan(y_stack)
+    n_valid_per_cell = np.sum(valid_mask, axis=0)
+
+    # Replace NaN with 0 for computation, will mask later
+    x_stack = np.where(valid_mask, x_stack, 0)
+    y_stack = np.where(valid_mask, y_stack, 0)
+
+    # Compute sums only over valid entries
+    sum_x = np.sum(x_stack, axis=0)
+    sum_y = np.sum(y_stack, axis=0)
+    sum_x2 = np.sum(x_stack**2, axis=0)
+    sum_y2 = np.sum(y_stack**2, axis=0)
+    sum_xy = np.sum(x_stack * y_stack, axis=0)
+
+    # Pearson correlation formula
+    n_arr = n_valid_per_cell.astype(np.float64)
+    numerator = n_arr * sum_xy - sum_x * sum_y
+    denom_x = n_arr * sum_x2 - sum_x**2
+    denom_y = n_arr * sum_y2 - sum_y**2
+
+    # Handle edge cases
+    with np.errstate(divide='ignore', invalid='ignore'):
+        denominator = np.sqrt(denom_x * denom_y)
+        correlation_map = np.where(denominator > 0, numerator / denominator, np.nan)
+
+    # Mask cells with too few valid models
+    correlation_map = np.where(n_valid_per_cell >= min_models, correlation_map, np.nan)
+
+    # Clean up
+    del x_stack, y_stack
+    gc.collect()
+
+    return {
+        'correlation_map': correlation_map,
+        'nav_lon': nav_lon,
+        'nav_lat': nav_lat,
+        'n_valid_models': n_valid_per_cell,
+        'model_names': valid_models
+    }
+
+
+def plot_correlation_map(results, output_dir, config,
+                         var_x, var_y,
+                         x_mode, y_mode,
+                         depth_x, depth_y,
+                         hist_start, hist_end,
+                         fut_start, fut_end):
+    """Create map of cross-model correlations."""
+
+    dpi = config.get("figure", {}).get("dpi", 300) if config else 300
+    fmt = config.get("figure", {}).get("format", "png") if config else "png"
+
+    correlation_map = results['correlation_map']
+    nav_lon = results['nav_lon']
+    nav_lat = results['nav_lat']
+
+    # Get variable info for labels
+    x_label, x_units, x_depth, _ = get_variable_info(var_x, depth_x)
+    y_label, y_units, y_depth, _ = get_variable_info(var_y, depth_y)
+
+    # Mode labels
+    mode_labels = {
+        'hist': f'{hist_start}-{hist_end}',
+        'fut': f'{fut_start}-{fut_end}',
+        'change': f'Δ({fut_start}-{fut_end} - {hist_start}-{hist_end})'
+    }
+
+    # Create figure
+    projection = ccrs.Robinson()
+    data_crs = ccrs.PlateCarree()
+
+    fig = plt.figure(figsize=(12, 6))
+    ax = fig.add_subplot(1, 1, 1, projection=projection)
+
+    ax.add_feature(cfeature.LAND, facecolor='lightgray', zorder=1)
+    ax.add_feature(cfeature.COASTLINE, linewidth=0.5, zorder=2)
+    ax.set_global()
+
+    # Plot correlation map with diverging colormap
+    im = ax.pcolormesh(
+        nav_lon, nav_lat, correlation_map,
+        transform=data_crs,
+        cmap='RdBu_r',
+        vmin=-1, vmax=1,
+        shading='auto'
+    )
+
+    # Colorbar
+    cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05,
+                        shrink=0.8, extend='neither')
+    cbar.set_label('Pearson r (cross-model)', fontsize=11)
+
+    # Title
+    title = (f"Cross-Model Correlation\n"
+             f"{x_label}{x_depth} ({mode_labels[x_mode]}) vs "
+             f"{y_label}{y_depth} ({mode_labels[y_mode]})")
+    ax.set_title(title, fontsize=12, fontweight='bold')
+
+    plt.tight_layout()
+
+    # Save PNG
+    var_x_safe = var_x.replace('_', '').lower()
+    var_y_safe = var_y.replace('_', '').lower()
+    output_file = output_dir / f"correlation_map_{var_x_safe}_{x_mode}_vs_{var_y_safe}_{y_mode}.{fmt}"
+    fig.savefig(output_file, dpi=dpi, bbox_inches='tight')
+    print_success(f"Saved plot: {output_file}")
+    plt.close(fig)
+
+    # Save to NetCDF for further analysis
+    nc_file = output_file.with_suffix('.nc')
+    ds = xr.Dataset({
+        'correlation': (['y', 'x'], correlation_map),
+        'n_valid_models': (['y', 'x'], results['n_valid_models']),
+    }, coords={
+        'nav_lon': (['y', 'x'], nav_lon),
+        'nav_lat': (['y', 'x'], nav_lat),
+    })
+    ds.attrs['var_x'] = var_x
+    ds.attrs['var_y'] = var_y
+    ds.attrs['x_mode'] = x_mode
+    ds.attrs['y_mode'] = y_mode
+    ds.attrs['hist_period'] = f'{hist_start}-{hist_end}'
+    ds.attrs['fut_period'] = f'{fut_start}-{fut_end}'
+    ds.attrs['models'] = ','.join(results['model_names'])
+    ds.to_netcdf(nc_file)
+    print_success(f"Saved NetCDF: {nc_file}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Calculate cross-model correlation between two variables for emergent constraints',
@@ -621,13 +924,16 @@ Examples:
   # Southern Ocean (high latitudes)
   python calculate_variable_correlation.py ./output --var-x _PPINT --var-y MES --lat-min -90 --lat-max -45
 
+  # Spatial map of cross-model correlations
+  python calculate_variable_correlation.py ./output --var-x _PPINT --var-y MES --spatial-map
+
   # Both variables as changes
   python calculate_variable_correlation.py ./output --var-x _PPINT --var-y MES --x-mode change --y-mode change
 
 Modes:
-  hist   : Historical period mean (default for X)
+  hist   : Historical period mean
   fut    : Future period mean
-  change : Future minus historical (default for Y)
+  change : Future minus historical (default for both X and Y)
 """
     )
     parser.add_argument('output_dir', type=Path,
@@ -636,8 +942,8 @@ Modes:
                         help='X-axis variable (predictor, default: _PPINT)')
     parser.add_argument('--var-y', '-y', type=str, default='MES',
                         help='Y-axis variable (target, default: MES)')
-    parser.add_argument('--x-mode', type=str, choices=['hist', 'fut', 'change'], default='hist',
-                        help='X variable mode: hist, fut, or change (default: hist)')
+    parser.add_argument('--x-mode', type=str, choices=['hist', 'fut', 'change'], default='change',
+                        help='X variable mode: hist, fut, or change (default: change)')
     parser.add_argument('--y-mode', type=str, choices=['hist', 'fut', 'change'], default='change',
                         help='Y variable mode: hist, fut, or change (default: change)')
     parser.add_argument('--depth-x', type=int, default=None,
@@ -661,6 +967,8 @@ Modes:
                         help='Start year for future period (default: 2090)')
     parser.add_argument('--fut-end', type=int, default=2100,
                         help='End year for future period (default: 2100)')
+    parser.add_argument('--spatial-map', action='store_true',
+                        help='Output spatial map of cross-model correlations instead of single value')
 
     args = parser.parse_args()
 
@@ -681,51 +989,95 @@ Modes:
     print_info(f"Found {len(models)} models matching '{args.pattern}'")
     print_info(f"X variable: {args.var_x} ({args.x_mode})")
     print_info(f"Y variable: {args.var_y} ({args.y_mode})")
-    print_info(f"Latitude range: {args.lat_min}° to {args.lat_max}°")
     print_info(f"Historical period: {args.hist_start}-{args.hist_end}")
     print_info(f"Future period: {args.fut_start}-{args.fut_end}")
+    if args.spatial_map:
+        print_info("Mode: Spatial correlation map")
+    else:
+        print_info(f"Latitude range: {args.lat_min}° to {args.lat_max}°")
 
-    # Calculate correlation
-    results = calculate_correlation(
-        models, config,
-        var_x=args.var_x,
-        var_y=args.var_y,
-        x_mode=args.x_mode,
-        y_mode=args.y_mode,
-        depth_x=args.depth_x,
-        depth_y=args.depth_y,
-        lat_min=args.lat_min,
-        lat_max=args.lat_max,
-        hist_start=args.hist_start,
-        hist_end=args.hist_end,
-        fut_start=args.fut_start,
-        fut_end=args.fut_end
-    )
+    if args.spatial_map:
+        # Spatial correlation map mode
+        results = calculate_spatial_correlation_map(
+            models,
+            var_x=args.var_x,
+            var_y=args.var_y,
+            x_mode=args.x_mode,
+            y_mode=args.y_mode,
+            depth_x=args.depth_x,
+            depth_y=args.depth_y,
+            hist_start=args.hist_start,
+            hist_end=args.hist_end,
+            fut_start=args.fut_start,
+            fut_end=args.fut_end
+        )
 
-    if results is None:
-        return 1
+        if results is None:
+            return 1
 
-    print_header("Correlation Results")
-    print_info(f"Pearson r = {results['r']:.4f}")
-    print_info(f"p-value = {results['p_value']:.4e}")
-    print_info(f"Number of models = {results['n_models']}")
+        print_header("Spatial Correlation Map Results")
+        corr_map = results['correlation_map']
+        valid_corrs = corr_map[~np.isnan(corr_map)]
+        print_info(f"Mean correlation: {np.mean(valid_corrs):.4f}")
+        print_info(f"Correlation range: {np.min(valid_corrs):.4f} to {np.max(valid_corrs):.4f}")
+        print_info(f"Number of models: {len(results['model_names'])}")
 
-    # Plot results
-    plot_correlation(
-        results, args.output_dir, config,
-        var_x=args.var_x,
-        var_y=args.var_y,
-        x_mode=args.x_mode,
-        y_mode=args.y_mode,
-        depth_x=args.depth_x,
-        depth_y=args.depth_y,
-        lat_min=args.lat_min,
-        lat_max=args.lat_max,
-        hist_start=args.hist_start,
-        hist_end=args.hist_end,
-        fut_start=args.fut_start,
-        fut_end=args.fut_end
-    )
+        # Plot map
+        plot_correlation_map(
+            results, args.output_dir, config,
+            var_x=args.var_x,
+            var_y=args.var_y,
+            x_mode=args.x_mode,
+            y_mode=args.y_mode,
+            depth_x=args.depth_x,
+            depth_y=args.depth_y,
+            hist_start=args.hist_start,
+            hist_end=args.hist_end,
+            fut_start=args.fut_start,
+            fut_end=args.fut_end
+        )
+    else:
+        # Original single-value correlation mode
+        results = calculate_correlation(
+            models, config,
+            var_x=args.var_x,
+            var_y=args.var_y,
+            x_mode=args.x_mode,
+            y_mode=args.y_mode,
+            depth_x=args.depth_x,
+            depth_y=args.depth_y,
+            lat_min=args.lat_min,
+            lat_max=args.lat_max,
+            hist_start=args.hist_start,
+            hist_end=args.hist_end,
+            fut_start=args.fut_start,
+            fut_end=args.fut_end
+        )
+
+        if results is None:
+            return 1
+
+        print_header("Correlation Results")
+        print_info(f"Pearson r = {results['r']:.4f}")
+        print_info(f"p-value = {results['p_value']:.4e}")
+        print_info(f"Number of models = {results['n_models']}")
+
+        # Plot results
+        plot_correlation(
+            results, args.output_dir, config,
+            var_x=args.var_x,
+            var_y=args.var_y,
+            x_mode=args.x_mode,
+            y_mode=args.y_mode,
+            depth_x=args.depth_x,
+            depth_y=args.depth_y,
+            lat_min=args.lat_min,
+            lat_max=args.lat_max,
+            hist_start=args.hist_start,
+            hist_end=args.hist_end,
+            fut_start=args.fut_start,
+            fut_end=args.fut_end
+        )
 
     return 0
 

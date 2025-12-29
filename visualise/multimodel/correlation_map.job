@@ -1,0 +1,76 @@
+#!/bin/bash
+#SBATCH --job-name=corr_map          # Job name
+#SBATCH --output=corr_map_%j.out     # Output file name (%j expands to jobID)
+#SBATCH --error=corr_map_%j.err      # Error file name (%j expands to jobID)
+#SBATCH --time=02:00:00              # Run time (hh:mm:ss)
+#SBATCH --ntasks=1                   # Number of tasks (processes)
+#SBATCH --nodes=1                    # Number of nodes
+#SBATCH --cpus-per-task=1            # Number of CPU cores per task
+#SBATCH --mem=32G                    # Memory needed per node
+
+# Spatial correlation map for emergent constraint analysis
+# Computes cross-model correlation at each grid cell
+
+echo "Job ID: $SLURM_JOB_ID"
+echo "Node: $SLURM_JOB_NODELIST"
+echo "Start time: $(date)"
+
+# Setup mamba/conda environment
+export MAMBA_EXE='/gpfs/home/vhf24tbu/miniforge3/bin/mamba'
+export MAMBA_ROOT_PREFIX='/gpfs/home/vhf24tbu/miniforge3'
+__mamba_setup="$("$MAMBA_EXE" shell hook --shell bash --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__mamba_setup"
+else
+    alias mamba="$MAMBA_EXE"
+fi
+unset __mamba_setup
+
+mamba activate base
+
+# Script location
+SCRIPT_DIR=~/setUpRuns/planktom12_scripts/visualise/multimodel
+
+# Output directory - create if needed
+OUTPUT_DIR="${1:-./correlation_output}"
+mkdir -p "$OUTPUT_DIR"
+
+# Variables to correlate (can be overridden via environment variables)
+VAR_X="${VAR_X:-_PPINT}"
+VAR_Y="${VAR_Y:-MES}"
+X_MODE="${X_MODE:-change}"
+Y_MODE="${Y_MODE:-change}"
+
+# Time periods
+HIST_START="${HIST_START:-2000}"
+HIST_END="${HIST_END:-2010}"
+FUT_START="${FUT_START:-2090}"
+FUT_END="${FUT_END:-2100}"
+
+# Model directory and pattern
+BASE_DIR="${BASE_DIR:-~/scratch/ModelRuns}"
+PATTERN="${PATTERN:-TOM12_RY_JRA*}"
+
+echo "Configuration:"
+echo "  X variable: $VAR_X ($X_MODE)"
+echo "  Y variable: $VAR_Y ($Y_MODE)"
+echo "  Historical: $HIST_START-$HIST_END"
+echo "  Future: $FUT_START-$FUT_END"
+echo "  Output: $OUTPUT_DIR"
+
+# Run the correlation map script
+python3 "$SCRIPT_DIR/calculate_variable_correlation.py" \
+    "$OUTPUT_DIR" \
+    --var-x "$VAR_X" \
+    --var-y "$VAR_Y" \
+    --x-mode "$X_MODE" \
+    --y-mode "$Y_MODE" \
+    --hist-start "$HIST_START" \
+    --hist-end "$HIST_END" \
+    --fut-start "$FUT_START" \
+    --fut-end "$FUT_END" \
+    --base-dir "$BASE_DIR" \
+    --pattern "$PATTERN" \
+    --spatial-map
+
+echo "End time: $(date)"
