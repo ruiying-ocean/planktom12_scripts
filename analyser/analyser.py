@@ -407,9 +407,9 @@ for year in range(year_from, year_to + 1):
             if year == year_from:
                 if lines:
                     header_suffix = ''
-                    if aou_result is not None:
+                    if aou_result is not None and ',AOU' not in lines[0]:
                         header_suffix += ',AOU'
-                    if rls_result is not None:
+                    if rls_result is not None and ',RLS' not in lines[0]:
                         header_suffix += ',RLS'
                     lines[0] = lines[0].rstrip('\n') + header_suffix + '\n'
 
