@@ -61,7 +61,6 @@ dmypy.json
 # NEMO/Model outputs
 *.nc
 *.nc4
-*.dat
 *.restart
 ocean.output
 run.stat
