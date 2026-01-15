@@ -189,6 +189,43 @@ units = "PgCarbonPerYr"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
 
+# Primary production by phytoplankton PFT
+[[volume]]
+variable = "PPT_DIA"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+
+[[volume]]
+variable = "PPT_MIX"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+
+[[volume]]
+variable = "PPT_COC"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+
+[[volume]]
+variable = "PPT_PIC"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+
+[[volume]]
+variable = "PPT_PHA"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+
+[[volume]]
+variable = "PPT_FIX"
+units = "PgCarbonPerYr"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+
 [[volume]]
 variable = "proara"
 units = "PgCarbonPerYr"

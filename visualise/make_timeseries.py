@@ -42,7 +42,8 @@ class ModelDataLoader:
         data.update(surface_data)
 
         volume_df = self._read_analyser_file("vol")
-        volume_cols = ["PPT", "proara", "prococ", "probsi", "GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"]
+        volume_cols = ["PPT", "proara", "prococ", "probsi", "GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE",
+                       "PPT_DIA", "PPT_MIX", "PPT_COC", "PPT_PIC", "PPT_PHA", "PPT_FIX"]
         volume_data = self._extract_arrays(volume_df, volume_cols)
         volume_data["PROCACO3"] = volume_data["proara"] + volume_data["prococ"]
         # SP (secondary production) = sum of all grazing terms
@@ -378,6 +379,47 @@ class FigureCreator:
 
         self._save_figure(fig, f"{self.model_name}_summary_organic_carbon.png")
 
+    def create_ppt_by_pft_summary(self, data):
+        """Create summary plots for primary production by phytoplankton PFT."""
+        year_limits = self._get_global_year_limits(data)
+        layout = {'rows': 2, 'cols': 3}
+        subplot_width = self.config['layout']['subplot_width']
+        subplot_height = self.config['layout']['subplot_height']
+
+        # Primary production by PFT configs (matching the phytoplankton order in PFT summary)
+        ppt_configs = [
+            ("PPT_PIC", "Picophytoplankton PP", "PgC/yr"),
+            ("PPT_PHA", "Phaeocystis PP", "PgC/yr"),
+            ("PPT_MIX", "Mixotrophs PP", "PgC/yr"),
+            ("PPT_DIA", "Diatoms PP", "PgC/yr"),
+            ("PPT_COC", "Coccolithophores PP", "PgC/yr"),
+            ("PPT_FIX", "Nitrogen Fixers PP", "PgC/yr"),
+        ]
+
+        fig, axes = plt.subplots(
+            layout['rows'], layout['cols'],
+            figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
+            sharex=True, constrained_layout=self.config['layout']['use_constrained_layout']
+        )
+        axes = axes.flatten()
+
+        for i, (var_name, title, ylabel) in enumerate(ppt_configs):
+            color = self.colors[i % len(self.colors)]
+            is_bottom_row = i >= layout['cols']
+            # Check if data is available
+            if var_name in data and data[var_name] is not None and len(data[var_name]) > 0:
+                self._setup_axis(axes[i], data["year"], data[var_name], color, title, ylabel,
+                               None, None, year_limits, add_xlabel=is_bottom_row)
+            else:
+                # Variable not available - show placeholder
+                axes[i].text(0.5, 0.5, f'{title}\nnot available',
+                           ha='center', va='center', transform=axes[i].transAxes, fontsize=9, color='gray')
+                axes[i].set_title(title, fontweight='bold', pad=5)
+                if is_bottom_row:
+                    axes[i].set_xlabel("Year", fontweight='bold')
+
+        self._save_figure(fig, f"{self.model_name}_summary_ppt_by_pft.png")
+
 def main():
     parser = argparse.ArgumentParser(
         description='Create annual summary visualizations for ocean model output',
@@ -420,6 +462,7 @@ def main():
         creator.create_physics_summary(data)
         creator.create_derived_summary(data)
         creator.create_organic_carbon_summary(data)
+        creator.create_ppt_by_pft_summary(data)
 
         print("\n🎉 All visualizations completed successfully!")
         print(f"📂 Files saved to: {save_dir}")

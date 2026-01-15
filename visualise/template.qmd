@@ -45,6 +45,10 @@ ${SETUPDATA_SUMMARY}
 
 ![](${identifier}_summary_derived.${img_format})
 
+## Primary Production by PFT
+
+![](${identifier}_summary_ppt_by_pft.${img_format})
+
 ---
 
 # Time Slices

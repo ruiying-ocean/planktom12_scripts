@@ -50,6 +50,10 @@ cols = 3
 rows = 1
 cols = 3
 
+[layout.ppt_by_pft_summary]
+rows = 2
+cols = 3
+
 # Multimodel-specific settings
 [multimodel]
 # Figure aspect ratio (width = height * ratio)
@@ -155,6 +159,15 @@ MIX = {title = "Mixotrophs", color_index = 2}
 DIA = {title = "Diatoms", color_index = 3}
 COC = {title = "Coccolithophores", color_index = 4}
 FIX = {title = "Nitrogen Fixers", color_index = 5}
+
+# Primary production by phytoplankton PFT
+[plot_info.ppt_by_pft]
+PPT_PIC = {title = "PIC NPP [PgC/yr]", color_index = 0}
+PPT_PHA = {title = "PHA NPP [PgC/yr]", color_index = 1}
+PPT_MIX = {title = "MIX NPP [PgC/yr]", color_index = 2}
+PPT_DIA = {title = "DIA NPP [PgC/yr]", color_index = 3}
+PPT_COC = {title = "COC NPP [PgC/yr]", color_index = 4}
+PPT_FIX = {title = "FIX NPP [PgC/yr]", color_index = 5}
 
 [plot_info.pfts.zooplankton]
 GEL = {title = "Gelatinous", color_index = 6}
