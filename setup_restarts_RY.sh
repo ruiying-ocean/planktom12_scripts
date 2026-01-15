@@ -11,15 +11,24 @@ echo "Target directory for symbolic links: "$target_modeldir
 # Create the target directory if it doesn't exist
 mkdir -p $target_modeldir
 
-# Link the restart file to use for the next year to the one just completed.
-for (( i=0; i<$cpus; i++ )); do
-	if (( i < 10 )); then
-		proc=0$i
-	else
-		proc=$i
+# Helper function: create symlink only if source exists
+link_if_exists() {
+	src=$1
+	dst=$2
+	if [ ! -f "$src" ]; then
+		echo "Error: Source file does not exist: $src"
+		exit 1
 	fi
-    
-	ln -fs ${src_model_dir}/ORCA2_${timestep}_restart_00${proc}.nc ${target_modeldir}/restart_00${proc}.nc
-	ln -fs ${src_model_dir}/ORCA2_${timestep}_restart_ice_00${proc}.nc ${target_modeldir}/restart_ice_in_00${proc}.nc
-	ln -fs ${src_model_dir}/ORCA2_${timestep}_restart_trc_00${proc}.nc ${target_modeldir}/restart_trc_00${proc}.nc
+	ln -fs "$src" "$dst"
+}
+
+# Link the restart files
+for (( i=0; i<$cpus; i++ )); do
+	proc=$(printf "%02d" $i)
+
+	link_if_exists "${src_model_dir}/ORCA2_${timestep}_restart_00${proc}.nc" "${target_modeldir}/restart_00${proc}.nc"
+	link_if_exists "${src_model_dir}/ORCA2_${timestep}_restart_ice_00${proc}.nc" "${target_modeldir}/restart_ice_in_00${proc}.nc"
+	link_if_exists "${src_model_dir}/ORCA2_${timestep}_restart_trc_00${proc}.nc" "${target_modeldir}/restart_trc_00${proc}.nc"
 done
+
+echo "All restart symlinks created successfully"
