@@ -860,6 +860,128 @@ class PFTNormalizedPlotter(PlotGenerator):
                 axes[i].set_xlabel("Year", fontweight="bold")
 
 
+class PPTByPFTPlotter(PlotGenerator):
+    """Generates PPT by phytoplankton PFT plots"""
+
+    def generate(self):
+        # Use 2x3 grid for 6 phytoplankton PFTs
+        fig, axes = plt.subplots(
+            2,
+            3,
+            figsize=(3 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT),
+            sharex=True,
+            constrained_layout=USE_CONSTRAINED_LAYOUT,
+        )
+        flat_axes = axes.flatten()
+
+        setup_axes(flat_axes)
+
+        self.plot_all_models(fig, flat_axes, self._plot_model)
+
+        self.add_legend(fig)
+        self.save_figure(fig, "multimodel_summary_ppt_by_pft.png")
+
+    def _plot_model(self, model, axes, color):
+        vol_data = DataLoader.load_analyser_data(model, "vol", "annual")
+        if vol_data is None:
+            return
+
+        actual_years = DataLoader.get_actual_years(vol_data)
+        indices = model.get_year_range_indices(actual_years)
+        if indices[0] is None:
+            return
+
+        year = DataLoader.safe_load_column(vol_data, "year", indices)
+        if year is None:
+            return
+
+        ppt_mapping = [
+            ("PPT_PIC", "Picophytoplankton PP"),
+            ("PPT_PHA", "Phaeocystis PP"),
+            ("PPT_MIX", "Mixotrophs PP"),
+            ("PPT_DIA", "Diatoms PP"),
+            ("PPT_COC", "Coccolithophores PP"),
+            ("PPT_FIX", "Nitrogen Fixers PP"),
+        ]
+
+        for i, (col_name, title) in enumerate(ppt_mapping):
+            values = DataLoader.safe_load_column(vol_data, col_name, indices)
+            plot_year, plot_values = DataLoader.align_year_and_values(year, values)
+            if plot_year is not None:
+                label = model.label if i == 4 else None
+                axes[i].plot(
+                    plot_year,
+                    plot_values,
+                    color=color,
+                    label=label,
+                    linewidth=LINE_WIDTH,
+                )
+                axes[i].set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[i].set_ylabel("PgC/yr")
+                # Add xlabel only to bottom row (indices 3, 4, 5 in 2x3 grid)
+                if i >= 3:
+                    axes[i].set_xlabel("Year", fontweight='bold')
+
+
+class PPTByPFTNormalizedPlotter(PlotGenerator):
+    """Generates normalized/anomaly plots for PPT by phytoplankton PFT"""
+
+    def generate(self):
+        fig, axes = plt.subplots(
+            2,
+            3,
+            figsize=(3 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT),
+            sharex=True,
+            constrained_layout=USE_CONSTRAINED_LAYOUT,
+        )
+        flat_axes = axes.flatten()
+
+        setup_axes(flat_axes)
+
+        self.plot_all_models(fig, flat_axes, self._plot_model)
+
+        self.add_legend(fig)
+        self.save_figure(fig, "multimodel_summary_ppt_by_pft_normalized.png")
+
+    def _plot_model(self, model, axes, color):
+        vol_data = DataLoader.load_analyser_data(model, "vol", "annual")
+        if vol_data is None:
+            return
+
+        actual_years = DataLoader.get_actual_years(vol_data)
+        indices = model.get_year_range_indices(actual_years)
+        if indices[0] is None:
+            return
+
+        year = DataLoader.safe_load_column(vol_data, "year", indices)
+        if year is None:
+            return
+
+        ppt_mapping = [
+            ("PPT_PIC", "PIC PP anomaly"),
+            ("PPT_PHA", "PHA PP anomaly"),
+            ("PPT_MIX", "MIX PP anomaly"),
+            ("PPT_DIA", "DIA PP anomaly"),
+            ("PPT_COC", "COC PP anomaly"),
+            ("PPT_FIX", "FIX PP anomaly"),
+        ]
+
+        for i, (col_name, title) in enumerate(ppt_mapping):
+            values = DataLoader.safe_load_column(vol_data, col_name, indices)
+            plot_year, plot_values = DataLoader.align_year_and_values(year, values)
+            if plot_year is None:
+                continue
+
+            normalized = GlobalSummaryNormalizedPlotter._normalize_series(plot_values)
+            label = model.label if i == 4 else None
+            axes[i].plot(plot_year, normalized, color=color, label=label, linewidth=LINE_WIDTH)
+            axes[i].set_title(title, fontsize=TITLE_FONTSIZE, fontweight="bold", pad=5)
+            axes[i].set_ylabel("PgC/yr anomaly")
+            axes[i].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+            if i >= 3:
+                axes[i].set_xlabel("Year", fontweight="bold")
+
+
 class TChlPlotter(RegionalPlotter):
     """Generates TChl summary plots"""
 
@@ -1558,6 +1680,8 @@ class MultiModelPlotter:
             TChlPlotter(self.models, self.save_dir),
             PFTPlotter(self.models, self.save_dir),
             PFTNormalizedPlotter(self.models, self.save_dir),
+            PPTByPFTPlotter(self.models, self.save_dir),
+            PPTByPFTNormalizedPlotter(self.models, self.save_dir),
             NutrientPlotter(self.models, self.save_dir),
             PCO2Plotter(self.models, self.save_dir),
             PhysicsPlotter(self.models, self.save_dir),

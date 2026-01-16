@@ -61,6 +61,18 @@ PFT biomass anomalies relative to the first-decade mean to highlight temporal ch
 
 ![](multimodel_summary_pfts_normalized.png)
 
+## PPT by PFT
+
+Primary production broken down by phytoplankton functional type.
+
+![](multimodel_summary_ppt_by_pft.png)
+
+## PPT by PFT Anomalies
+
+Primary production by PFT anomalies relative to the first-decade mean.
+
+![](multimodel_summary_ppt_by_pft_normalized.png)
+
 # Nutrients
 
 Comparison of nutrient concentrations across models.
