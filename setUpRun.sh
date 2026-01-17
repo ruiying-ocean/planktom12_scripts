@@ -209,19 +209,18 @@ if [ $type == "BIAS" ]; then
 	ln -sf namelist_ref_loop namelist_ref_all_years
 fi
 
+# Automatically correct nn_date0 in namelist_ref_first_year to match yearStart from setup data
+expectedDate="${yearStart}0101"
+currentDate=$( grep "^\s*nn_date0" namelist_ref_first_year | head -1 | sed 's/.*=\s*\([0-9]*\).*/\1/' )
+
+if [ "$currentDate" != "$expectedDate" ]; then
+	echo -e "\e[1;33mNOTE\e[0m: Updating nn_date0 from $currentDate to $expectedDate to match yearStart"
+	sed -i "s/nn_date0.*=.*/nn_date0    = $expectedDate/" namelist_ref_first_year
+fi
+
 # Initial year; if a CPU based restart file does not exist, then this is the first year
 if [ ! -f restart_0000.nc ]; then
-	# Copy (not symlink) so we can modify nn_date0 if needed
-	cp namelist_ref_first_year namelist_ref
-
-	# Automatically correct nn_date0 in namelist_ref to match yearStart from setup data
-	expectedDate="${yearStart}0101"
-	currentDate=$( grep "nn_date0" namelist_ref | awk -F'=' '{print $2}' | tr -d ' ,' )
-
-	if [ "$currentDate" != "$expectedDate" ]; then
-		echo -e "\e[1;33mNOTE\e[0m: Updating nn_date0 from $currentDate to $expectedDate to match yearStart"
-		sed -i "s/nn_date0.*=.*/nn_date0    = $expectedDate/" namelist_ref
-	fi
+	ln -s namelist_ref_first_year namelist_ref
 else
 	ln -s namelist_ref_all_years namelist_ref
 fi
