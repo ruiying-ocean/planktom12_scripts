@@ -176,7 +176,7 @@ namelist_ref_jra:/gpfs/home/vhf24tbu/EXP00/namelist_ref_jra
 # - nn_rstctl flag then set to 2, taking date from existing file
 
 namelist_ref_era_first_year:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era_start
-namelist_ref_jra_first_year:/gpfs/home/vhf24tbu/EXP00/namelist_ref_jra_first_year_1940
+namelist_ref_jra_first_year:/gpfs/home/vhf24tbu/EXP00/namelist_ref_jra_first_year
 
 # For bias runs we need the model to use forcing data that is a loop of a single year (currently set to 1990)
 namelist_ref_era_looping:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era_looping
