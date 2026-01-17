@@ -195,46 +195,38 @@ else
 	ln -s atmco2.dat.static atmco2.dat
 fi
 
-# Forcing 
+# Forcing
 rm -f namelist_ref
 
 echo $forcing
 if [ $forcing == "NCEP" ]; then
-	ln -s namelist_ref_ncep_coldstart namelist_ref_coldstart
-	ln -s namelist_ref_ncep_restart namelist_ref_restart
-	ln -s namelist_ref_ncep_cycling namelist_ref_cycling
+	forcing_prefix="ncep"
 elif [ $forcing == "ERA" ]; then
-	ln -s namelist_ref_era_coldstart namelist_ref_coldstart
-	ln -s namelist_ref_era_restart namelist_ref_restart
-	ln -s namelist_ref_era_cycling namelist_ref_cycling
+	forcing_prefix="era"
 else
-	ln -s namelist_ref_jra_coldstart namelist_ref_coldstart
-	ln -s namelist_ref_jra_restart namelist_ref_restart
-	ln -s namelist_ref_jra_cycling namelist_ref_cycling
+	forcing_prefix="jra"
 fi
 
 # Type
 echo $type
 
-if [ $type == "BIAS" ]; then
-	rm -f namelist_ref_restart
-	ln -sf namelist_ref_cycling namelist_ref_restart
-fi
-
-# Automatically correct nn_date0 in namelist_ref_coldstart to match yearStart from setup data
+# Automatically correct nn_date0 in namelist_ref_<forcing>_coldstart to match yearStart from setup data
 expectedDate="${yearStart}0101"
-currentDate=$( grep "nn_date0" namelist_ref_coldstart | head -1 | awk -F'=' '{print $2}' | awk '{print $1}' )
+currentDate=$( grep "nn_date0" namelist_ref_${forcing_prefix}_coldstart | head -1 | awk -F'=' '{print $2}' | awk '{print $1}' )
 
 if [ "$currentDate" != "$expectedDate" ]; then
 	echo -e "\e[1;33mNOTE\e[0m: Updating nn_date0 from $currentDate to $expectedDate to match yearStart"
-	sed -i "s/nn_date0.*=.*/nn_date0    = $expectedDate/" namelist_ref_coldstart
+	sed -i "s/nn_date0.*=.*/nn_date0    = $expectedDate/" namelist_ref_${forcing_prefix}_coldstart
 fi
 
 # Initial year; if a CPU based restart file does not exist, then this is the first year
+# For BIAS runs, use cycling namelist for restarts instead of restart namelist
 if [ ! -f restart_0000.nc ]; then
-	ln -s namelist_ref_coldstart namelist_ref
+	ln -s namelist_ref_${forcing_prefix}_coldstart namelist_ref
+elif [ $type == "BIAS" ]; then
+	ln -s namelist_ref_${forcing_prefix}_cycling namelist_ref
 else
-	ln -s namelist_ref_restart namelist_ref
+	ln -s namelist_ref_${forcing_prefix}_restart namelist_ref
 fi
 
 # Temperature and salinity restoring
