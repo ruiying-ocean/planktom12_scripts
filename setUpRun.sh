@@ -120,8 +120,20 @@ while IFS= read -r line; do
         	fi
 
 		# Copy namelists in a way so changes can be made
+		# Skip namelists that don't match the selected forcing
 		if [[ $name == "namelist"* ]]; then
-			if [ -f $name ]; then
+			skip=false
+			if [[ $name == namelist_ref_era_* && $forcing != "ERA" ]]; then
+				skip=true
+			elif [[ $name == namelist_ref_jra_* && $forcing != "JRA" ]]; then
+				skip=true
+			elif [[ $name == namelist_ref_ncep_* && $forcing != "NCEP" ]]; then
+				skip=true
+			fi
+
+			if [ "$skip" = true ]; then
+				echo "Skipping $name (forcing is $forcing)"
+			elif [ -f $name ]; then
 				echo $name " exists so no fresh copy made "
 			else
 				cp $val $name
