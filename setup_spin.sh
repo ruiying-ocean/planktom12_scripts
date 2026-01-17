@@ -55,11 +55,28 @@ if [ -z "$FIRST_YEAR_TRANSIENT" ]; then
     exit 1
 fi
 
+# Parse forcing type from setup data file
+FORCING=$(grep "^forcing:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
+if [ -z "$FORCING" ]; then
+    echo "Warning: Could not parse forcing from $TRANSIENT_SETUP_DATA, defaulting to JRA"
+    FORCING="JRA"
+fi
+
+# Set forcing prefix for namelist selection
+if [ "$FORCING" == "NCEP" ]; then
+    FORCING_PREFIX="ncep"
+elif [ "$FORCING" == "ERA" ]; then
+    FORCING_PREFIX="era"
+else
+    FORCING_PREFIX="jra"
+fi
+
 TIMESTEP=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
 
 echo "============================================"
 echo "Using setUpData file: $TRANSIENT_SETUP_DATA"
 echo "First year (transient): $FIRST_YEAR_TRANSIENT"
+echo "Forcing: $FORCING"
 echo "Calculated TIMESTEP: $TIMESTEP"
 echo "============================================"
 
@@ -81,6 +98,14 @@ rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/restart.nc
 
 echo "============================================"
 echo "Old restart cleaned for model ID: $MODEL_ID"
+echo "============================================"
+
+# Update namelist_ref to use restart namelist since we now have restart files
+rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
+ln -s namelist_ref_${FORCING_PREFIX}_restart ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
+
+echo "============================================"
+echo "Updated namelist_ref -> namelist_ref_${FORCING_PREFIX}_restart"
 echo "============================================"
 
 ## copy EMP to new run directory
