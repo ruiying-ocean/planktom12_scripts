@@ -188,17 +188,17 @@ rm -f namelist_ref
 
 echo $forcing
 if [ $forcing == "NCEP" ]; then
-	ln -s namelist_ref_ncep_first_year namelist_ref_coldstart
-	ln -s namelist_ref_ncep namelist_ref_restart 
-	ln -s namelist_ref_ncep_looping namelist_ref_cycling
+	ln -s namelist_ref_ncep_coldstart namelist_ref_coldstart
+	ln -s namelist_ref_ncep_restart namelist_ref_restart
+	ln -s namelist_ref_ncep_cycling namelist_ref_cycling
 elif [ $forcing == "ERA" ]; then
-	ln -s namelist_ref_era_first_year namelist_ref_coldstart
-	ln -s namelist_ref_era namelist_ref_restart 
-	ln -s namelist_ref_era_looping namelist_ref_cycling
+	ln -s namelist_ref_era_coldstart namelist_ref_coldstart
+	ln -s namelist_ref_era_restart namelist_ref_restart
+	ln -s namelist_ref_era_cycling namelist_ref_cycling
 else
-	ln -s namelist_ref_jra_first_year namelist_ref_coldstart
-	ln -s namelist_ref_jra namelist_ref_restart 
-	ln -s namelist_ref_jra_looping namelist_ref_cycling
+	ln -s namelist_ref_jra_coldstart namelist_ref_coldstart
+	ln -s namelist_ref_jra_restart namelist_ref_restart
+	ln -s namelist_ref_jra_cycling namelist_ref_cycling
 fi
 
 # Type

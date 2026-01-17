@@ -167,17 +167,16 @@ namelist_cfg:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_Pl
 namelist_top_ref:/gpfs/home/vhf24tbu/EXP00/namelist_top_ref
 
 # The namelist that has variables more specific to the run, eg forcing 
-namelist_ref_era:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era
+namelist_ref_era_restart:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era
 
-# Namelist versions with the parameter change for SPINNING UP
-# - first year needs to be run with the date set in the namelist_ref variable nn_date0 and the nn_rstctl flag set to 0
-# - run one year and then copy the namelist above in place
-# - nn_rstctl flag then set to 2, taking date from existing file
+# Coldstart namelist versions (for spinning up)
+# - coldstart runs need the date set in nn_date0 and nn_rstctl flag set to 0
+# - after first year, use _restart namelist (nn_rstctl=2, taking date from restart file)
 
-namelist_ref_era_first_year:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era_start
+namelist_ref_era_coldstart:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era_start
 
 # For bias runs we need the model to use forcing data that is a loop of a single year (currently set to 1990)
-namelist_ref_era_looping:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era_looping
+namelist_ref_era_cycling:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era_looping
 
 # Short namelist of config namelist IDs
 namelist_top_cfg:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_top_cfg
