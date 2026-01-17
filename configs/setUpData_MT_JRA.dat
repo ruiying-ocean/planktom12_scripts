@@ -169,7 +169,7 @@ namelist_top_ref:/gpfs/home/vhf24tbu/EXP00/namelist_top_ref
 
 # The namelist that has variables more specific to the run, eg forcing 
 namelist_ref_era_restart:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era
-namelist_ref_jra_restart:/gpfs/home/vhf24tbu/EXP00/namelist_ref_jra
+namelist_ref_jra_restart:/gpfs/home/vhf24tbu/EXP00/namelist_ref_jra_restart
 
 # Coldstart namelist versions (for spinning up)
 # - coldstart runs need the date set in nn_date0 and nn_rstctl flag set to 0
