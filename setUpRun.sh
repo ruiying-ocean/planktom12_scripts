@@ -188,41 +188,41 @@ rm -f namelist_ref
 
 echo $forcing
 if [ $forcing == "NCEP" ]; then
-	ln -s namelist_ref_ncep_first_year namelist_ref_first_year
-	ln -s namelist_ref_ncep namelist_ref_all_years 
-	ln -s namelist_ref_ncep_looping namelist_ref_loop
+	ln -s namelist_ref_ncep_first_year namelist_ref_coldstart
+	ln -s namelist_ref_ncep namelist_ref_restart 
+	ln -s namelist_ref_ncep_looping namelist_ref_cycling
 elif [ $forcing == "ERA" ]; then
-	ln -s namelist_ref_era_first_year namelist_ref_first_year
-	ln -s namelist_ref_era namelist_ref_all_years 
-	ln -s namelist_ref_era_looping namelist_ref_loop
+	ln -s namelist_ref_era_first_year namelist_ref_coldstart
+	ln -s namelist_ref_era namelist_ref_restart 
+	ln -s namelist_ref_era_looping namelist_ref_cycling
 else
-	ln -s namelist_ref_jra_first_year namelist_ref_first_year
-	ln -s namelist_ref_jra namelist_ref_all_years 
-	ln -s namelist_ref_jra_looping namelist_ref_loop
+	ln -s namelist_ref_jra_first_year namelist_ref_coldstart
+	ln -s namelist_ref_jra namelist_ref_restart 
+	ln -s namelist_ref_jra_looping namelist_ref_cycling
 fi
 
 # Type
 echo $type
 
 if [ $type == "BIAS" ]; then
-	rm -f namelist_ref_all_years
-	ln -sf namelist_ref_loop namelist_ref_all_years
+	rm -f namelist_ref_restart
+	ln -sf namelist_ref_cycling namelist_ref_restart
 fi
 
-# Automatically correct nn_date0 in namelist_ref_first_year to match yearStart from setup data
+# Automatically correct nn_date0 in namelist_ref_coldstart to match yearStart from setup data
 expectedDate="${yearStart}0101"
-currentDate=$( grep "nn_date0" namelist_ref_first_year | head -1 | awk -F'=' '{print $2}' | awk '{print $1}' )
+currentDate=$( grep "nn_date0" namelist_ref_coldstart | head -1 | awk -F'=' '{print $2}' | awk '{print $1}' )
 
 if [ "$currentDate" != "$expectedDate" ]; then
 	echo -e "\e[1;33mNOTE\e[0m: Updating nn_date0 from $currentDate to $expectedDate to match yearStart"
-	sed -i "s/nn_date0.*=.*/nn_date0    = $expectedDate/" namelist_ref_first_year
+	sed -i "s/nn_date0.*=.*/nn_date0    = $expectedDate/" namelist_ref_coldstart
 fi
 
 # Initial year; if a CPU based restart file does not exist, then this is the first year
 if [ ! -f restart_0000.nc ]; then
-	ln -s namelist_ref_first_year namelist_ref
+	ln -s namelist_ref_coldstart namelist_ref
 else
-	ln -s namelist_ref_all_years namelist_ref
+	ln -s namelist_ref_restart namelist_ref
 fi
 
 # Temperature and salinity restoring
