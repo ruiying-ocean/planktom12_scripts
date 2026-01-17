@@ -211,7 +211,7 @@ fi
 
 # Automatically correct nn_date0 in namelist_ref_first_year to match yearStart from setup data
 expectedDate="${yearStart}0101"
-currentDate=$( grep "^\s*nn_date0" namelist_ref_first_year | head -1 | sed 's/.*=\s*\([0-9]*\).*/\1/' )
+currentDate=$( grep "nn_date0" namelist_ref_first_year | head -1 | awk -F'=' '{print $2}' | awk '{print $1}' )
 
 if [ "$currentDate" != "$expectedDate" ]; then
 	echo -e "\e[1;33mNOTE\e[0m: Updating nn_date0 from $currentDate to $expectedDate to match yearStart"
