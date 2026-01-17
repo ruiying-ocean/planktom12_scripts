@@ -1,9 +1,9 @@
 #!/bin/sh
 
 date
-echo "To use: setUpRun <setUpData.dat> <Full Run ID>"
+echo "To use: setUpRun <setUpData.dat> <Full Run ID> [SPINUP_MODEL_ID]"
 
-if [ "$#" -ne 2 ]; then
+if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
 	exit 1
 fi
 
@@ -13,6 +13,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Input variables read from command line
 setUpDatafile=$1
 id=$2
+spinupModelId=$3
 
 # If setUpDatafile doesn't exist as-is, try looking in configs/ directory
 if [ ! -f "$setUpDatafile" ]; then
@@ -319,11 +320,20 @@ echo $id $codeVersion $(date '+%d-%b-%Y') $yearStart $yearEnd ${CO2,,} $forcing 
 # Get setUpRun script
 cp ${SCRIPT_DIR}/setUpRun.sh .
 
+# ----- Setup from spinup model (if provided) -----
+if [ -n "$spinupModelId" ]; then
+	bash ${SCRIPT_DIR}/setup_spin.sh $id $spinupModelId
+	if [ $? -ne 0 ]; then
+		echo "Error: Spinup setup failed"
+		exit 1
+	fi
+fi
+
 # ----- Export parameters the nemo.job file will need -----
 yearToRun=$yearStart
 
-echo "Exporting " $yearToRun $yearEnd $basedir $modelDir $simulation $Model
-export yearToRun yearStart yearEnd basedir modelDir simulation Model
+echo "Exporting " $yearToRun $yearEnd $basedir $modelDir $simulation $Model $forcing_prefix
+export yearToRun yearStart yearEnd basedir modelDir simulation Model forcing_prefix
 
 read -p "Press any key to run it? (cntr+c otherwise)"
 
