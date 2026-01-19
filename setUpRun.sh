@@ -332,8 +332,8 @@ fi
 # ----- Export parameters the nemo.job file will need -----
 yearToRun=$yearStart
 
-echo "Exporting " $yearToRun $yearEnd $basedir $modelDir $simulation $Model $forcing_prefix
-export yearToRun yearStart yearEnd basedir modelDir simulation Model forcing_prefix
+echo "Exporting " $yearToRun $yearEnd $basedir $modelDir $simulation $Model $forcing_prefix $type
+export yearToRun yearStart yearEnd basedir modelDir simulation Model forcing_prefix type
 
 read -p "Press any key to run it? (cntr+c otherwise)"
 
