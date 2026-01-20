@@ -73,12 +73,14 @@ class ObservationData:
         cls.PFT = {}
         for key, value in pft_config.items():
             if isinstance(value, list) and len(value) == 2:
-                cls.PFT[key] = {"min": value[0], "max": value[1]}
+                cls.PFT[key] = {"min": value[0], "max": value[1], "type": "range"}
+            elif isinstance(value, (int, float)):
+                cls.PFT[key] = {"value": value, "type": "line"}
             else:
-                cls.PFT[key] = {"min": None, "max": None}
+                cls.PFT[key] = {"min": None, "max": None, "type": None}
         # Add MIX with no observations if not in config
         if "MIX" not in cls.PFT:
-            cls.PFT["MIX"] = {"min": None, "max": None}
+            cls.PFT["MIX"] = {"min": None, "max": None, "type": None}
 
         # Load nutrient observations
         cls.NUTRIENTS = obs_config.get('nutrients', {})

@@ -177,6 +177,17 @@ class FigureCreator:
 
         self._save_figure(fig, f"{self.model_name}_summary_global.png")
 
+    def _get_pft_obs(self, pft_obs, key):
+        """Get observation range or line for a PFT based on its type."""
+        if key not in pft_obs:
+            return None, None
+        obs = pft_obs[key]
+        if obs.get("type") == "line":
+            return None, ObservationLine(obs["value"])
+        elif obs.get("type") == "range" and obs.get("min") is not None:
+            return ObservationRange(obs["min"], obs["max"]), None
+        return None, None
+
     def create_pft_summary(self, data):
         year_limits = self._get_global_year_limits(data)
         layout = self.config['layout']['pft_summary']
@@ -187,29 +198,18 @@ class FigureCreator:
         pft_obs = ObservationData.get_pft()
 
         pft_configs = [
-            ("PIC", "Picophytoplankton", "PgC",
-             ObservationRange(pft_obs["PIC"]["min"], pft_obs["PIC"]["max"]) if pft_obs["PIC"]["min"] else None),
-            ("PHA", "Phaeocystis", "PgC",
-             ObservationRange(pft_obs["PHA"]["min"], pft_obs["PHA"]["max"]) if pft_obs["PHA"]["min"] else None),
-            ("MIX", "Mixotrophs", "PgC", None),
-            ("DIA", "Diatoms", "PgC",
-             ObservationRange(pft_obs["DIA"]["min"], pft_obs["DIA"]["max"]) if pft_obs["DIA"]["min"] else None),
-            ("COC", "Coccolithophores", "PgC",
-             ObservationRange(pft_obs["COC"]["min"], pft_obs["COC"]["max"]) if pft_obs["COC"]["min"] else None),
-            ("FIX", "Nitrogen Fixers", "PgC",
-             ObservationRange(pft_obs["FIX"]["min"], pft_obs["FIX"]["max"]) if pft_obs["FIX"]["min"] else None),
-            ("GEL", "Gelatinous Zooplankton", "PgC",
-             ObservationRange(pft_obs["GEL"]["min"], pft_obs["GEL"]["max"]) if pft_obs["GEL"]["min"] else None),
-            ("PRO", "Protozooplankton", "PgC",
-             ObservationRange(pft_obs["PRO"]["min"], pft_obs["PRO"]["max"]) if pft_obs["PRO"]["min"] else None),
-            ("BAC", "Bacteria", "PgC",
-             ObservationRange(pft_obs["BAC"]["min"], pft_obs["BAC"]["max"]) if pft_obs["BAC"]["min"] else None),
-            ("CRU", "Crustaceans", "PgC",
-             ObservationRange(pft_obs["CRU"]["min"], pft_obs["CRU"]["max"]) if pft_obs["CRU"]["min"] else None),
-            ("PTE", "Pteropods", "PgC",
-             ObservationRange(pft_obs["PTE"]["min"], pft_obs["PTE"]["max"]) if pft_obs["PTE"]["min"] else None),
-            ("MES", "Mesozooplankton", "PgC",
-             ObservationRange(pft_obs["MES"]["min"], pft_obs["MES"]["max"]) if pft_obs["MES"]["min"] else None)
+            ("PIC", "Picophytoplankton", "PgC"),
+            ("PHA", "Phaeocystis", "PgC"),
+            ("MIX", "Mixotrophs", "PgC"),
+            ("DIA", "Diatoms", "PgC"),
+            ("COC", "Coccolithophores", "PgC"),
+            ("FIX", "Nitrogen Fixers", "PgC"),
+            ("GEL", "Gelatinous Zooplankton", "PgC"),
+            ("PRO", "Protozooplankton", "PgC"),
+            ("BAC", "Bacteria", "PgC"),
+            ("CRU", "Crustaceans", "PgC"),
+            ("PTE", "Pteropods", "PgC"),
+            ("MES", "Mesozooplankton", "PgC")
         ]
 
         fig, axes = plt.subplots(
@@ -219,11 +219,12 @@ class FigureCreator:
         )
         axes = axes.flatten()
 
-        for i, (var_name, title, ylabel, obs_range) in enumerate(pft_configs):
+        for i, (var_name, title, ylabel) in enumerate(pft_configs):
             color = self.colors[i % len(self.colors)]
             is_bottom_row = i >= (layout['rows'] - 1) * layout['cols']
+            obs_range, obs_line = self._get_pft_obs(pft_obs, var_name)
             self._setup_axis(axes[i], data["year"], data[var_name], color, title, ylabel,
-                           obs_range, None, year_limits, add_xlabel=is_bottom_row)
+                           obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
 
         self._save_figure(fig, f"{self.model_name}_summary_pfts.png")
 

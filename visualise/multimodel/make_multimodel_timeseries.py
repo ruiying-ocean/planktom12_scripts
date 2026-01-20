@@ -785,11 +785,11 @@ class PFTPlotter(PlotGenerator):
         }
         for idx, pft_name in obs_indices.items():
             if pft_name in ObservationData.get_pft():
-                ranges = ObservationData.get_pft()[pft_name]
-                if ranges["min"] is not None and ranges["max"] is not None:
-                    axes[idx].axhspan(
-                        ranges["min"], ranges["max"], **HATCH_STYLE
-                    )
+                obs = ObservationData.get_pft()[pft_name]
+                if obs.get("type") == "line":
+                    axes[idx].axhline(obs["value"], **LINE_STYLE)
+                elif obs.get("type") == "range" and obs["min"] is not None and obs["max"] is not None:
+                    axes[idx].axhspan(obs["min"], obs["max"], **HATCH_STYLE)
 
 
 class PFTNormalizedPlotter(PlotGenerator):
