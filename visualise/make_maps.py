@@ -232,7 +232,7 @@ def plot_ecosystem_diagnostics(
                     sat_chl = sat_chl.mean(dim='month')
 
                 sat_chl = sat_chl.squeeze()
-                sat_chl = plotter.apply_mask(sat_chl)
+                # Don't apply ORCA mask - satellite data has different grid and already has NaN over land
 
                 im_sat = plotter.plot_variable(
                     ax=ax, data=sat_chl, cmap=meta['cmap'],
