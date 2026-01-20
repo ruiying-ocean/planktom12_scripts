@@ -144,11 +144,7 @@ def main():
         # 2.1 Ecosystem diagnostics with satellite chlorophyll
         print_step(1, 6, "Ecosystem diagnostics (TChl, EXP, PPINT)")
         obs_dir = Path(args.obs_dir)
-        chl_obs_file = obs_dir / 'occi_chla_monthly_climatology.nc'
-        if not chl_obs_file.exists():
-            chl_obs_file = obs_dir / 'modis_chla_climatology_orca.nc'
-        if not chl_obs_file.exists():
-            chl_obs_file = obs_dir / 'merged_chla_climatology_orca.nc'
+        chl_obs_file = obs_dir / 'OC-CCI/climatology/OC-CCI_climatology_1deg.nc'
 
         plot_ecosystem_diagnostics(
             plotter=plotter,
