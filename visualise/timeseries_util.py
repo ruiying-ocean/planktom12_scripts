@@ -37,45 +37,71 @@ class ObservationData:
     """
     Centralized container for all observational data values.
     These values are literature-based constraints for model validation.
+    Loads from visualise_config.toml [observations] section.
     """
 
-    # Global ecosystem variables
-    GLOBAL = {
-        "TChl": {"value": 0.2921, "type": "line"},  # OCCCI observation
-        "PPT": {"min": 51, "max": 65, "type": "span"},  # Primary production [PgC/yr]
-        "EXP": {"min": 7.8, "max": 12.2, "type": "span"},  # Export at 100m [PgC/yr]
-        "PROCACO3": {"min": 1.04, "max": 3.34, "type": "span"},  # CaCO3 production [PgC/yr]
-        "EXPCACO3": {"min": 0.68, "max": 0.9, "type": "span"},  # CaCO3 export [PgC/yr]
-        "probsi": {"min": 203, "max": 307, "type": "span"},  # Silica production [Tmol/yr]
-        "SI_FLX": {"min": 89, "max": 135, "type": "span"},  # Silica export [Tmol/yr]
-    }
+    # Class-level cache for loaded data
+    _loaded = False
+    _config = None
 
-    # Plankton Functional Types (PFTs)
-    PFT = {
-        "PIC": {"min": 0.28, "max": 0.52},  # Picophytoplankton [PgC]
-        "PHA": {"min": 0.11, "max": 0.69},  # Phaeocystis [PgC]
-        "MIX": {"min": None, "max": None},  # Mixotrophs [PgC] - no observations
-        "DIA": {"min": 0.013, "max": 0.75},  # Diatoms [PgC]
-        "COC": {"min": 0.001, "max": 0.032},  # Coccolithophores [PgC]
-        "FIX": {"min": 0.008, "max": 0.12},  # N2-fixers [PgC]
-        "GEL": {"min": 0.10, "max": 3.11},  # Gelatinous zooplankton [PgC]
-        "PRO": {"min": 0.10, "max": 0.37},  # Protozooplankton [PgC]
-        "BAC": {"min": 0.25, "max": 0.26},  # Bacteria [PgC]
-        "CRU": {"min": 0.01, "max": 0.64},  # Crustaceans [PgC]
-        "PTE": {"min": 0.048, "max": 0.057},  # Pteropods [PgC]
-        "MES": {"min": 0.21, "max": 0.34},  # Mesozooplankton [PgC]
-    }
+    # Will be populated from config
+    GLOBAL = {}
+    PFT = {}
+    NUTRIENTS = {}
 
-    # Nutrient concentrations
-    NUTRIENTS = {
-        "PO4": 0.517,  # Phosphate [μmol/L] - surface, normalized by 122
-        "NO3": 5.044,  # Nitrate [μmol/L] - surface
-        "Fer": None,  # Iron [nmol/L] - no reliable global observation
-        "Si": 7.227,  # Silica [μmol/L] - surface
-        "O2": 168.3,  # Oxygen [μmol/L] - at 300m depth
-        "AOU": None,  # AOU [μmol/L] - no reliable global observation
-        "Alkalini": 2352.49,  # Alkalinity [μmol/L] - GLODAP value converted from μmol/kg
-    }
+    @classmethod
+    def _ensure_loaded(cls):
+        """Load observation data from config if not already loaded."""
+        if cls._loaded:
+            return
+
+        # Load config
+        cls._config = ConfigLoader.load_config()
+        obs_config = cls._config.get('observations', {})
+
+        # Load global ecosystem observations
+        global_config = obs_config.get('global', {})
+        cls.GLOBAL = {}
+        for key, value in global_config.items():
+            if isinstance(value, list) and len(value) == 2:
+                cls.GLOBAL[key] = {"min": value[0], "max": value[1], "type": "span"}
+            else:
+                cls.GLOBAL[key] = {"value": value, "type": "line"}
+
+        # Load PFT observations
+        pft_config = obs_config.get('pfts', {})
+        cls.PFT = {}
+        for key, value in pft_config.items():
+            if isinstance(value, list) and len(value) == 2:
+                cls.PFT[key] = {"min": value[0], "max": value[1]}
+            else:
+                cls.PFT[key] = {"min": None, "max": None}
+        # Add MIX with no observations if not in config
+        if "MIX" not in cls.PFT:
+            cls.PFT["MIX"] = {"min": None, "max": None}
+
+        # Load nutrient observations
+        cls.NUTRIENTS = obs_config.get('nutrients', {})
+
+        cls._loaded = True
+
+    @classmethod
+    def get_global(cls) -> Dict[str, Any]:
+        """Get global ecosystem observation data."""
+        cls._ensure_loaded()
+        return cls.GLOBAL
+
+    @classmethod
+    def get_pft(cls) -> Dict[str, Any]:
+        """Get PFT observation data."""
+        cls._ensure_loaded()
+        return cls.PFT
+
+    @classmethod
+    def get_nutrients(cls) -> Dict[str, Any]:
+        """Get nutrient observation data."""
+        cls._ensure_loaded()
+        return cls.NUTRIENTS
 
     # Monthly pCO2 data by region (from data products)
     PCO2_MONTHLY = {

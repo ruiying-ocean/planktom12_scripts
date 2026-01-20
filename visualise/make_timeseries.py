@@ -141,8 +141,8 @@ class FigureCreator:
         subplot_width = self.config['layout']['subplot_width']
         subplot_height = self.config['layout']['subplot_height']
 
-        # Use shared observation data
-        obs = ObservationData.GLOBAL
+        # Use shared observation data (loaded from config)
+        obs = ObservationData.get_global()
 
         plot_configs = [
             (data["Cflx"], self.colors[0], "Surface Carbon Flux", "PgC/yr", None, None),
@@ -183,8 +183,8 @@ class FigureCreator:
         subplot_width = self.config['layout']['subplot_width']
         subplot_height = self.config['layout']['subplot_height']
 
-        # Use shared observation data
-        pft_obs = ObservationData.PFT
+        # Use shared observation data (loaded from config)
+        pft_obs = ObservationData.get_pft()
 
         pft_configs = [
             ("PIC", "Picophytoplankton", "PgC",
@@ -233,8 +233,8 @@ class FigureCreator:
         subplot_width = self.config['layout']['subplot_width']
         subplot_height = self.config['layout']['subplot_height']
 
-        # Use shared observation data
-        nut_obs = ObservationData.NUTRIENTS
+        # Use shared observation data (loaded from config)
+        nut_obs = ObservationData.get_nutrients()
 
         nutrient_configs = [
             ("nPO4", self.colors[0], "Surface Phosphate", "μmol/L",

@@ -108,37 +108,36 @@ line_alpha = 0.8
 line_linewidth = 1.5
 
 # Observation ranges (from literature)
-[observations.ecosystem]
-TChl = 0.2921  # OCCCI observation value
-PPT = [51, 65]  # Primary production range [PgC/yr]
+[observations.global]
+TChl = 0.2921  # OCCCI observation [μg Chl/L]
+PPT = [51, 65]  # Primary production [PgC/yr]
 EXP = [7.8, 12.2]  # Export at 100m [PgC/yr]
 PROCACO3 = [1.04, 3.34]  # CaCO3 production [PgC/yr]
 EXPCACO3 = [0.68, 0.9]  # CaCO3 export [PgC/yr]
 probsi = [203, 307]  # Silica production [Tmol/yr]
 SI_FLX = [89, 135]  # Silica export [Tmol/yr]
 
-[observations.pfts.phytoplankton]
-PIC = [0.28, 0.52]
-PHA = [0.11, 0.69]
-DIA = [0.013, 0.75]
-COC = [0.001, 0.032]
-FIX = [0.008, 0.12]
-
-[observations.pfts.zooplankton]
-GEL = [0.002, 0.01]
-PRO = [0.0001, 0.69]
-BAC = [0.29, 1.69]
-MAC = [0.16, 0.34]
-PTE = [0.001, 0.032]
-MES = [0.08, 0.29]
+[observations.pfts]
+PIC = [0.28, 0.52]  # Picophytoplankton [PgC]
+PHA = [0.11, 0.69]  # Phaeocystis [PgC]
+DIA = [0.013, 0.75]  # Diatoms [PgC]
+COC = [0.001, 0.032]  # Coccolithophores [PgC]
+FIX = [0.008, 0.12]  # N2-fixers [PgC]
+GEL = 0.51  # Gelatinous zooplankton [PgC] - Luo et al. (2020) GBC
+PRO = [0.10, 0.37]  # Protozooplankton [PgC]
+BAC = [0.25, 0.26]  # Bacteria [PgC]
+CRU = [0.01, 0.64]  # Crustaceans [PgC]
+PTE = [0.048, 0.057]  # Pteropods [PgC]
+MES = [0.21, 0.34]  # Mesozooplankton [PgC]
+# MIX has no observations
 
 [observations.nutrients]
-PO4 = 2.17
-NO3 = 30.56
-SIL = 68.88
-FER = 0.63
-OXY = 169.16
-ALK = 2408.19
+PO4 = 0.517  # Phosphate [μmol/L] - surface, normalized by 122
+NO3 = 5.044  # Nitrate [μmol/L] - surface
+Si = 7.227  # Silica [μmol/L] - surface
+O2 = 168.3  # Oxygen [μmol/L] - at 300m depth
+Alkalini = 2352.49  # Alkalinity [μmol/L] - GLODAP
+# Fer and AOU have no reliable global observations
 
 # Plot titles and units
 [plot_info.ecosystem]
@@ -173,7 +172,7 @@ PPT_FIX = {title = "FIX NPP [PgC/yr]", color_index = 5}
 GEL = {title = "Gelatinous", color_index = 6}
 PRO = {title = "Protozooplankton", color_index = 7}
 BAC = {title = "Bacteria", color_index = 8}
-MAC = {title = "Macrozooplankton", color_index = 9}
+CRU = {title = "Crustaceans", color_index = 9}
 PTE = {title = "Pteropods", color_index = 0}
 MES = {title = "Mesozooplankton", color_index = 1}
 

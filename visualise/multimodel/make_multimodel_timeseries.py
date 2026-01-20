@@ -445,8 +445,8 @@ class GlobalSummaryPlotter(PlotGenerator):
         for i in range(1, 9):
             if obs_mapping[i] is not None:
                 obs_key, obs_type = obs_mapping[i]
-                if obs_key in ObservationData.GLOBAL:
-                    obs = ObservationData.GLOBAL[obs_key]
+                if obs_key in ObservationData.get_global():
+                    obs = ObservationData.get_global()[obs_key]
                     ax = axes[i]
                     if obs.get("type") == "line" or obs_type == "line":
                         ax.axhline(obs["value"], **LINE_STYLE)
@@ -784,8 +784,8 @@ class PFTPlotter(PlotGenerator):
             11: "MES",
         }
         for idx, pft_name in obs_indices.items():
-            if pft_name in ObservationData.PFT:
-                ranges = ObservationData.PFT[pft_name]
+            if pft_name in ObservationData.get_pft():
+                ranges = ObservationData.get_pft()[pft_name]
                 if ranges["min"] is not None and ranges["max"] is not None:
                     axes[idx].axhspan(
                         ranges["min"], ranges["max"], **HATCH_STYLE
@@ -1165,8 +1165,8 @@ class NutrientPlotter(PlotGenerator):
         # Add observation lines for all 7 nutrients
         nutrient_keys = ["PO4", "NO3", "Fer", "Si", "O2", "Alkalini", "AOU"]
         for i, key in enumerate(nutrient_keys):
-            if i < len(axes) and key in ObservationData.NUTRIENTS:
-                obs_value = ObservationData.NUTRIENTS[key]
+            if i < len(axes) and key in ObservationData.get_nutrients():
+                obs_value = ObservationData.get_nutrients()[key]
                 if obs_value is not None:
                     axes[i].axhline(obs_value, **LINE_STYLE)
 
