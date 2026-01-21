@@ -946,10 +946,14 @@ def main():
 
     # 6. Carbon chemistry (ALK, DIC)
     print("6. Carbon chemistry variables...")
+    carbon_vars = ['_ALK', '_DIC']
+    carbon_obs = load_observations(obs_dir, nutrients=[], carbon_chemistry=carbon_vars)
     plot_carbon_chemistry(
         plotter=plotter,
         ptrc_ds=ptrc_ds,
-        output_path=output_dir / f"{args.run_name}_{args.year}_carbon_chemistry.png"
+        obs_datasets=carbon_obs,
+        output_path=output_dir / f"{args.run_name}_{args.year}_carbon_chemistry.png",
+        variables=carbon_vars
     )
 
     print("\n=== All maps generated successfully ===")
