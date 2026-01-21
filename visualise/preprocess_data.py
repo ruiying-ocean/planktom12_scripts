@@ -254,14 +254,15 @@ def load_observations(
 
     # Try to load Fe data from Huang2022
     fe_file = obs_dir / 'Huang2022_orca.nc'
-    if fe_file.exists() and '_Fer' in nutrients:
-        print(f"Loading Fe data from {fe_file}")
-        fe_ds = xr.open_dataset(fe_file, decode_times=False)
-        print(f"  Fe variables: {list(fe_ds.data_vars)}")
-        if 'fe' in fe_ds:
-            obs_datasets['_Fer'] = fe_ds['fe']
-    else:
-        print(f"Warning: Fe file not found at {fe_file}")
+    if '_Fer' in nutrients:
+        if fe_file.exists():
+            print(f"Loading Fe data from {fe_file}")
+            fe_ds = xr.open_dataset(fe_file, decode_times=False)
+            print(f"  Fe variables: {list(fe_ds.data_vars)}")
+            if 'fe' in fe_ds:
+                obs_datasets['_Fer'] = fe_ds['fe']
+        else:
+            print(f"Warning: Fe file not found at {fe_file}")
 
     # Try to load GLODAP data for carbon chemistry (ALK, DIC)
     if carbon_chemistry:
