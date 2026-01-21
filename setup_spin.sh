@@ -145,29 +145,35 @@ echo "============================================"
 echo "EMP files in ${MODEL} copied for model ID: $MODEL_ID"
 echo "============================================"
 
-## copy namelist.trc.sms to make sure both are consistent
-NAMELIST_SOURCE="${SPIN_DIR}/namelist.trc.sms"
-NAMELIST_TARGET="${MODEL_RUN_DIR}/${MODEL_ID}/namelist.trc.sms"
-NAMELIST_OLD="${MODEL_RUN_DIR}/${MODEL_ID}/namelist.trc.sms.old"
+## copy namelist.trc.sms to make sure both are consistent - skip for BIAS runs
+if [ "$RUN_TYPE" == "BIAS" ]; then
+    echo "============================================"
+    echo "BIAS run: keeping existing namelist.trc.sms"
+    echo "============================================"
+else
+    NAMELIST_SOURCE="${SPIN_DIR}/namelist.trc.sms"
+    NAMELIST_TARGET="${MODEL_RUN_DIR}/${MODEL_ID}/namelist.trc.sms"
+    NAMELIST_OLD="${MODEL_RUN_DIR}/${MODEL_ID}/namelist.trc.sms.old"
 
-if [ ! -f "$NAMELIST_SOURCE" ]; then
-    echo "Error: Source namelist file does not exist: $NAMELIST_SOURCE"
-    exit 1
+    if [ ! -f "$NAMELIST_SOURCE" ]; then
+        echo "Error: Source namelist file does not exist: $NAMELIST_SOURCE"
+        exit 1
+    fi
+
+    if [ -f "$NAMELIST_TARGET" ]; then
+        mv "$NAMELIST_TARGET" "$NAMELIST_OLD"
+    fi
+
+    cp "$NAMELIST_SOURCE" "$NAMELIST_TARGET"
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to copy namelist file"
+        exit 1
+    fi
+
+    echo "============================================"
+    echo "namelist.trc.sms copied for model ID: $MODEL_ID"
+    echo "============================================"
 fi
-
-if [ -f "$NAMELIST_TARGET" ]; then
-    mv "$NAMELIST_TARGET" "$NAMELIST_OLD"
-fi
-
-cp "$NAMELIST_SOURCE" "$NAMELIST_TARGET"
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to copy namelist file"
-    exit 1
-fi
-
-echo "============================================"
-echo "Namelist copied for model ID: $MODEL_ID"
-echo "============================================"
 
 ## Record spinup info
 SPINUP_RECORD="${MODEL_RUN_DIR}/${MODEL_ID}/spinup_info.txt"
