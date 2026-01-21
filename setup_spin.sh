@@ -71,12 +71,20 @@ else
     FORCING_PREFIX="jra"
 fi
 
+# Parse run type from setup data file
+RUN_TYPE=$(grep "^type:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
+if [ -z "$RUN_TYPE" ]; then
+    echo "Warning: Could not parse type from $TRANSIENT_SETUP_DATA, defaulting to SPINUP"
+    RUN_TYPE="SPINUP"
+fi
+
 TIMESTEP=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
 
 echo "============================================"
 echo "Using setUpData file: $TRANSIENT_SETUP_DATA"
 echo "First year (transient): $FIRST_YEAR_TRANSIENT"
 echo "Forcing: $FORCING"
+echo "Run type: $RUN_TYPE"
 echo "Calculated TIMESTEP: $TIMESTEP"
 echo "============================================"
 
@@ -100,13 +108,18 @@ echo "============================================"
 echo "Old restart cleaned for model ID: $MODEL_ID"
 echo "============================================"
 
-# Update namelist_ref to use restart namelist since we now have restart files
-rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
-ln -s namelist_ref_${FORCING_PREFIX}_restart ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
-
-echo "============================================"
-echo "Updated namelist_ref -> namelist_ref_${FORCING_PREFIX}_restart"
-echo "============================================"
+# Update namelist_ref - skip for BIAS runs (cycling namelist already set by setUpRun.sh)
+if [ "$RUN_TYPE" == "BIAS" ]; then
+    echo "============================================"
+    echo "BIAS run: keeping existing namelist_ref (cycling)"
+    echo "============================================"
+else
+    rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
+    ln -s namelist_ref_${FORCING_PREFIX}_restart ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
+    echo "============================================"
+    echo "Updated namelist_ref -> namelist_ref_${FORCING_PREFIX}_restart"
+    echo "============================================"
+fi
 
 ## copy EMP to new run directory
 EMP_SOURCE="${SPIN_DIR}/EMPave_$((FIRST_YEAR_TRANSIENT - 1)).dat"
