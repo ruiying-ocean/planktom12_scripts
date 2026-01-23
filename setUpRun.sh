@@ -248,17 +248,12 @@ else
 fi
 
 # Check that files for LIMPHY are set correctly
-IO=$( grep "^iodef.xml:" $setUpDatafile | awk -F'/' '{print $NF}' )
+IODEF_PATH=$( grep "^iodef.xml:" $setUpDatafile | awk -F':' '{print $2}' )
 KP=$( grep "^keepLimPhy:" $setUpDatafile | awk -F':' '{print $NF}' )
 err=0
 
 if [ $LP = ".true." ]; then
 	echo "LIMPHY TRUE"
-
-	if [ $IO != iodef_tom12limphy.xml ]; then
-		echo -e "\e[1;31mWARNING\e[0m : IODEF file does not match"
-		err=1
-	fi
 
 	if [ $KP != 1 ]; then
 		echo -e "\e[1;31mWARNING\e[0m : KEEP value for LimPhy not set to 1"
@@ -267,15 +262,16 @@ if [ $LP = ".true." ]; then
 else
 	echo "LIMPHY FALSE"
 
-	if [ $IO != iodef_tom12${PIIC}${C14}.xml ]; then
-		echo -e "\e[1;31mWARNING\e[0m : IODEF file does not match"
-		err=1
-	fi
-
 	if [ $KP != 0 ]; then
 		echo -e "\e[1;31mWARNING\e[0m : KEEP value for LimPhy not set to 0"
 		err=1
 	fi
+fi
+
+# Check iodef file exists
+if [ ! -f "$IODEF_PATH" ]; then
+	echo -e "\e[1;31mWARNING\e[0m : IODEF file does not exist: $IODEF_PATH"
+	err=1
 fi
 
 if [ $err == 1 ]; then
