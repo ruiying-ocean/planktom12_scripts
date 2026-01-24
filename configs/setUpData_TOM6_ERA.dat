@@ -147,7 +147,7 @@ namelist_ref_era_cycling:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/
 namelist_top_cfg:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_top_cfg
 
 # PlankTOM6 SMS namelist (MEDUSA grazing parameters)
-namelist.trc.sms:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist.trc.sms.TOM6
+namelist.trc.sms:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist.trc.sms_tom6
 
 # Ice namelists
 namelist_ice_cfg:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ice_cfg
@@ -158,7 +158,7 @@ namelist_ice_ref:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LI
 field_def.xml:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/field_def.xml
 
 # PlankTOM6 output definition
-iodef.xml:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/iodef_tom6piicc14.xml
+iodef.xml:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/iodef_tom6.xml
 
 # Domain definition
 domain_def.xml:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/domain_def.xml
