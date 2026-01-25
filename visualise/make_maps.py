@@ -83,22 +83,13 @@ def plot_pft_maps(
 
         return mean_conc.squeeze()
 
-    # Create 2x3 subplot grid
-    fig, axs = plotter.create_subplot_grid(
-        nrows=2, ncols=3,
-        projection=ccrs.PlateCarree(),
-        figsize=(10, 5)
-    )
+    # First pass: precompute data and find global vmax across all PFTs
+    pft_data = {}
+    vmax_values = []
 
-    # Plot each PFT
-    for i, pft in enumerate(pft_list):
-        ax = axs.flat[i]
-
-        # Use concentration variable and convert to mean upper-ocean concentration
+    for pft in pft_list:
         if pft not in ptrc_ds:
             print(f"Warning: {pft} not found in dataset")
-            ax.text(0.5, 0.5, f'{pft}\nNot Available',
-                   ha='center', va='center', transform=ax.transAxes)
             continue
 
         data = ptrc_ds[pft]
@@ -119,25 +110,50 @@ def plot_pft_maps(
         # Apply land mask
         data = plotter.apply_mask(data)
 
-        # Check if concentration is negligible (sensitivity experiment with near-zero values)
+        # Check if concentration is negligible
         max_concentration = float(np.nanmax(data.values))
         if max_concentration < biomass_threshold or np.isnan(max_concentration):
-            # Leave panel empty with just the title showing negligible concentration
-            ax.text(0.5, 0.5, f'Negligible concentration\n(max: {max_concentration:.2e} µmol C L⁻¹)',
+            pft_data[pft] = None  # Mark as negligible
+        else:
+            pft_data[pft] = data
+            # Collect 95th percentile for global vmax calculation
+            vmax_values.append(float(np.nanpercentile(data.values, 95)))
+
+    # Calculate global vmax from all non-negligible PFTs
+    global_vmax = max(vmax_values) if vmax_values else 1.0
+
+    # Create 2x3 subplot grid
+    fig, axs = plotter.create_subplot_grid(
+        nrows=2, ncols=3,
+        projection=ccrs.PlateCarree(),
+        figsize=(10, 5)
+    )
+
+    # Second pass: plot each PFT using the global vmax
+    for i, pft in enumerate(pft_list):
+        ax = axs.flat[i]
+
+        if pft not in pft_data:
+            ax.text(0.5, 0.5, f'{pft}\nNot Available',
+                   ha='center', va='center', transform=ax.transAxes)
+            continue
+
+        data = pft_data[pft]
+
+        if data is None:
+            # Negligible concentration
+            ax.text(0.5, 0.5, f'Negligible concentration',
                    ha='center', va='center', transform=ax.transAxes, fontsize=9, color='gray')
             ax.set_title(f'{pft}', fontsize=10)
             continue
 
-        # Calculate dynamic vmax from 95th percentile
-        vmax = float(np.nanpercentile(data.values, 95))
-
-        # Plot integrated biomass per grid cell (Tg C)
+        # Plot using the shared global vmax
         im = plotter.plot_variable(
             ax=ax,
             data=data,
             cmap=cmap,
             vmin=0,
-            vmax=vmax,
+            vmax=global_vmax,
             add_colorbar=False
         )
 
