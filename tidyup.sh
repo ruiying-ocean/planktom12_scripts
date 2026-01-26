@@ -156,6 +156,15 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 	fi
 done
 
+# Sort CSV files by year to ensure correct ordering
+echo "Sorting analyser CSV files by year"
+for csv in analyser/analyser.*.annual.csv; do
+	if [[ -f "$csv" ]]; then
+		(head -n 1 "$csv" && tail -n +2 "$csv" | sort -t',' -k1,1n) > "${csv}.sorted"
+		mv "${csv}.sorted" "$csv"
+	fi
+done
+
 # Commands to execute at the end of the simulation (final year only)
 if [[ $yearTo -eq $yearEnd ]]; then
 
