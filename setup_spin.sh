@@ -55,20 +55,10 @@ if [ -z "$FIRST_YEAR_TRANSIENT" ]; then
     exit 1
 fi
 
-# Parse forcing type from setup data file
+# Parse forcing type from setup data file (for logging only)
 FORCING=$(grep "^forcing:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
 if [ -z "$FORCING" ]; then
-    echo "Warning: Could not parse forcing from $TRANSIENT_SETUP_DATA, defaulting to JRA"
     FORCING="JRA"
-fi
-
-# Set forcing prefix for namelist selection
-if [ "$FORCING" == "NCEP" ]; then
-    FORCING_PREFIX="ncep"
-elif [ "$FORCING" == "ERA" ]; then
-    FORCING_PREFIX="era"
-else
-    FORCING_PREFIX="jra"
 fi
 
 # Parse run type from setup data file
@@ -108,18 +98,12 @@ echo "============================================"
 echo "Old restart cleaned for model ID: $MODEL_ID"
 echo "============================================"
 
-# Update namelist_ref - skip for BIAS runs (cycling namelist already set by setUpRun.sh)
-if [ "$RUN_TYPE" == "BIAS" ]; then
-    echo "============================================"
-    echo "BIAS run: keeping existing namelist_ref (cycling)"
-    echo "============================================"
-else
-    rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
-    ln -s namelist_ref_${FORCING_PREFIX}_restart ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
-    echo "============================================"
-    echo "Updated namelist_ref -> namelist_ref_${FORCING_PREFIX}_restart"
-    echo "============================================"
-fi
+# Update namelist_ref to use all_years (which already points to cycling for BIAS, restart for DYNAMIC)
+rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
+ln -s namelist_ref_all_years ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
+echo "============================================"
+echo "Updated namelist_ref -> namelist_ref_all_years"
+echo "============================================"
 
 ## copy EMP to new run directory
 EMP_SOURCE="${SPIN_DIR}/EMPave_$((FIRST_YEAR_TRANSIENT - 1)).dat"

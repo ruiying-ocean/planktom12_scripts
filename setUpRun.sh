@@ -208,27 +208,51 @@ else
 	forcing_prefix="jra"
 fi
 
+# Create intermediate symlinks to abstract forcing type
+# - coldstart: nn_rstctl=0, uses nn_date0 for start date (first year of a run)
+# - restart:   nn_rstctl=2, reads date from restart file, historical forcing
+# - cycling:   nn_rstctl=2, reads date from restart file, loops single year forcing (for BIAS/spinup)
+ln -sf namelist_ref_${forcing_prefix}_coldstart namelist_ref_coldstart
+ln -sf namelist_ref_${forcing_prefix}_restart namelist_ref_all_years
+ln -sf namelist_ref_${forcing_prefix}_cycling namelist_ref_cycling
+
 # Type
 echo $type
 
-# Automatically correct nn_date0 in namelist_ref_<forcing>_coldstart to match yearStart from setup data
+# For BIAS runs, overwrite namelist_ref_all_years to use cycling instead of restart
+if [ $type == "BIAS" ]; then
+	rm -f namelist_ref_all_years
+	ln -sf namelist_ref_cycling namelist_ref_all_years
+fi
+
+# Automatically correct nn_date0 in namelist_ref_coldstart to match yearStart from setup data
 expectedDate="${yearStart}0101"
-currentDate=$( grep "nn_date0" namelist_ref_${forcing_prefix}_coldstart | head -1 | awk -F'=' '{print $2}' | awk '{print $1}' )
+currentDate=$( grep "nn_date0" namelist_ref_coldstart | head -1 | awk -F'=' '{print $2}' | awk '{print $1}' )
 
 if [ "$currentDate" != "$expectedDate" ]; then
 	echo -e "\e[1;33mNOTE\e[0m: Updating nn_date0 from $currentDate to $expectedDate to match yearStart"
-	sed -i "s/nn_date0.*=.*/nn_date0    = $expectedDate/" namelist_ref_${forcing_prefix}_coldstart
+	sed -i "s/nn_date0.*=.*/nn_date0    = $expectedDate/" namelist_ref_coldstart
 fi
 
-# Initial year; if a CPU based restart file does not exist, then this is the first year
-# For BIAS runs: use coldstart on first year, cycling on subsequent years
-# For non-BIAS runs: use coldstart on first year, restart on subsequent years
+# Namelist selection based on restart file existence
+# The intermediate symlinks abstract away BIAS vs DYNAMIC:
+#   - namelist_ref_all_years -> cycling (for BIAS) or restart (for DYNAMIC)
+#
+# Scenarios:
+#   | Setup method       | Run type | Has restart | Result   |
+#   |--------------------|----------|-------------|----------|
+#   | Fresh              | BIAS     | No          | coldstart|
+#   | Fresh              | DYNAMIC  | No          | coldstart|
+#   | Continued          | BIAS     | Yes         | cycling  |
+#   | Continued          | DYNAMIC  | Yes         | restart  |
+#   | From spinup (*)    | BIAS     | Yes         | cycling  |
+#   | From spinup (*)    | DYNAMIC  | Yes         | restart  |
+#   (*) setup_spin.sh copies restart files then switches namelist_ref -> all_years
+#
 if [ ! -f restart_0000.nc ]; then
-	ln -s namelist_ref_${forcing_prefix}_coldstart namelist_ref
-elif [ $type == "BIAS" ]; then
-	ln -s namelist_ref_${forcing_prefix}_cycling namelist_ref
+	ln -s namelist_ref_coldstart namelist_ref
 else
-	ln -s namelist_ref_${forcing_prefix}_restart namelist_ref
+	ln -s namelist_ref_all_years namelist_ref
 fi
 
 # Temperature and salinity restoring
