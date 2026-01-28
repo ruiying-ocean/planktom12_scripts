@@ -37,7 +37,7 @@ yearEnd:1940
 CO2:VARIABLE
 
 # Dynamic or bias run (DYNAMIC or BIAS) 
-type:BIAS
+forcing_mode:spinup
 
 # Forcing (NCEP or ERA)
 forcing:JRA

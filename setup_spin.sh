@@ -61,11 +61,11 @@ if [ -z "$FORCING" ]; then
     FORCING="JRA"
 fi
 
-# Parse run type from setup data file
-RUN_TYPE=$(grep "^type:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
-if [ -z "$RUN_TYPE" ]; then
-    echo "Warning: Could not parse type from $TRANSIENT_SETUP_DATA, defaulting to SPINUP"
-    RUN_TYPE="SPINUP"
+# Parse forcing mode from setup data file
+FORCING_MODE=$(grep "^forcing_mode:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
+if [ -z "$FORCING_MODE" ]; then
+    echo "Warning: Could not parse forcing_mode from $TRANSIENT_SETUP_DATA, defaulting to spinup"
+    FORCING_MODE="spinup"
 fi
 
 TIMESTEP=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
@@ -74,7 +74,7 @@ echo "============================================"
 echo "Using setUpData file: $TRANSIENT_SETUP_DATA"
 echo "First year (transient): $FIRST_YEAR_TRANSIENT"
 echo "Forcing: $FORCING"
-echo "Run type: $RUN_TYPE"
+echo "Forcing mode: $FORCING_MODE"
 echo "Calculated TIMESTEP: $TIMESTEP"
 echo "============================================"
 
@@ -129,10 +129,10 @@ echo "============================================"
 echo "EMP files in ${MODEL} copied for model ID: $MODEL_ID"
 echo "============================================"
 
-## copy namelist.trc.sms to make sure both are consistent - skip for BIAS runs
-if [ "$RUN_TYPE" == "BIAS" ]; then
+## copy namelist.trc.sms to make sure both are consistent - skip for spinup runs
+if [ "$FORCING_MODE" == "spinup" ]; then
     echo "============================================"
-    echo "BIAS run: keeping existing namelist.trc.sms"
+    echo "Spinup run: keeping existing namelist.trc.sms"
     echo "============================================"
 else
     NAMELIST_SOURCE="${SPIN_DIR}/namelist.trc.sms"

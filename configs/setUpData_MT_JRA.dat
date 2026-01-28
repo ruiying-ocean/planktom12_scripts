@@ -37,7 +37,7 @@ yearEnd:2100
 CO2:VARIABLE
 
 # Dynamic or bias run (DYNAMIC or BIAS) 
-type:DYNAMIC
+forcing_mode:transient
 
 # Forcing (NCEP or ERA)
 forcing:JRA

@@ -21,7 +21,7 @@ set -x
 # Number of cpus set to 48 in namelists and above in SLURM
 cpus=48
 
-echo "---- Inputs " $yearToRun $yearStart $yearEnd $basedir $modelDir $simulation $Model $forcing_prefix $type
+echo "---- Inputs " $yearToRun $yearStart $yearEnd $basedir $modelDir $simulation $Model $forcing_prefix $forcing_mode
 
 YEARP=$YEARN
 cd $modelDir

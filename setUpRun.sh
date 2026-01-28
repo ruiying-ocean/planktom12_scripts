@@ -54,7 +54,7 @@ while IFS= read -r line; do
 			if [[ $name == "basedir" ]]; then basedir=$val; fi
 			if [[ $name == "EMPaveFile" ]]; then EMPaveFile=$val; fi
 			if [[ $name == "model" ]]; then Model=$val; fi
-			if [[ $name == "type" ]]; then type=$val; fi
+			if [[ $name == "forcing_mode" ]]; then forcing_mode=$val; fi
 			if [[ $name == "compilerKey" ]]; then compKey=$val; fi
 
 			# Tidy up parameters
@@ -227,10 +227,10 @@ fi
 
 # Layer 2: Temporal symlinks (when each is used)
 # - first_year:  always uses coldstart
-# - other_years: uses cycling (BIAS) or restart (DYNAMIC)
-echo $type
+# - other_years: uses cycling (spinup) or restart (transient)
+echo $forcing_mode
 ln -sf namelist_ref_coldstart namelist_ref_first_year
-if [ $type == "BIAS" ]; then
+if [ $forcing_mode == "spinup" ]; then
 	ln -sf namelist_ref_cycling namelist_ref_other_years
 else
 	ln -sf namelist_ref_restart namelist_ref_other_years
@@ -238,14 +238,14 @@ fi
 
 # Layer 3: Final symlink (based on restart file existence)
 # Scenarios:
-#   | Setup method       | Run type | Has restart | Result   |
-#   |--------------------|----------|-------------|----------|
-#   | Fresh              | BIAS     | No          | coldstart|
-#   | Fresh              | DYNAMIC  | No          | coldstart|
-#   | Continued          | BIAS     | Yes         | cycling  |
-#   | Continued          | DYNAMIC  | Yes         | restart  |
-#   | From spinup (*)    | BIAS     | Yes         | cycling  |
-#   | From spinup (*)    | DYNAMIC  | Yes         | restart  |
+#   | Setup method       | Forcing mode | Has restart | Result   |
+#   |--------------------|--------------|-------------|----------|
+#   | Fresh              | spinup      | No          | coldstart|
+#   | Fresh              | transient    | No          | coldstart|
+#   | Continued          | spinup      | Yes         | cycling  |
+#   | Continued          | transient    | Yes         | restart  |
+#   | From spinup (*)    | spinup      | Yes         | cycling  |
+#   | From spinup (*)    | transient    | Yes         | restart  |
 #   (*) setup_spin.sh copies restart files then switches namelist_ref -> other_years
 #
 if [ ! -f restart_0000.nc ]; then
@@ -335,7 +335,7 @@ for file in ${SCRIPT_DIR}/visualise/*; do
 done
 
 # Save parameters needed for creating html file
-echo $id $codeVersion $(date '+%d-%b-%Y') $yearStart $yearEnd ${CO2,,} $forcing ${type,,} $TR $SR > html_parms
+echo $id $codeVersion $(date '+%d-%b-%Y') $yearStart $yearEnd ${CO2,,} $forcing ${forcing_mode,,} $TR $SR > html_parms
 
 # Get setUpRun script
 cp ${SCRIPT_DIR}/setUpRun.sh .
@@ -352,8 +352,8 @@ fi
 # ----- Export parameters the nemo.job file will need -----
 yearToRun=$yearStart
 
-echo "Exporting " $yearToRun $yearEnd $basedir $modelDir $simulation $Model $forcing_prefix $type
-export yearToRun yearStart yearEnd basedir modelDir simulation Model forcing_prefix type
+echo "Exporting " $yearToRun $yearEnd $basedir $modelDir $simulation $Model $forcing_prefix $forcing_mode
+export yearToRun yearStart yearEnd basedir modelDir simulation Model forcing_prefix forcing_mode
 
 read -p "Press any key to run it? (cntr+c otherwise)"
 
