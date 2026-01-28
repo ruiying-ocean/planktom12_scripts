@@ -306,9 +306,12 @@ fi
 codeVersion=$( grep "opa_*$Model" $setUpDatafile | awk -F'/' '{print$(NF-5)}' )
 
 # ----- Create copies of files used for run -----
-# Get NEMO job file
+# Get NEMO job files
 if [ ! -f nemo.job ]; then
 	cp ${SCRIPT_DIR}/nemo.job nemo.job
+fi
+if [ ! -f nemo_compute.job ]; then
+	cp ${SCRIPT_DIR}/nemo_compute.job nemo_compute.job
 fi
 
 # Get tidying up scripts
@@ -357,7 +360,15 @@ export yearToRun yearStart yearEnd basedir modelDir simulation Model forcing_pre
 
 read -p "Press any key to run it? (cntr+c otherwise)"
 
-sbatch -J${simulation}${yearToRun} < nemo.job
+# Auto-select job file: use compute if 2+ jobs already on ib
+ib_jobs=$(squeue -p ib -u $USER -h 2>/dev/null | wc -l)
+if [ "$ib_jobs" -ge 2 ]; then
+	echo "IB partition has $ib_jobs jobs, using compute partition"
+	sbatch -J${simulation}${yearToRun} < nemo_compute.job
+else
+	echo "IB partition has $ib_jobs jobs, using ib partition"
+	sbatch -J${simulation}${yearToRun} < nemo.job
+fi
 
 echo "To check status of job 'squeue | grep <you user name>' "
 
