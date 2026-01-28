@@ -221,11 +221,12 @@ if [ "$currentDate" != "$expectedDate" ]; then
 fi
 
 # Initial year; if a CPU based restart file does not exist, then this is the first year
-# For BIAS runs, always use cycling namelist (checked first to handle restarts from other locations)
-if [ $type == "BIAS" ]; then
-	ln -s namelist_ref_${forcing_prefix}_cycling namelist_ref
-elif [ ! -f restart_0000.nc ]; then
+# For BIAS runs: use coldstart on first year, cycling on subsequent years
+# For non-BIAS runs: use coldstart on first year, restart on subsequent years
+if [ ! -f restart_0000.nc ]; then
 	ln -s namelist_ref_${forcing_prefix}_coldstart namelist_ref
+elif [ $type == "BIAS" ]; then
+	ln -s namelist_ref_${forcing_prefix}_cycling namelist_ref
 else
 	ln -s namelist_ref_${forcing_prefix}_restart namelist_ref
 fi
