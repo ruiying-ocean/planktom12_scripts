@@ -46,13 +46,9 @@ if [ -f ORCA2_${timestep}_restart_0000.nc ]; then
 	mv restart_ice_in.nc restart_ice_in_first_year.nc
 	mv EMPave.dat EMPave_${yearPrevious}.dat
 
-	# Link namelist so it continues after the first year, set this each subsequent year
-	# BIAS runs use cycling namelist, others use restart namelist
-	if [ "$type" == "BIAS" ]; then
-		ln -fs namelist_ref_${forcing_prefix}_cycling namelist_ref
-	else
-		ln -fs namelist_ref_${forcing_prefix}_restart namelist_ref
-	fi
+	# Link namelist so it continues after the first year
+	# namelist_ref_other_years already points to cycling (BIAS) or restart (DYNAMIC)
+	ln -fs namelist_ref_other_years namelist_ref
 
 	# Link the restart file to used for the next year to the one just completed.
 	for (( i=0; i<$cpus; i++ )); do

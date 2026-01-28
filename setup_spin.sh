@@ -98,11 +98,11 @@ echo "============================================"
 echo "Old restart cleaned for model ID: $MODEL_ID"
 echo "============================================"
 
-# Update namelist_ref to use all_years (which already points to cycling for BIAS, restart for DYNAMIC)
+# Update namelist_ref to use other_years (which already points to cycling for BIAS, restart for DYNAMIC)
 rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
-ln -s namelist_ref_all_years ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
+ln -s namelist_ref_other_years ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
 echo "============================================"
-echo "Updated namelist_ref -> namelist_ref_all_years"
+echo "Updated namelist_ref -> namelist_ref_other_years"
 echo "============================================"
 
 ## copy EMP to new run directory
