@@ -78,7 +78,7 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
     
 	echo $remainder $since
 
-	if [[ "$remainder" -eq 0 ]]; then
+	if [[ "$remainder" -eq 0 || $y -eq $yearTo ]]; then
 
 		echo "Copying output $y"
 		if [[ $keepGrid_T -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc $afm_dir$model_id; fi
@@ -145,7 +145,7 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 	
 	echo $points $timestep $remainder $since
 
-	if [[ "$remainder" -eq 0 ]]; then
+	if [[ "$remainder" -eq 0 || $y -eq $yearTo ]]; then
 		echo "Copying restart $y"
 		cp ORCA2_*${timestep}_restart_*.nc $afm_dir$model_id
 		rm -f ORCA2_*${timestep}_restart_*.nc
