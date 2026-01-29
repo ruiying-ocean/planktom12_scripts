@@ -134,12 +134,23 @@ class OceanMapPlotter:
         """
         Calculate new variables based on existing ones.
         Copied from nemo_func.add_new_var()
+
+        Note: Only sums PFTs that exist in the dataset, allowing for
+        reduced PFT configurations (e.g., 6 PFT vs 12 PFT versions).
         """
         ds = ds.copy()
         if suffix == 'ptrc':
-            # Total Phytoplankton Carbon
-            ds['_PHY'] = ds['PIC'] + ds['FIX'] + ds['COC'] + ds['DIA'] + ds['MIX'] + ds['PHA']
-            ds['_ZOO'] = ds['BAC'] + ds['PRO'] + ds['MES'] + ds['PTE'] + ds['CRU'] + ds['GEL']
+            # Total Phytoplankton Carbon - sum only PFTs present in dataset
+            phyto_pfts = ['PIC', 'FIX', 'COC', 'DIA', 'MIX', 'PHA']
+            present_phyto = [pft for pft in phyto_pfts if pft in ds]
+            if present_phyto:
+                ds['_PHY'] = sum(ds[pft] for pft in present_phyto)
+
+            # Total Zooplankton Carbon - sum only ZOOs present in dataset
+            zoo_pfts = ['BAC', 'PRO', 'MES', 'PTE', 'CRU', 'GEL']
+            present_zoo = [pft for pft in zoo_pfts if pft in ds]
+            if present_zoo:
+                ds['_ZOO'] = sum(ds[pft] for pft in present_zoo)
         elif suffix == 'diad':
             # Secondary production (grazing) - sum of all grazing terms
             ds['_SP'] = ds['GRAPRO'] + ds['GRAMES'] + ds['GRAPTE'] + ds['GRACRU'] + ds['GRAGEL']
