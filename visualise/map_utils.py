@@ -152,8 +152,11 @@ class OceanMapPlotter:
             if present_zoo:
                 ds['_ZOO'] = sum(ds[pft] for pft in present_zoo)
         elif suffix == 'diad':
-            # Secondary production (grazing) - sum of all grazing terms
-            ds['_SP'] = ds['GRAPRO'] + ds['GRAMES'] + ds['GRAPTE'] + ds['GRACRU'] + ds['GRAGEL']
+            # Secondary production (grazing) - sum only grazing terms present in dataset
+            grazing_vars = ['GRAPRO', 'GRAMES', 'GRAPTE', 'GRACRU', 'GRAGEL']
+            present_grazing = [var for var in grazing_vars if var in ds]
+            if present_grazing:
+                ds['_SP'] = sum(ds[var] for var in present_grazing)
 
             # NPP and derived variables
             ds['_NPP'] = ds['PPT']
