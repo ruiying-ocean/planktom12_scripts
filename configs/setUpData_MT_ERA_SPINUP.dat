@@ -175,7 +175,7 @@ namelist_ref_era_restart:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/
 # - coldstart runs need the date set in nn_date0 and nn_rstctl flag set to 0
 # - after first year, use _restart namelist (nn_rstctl=2, taking date from restart file)
 
-namelist_ref_era_coldstart:/gpfs/home/vhf24tbu/EXP00/namelist_ref_era_start_1750
+namelist_ref_era_coldstart:/gpfs/home/vhf24tbu/EXP00/namelist_ref_era_start
 
 # For bias runs we need the model to use forcing data that is a loop of a single year (currently set to 1990)
 namelist_ref_era_cycling:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era_looping

@@ -1,0 +1,164 @@
+# -------------------------
+#
+# PlankTOM6 Configuration File
+#
+# This file contains all the paths and parameters needed for a run of PlankTOM6 on HALI.
+#
+# PlankTOM6: Simplified 6-PFT ecosystem model with MEDUSA-style Holling Type II grazing
+#   - 3 phytoplankton: DIA, COC, PIC
+#   - 2 zooplankton: PRO, MES
+#   - 1 bacteria: BAC
+#   - 3 detritus: DOC, POC, GOC (no HOC)
+#
+# This file is read in by setUpRun.sh.
+#
+# Lines with a preceding # will be ignored.
+#
+# -------------------------
+
+# ========== RUN COMPONENTS ==========
+# Model version to run (options: STD, DEV, CR, TOM6)
+model:TOM6
+
+# Starting year of the run
+yearStart:1750
+yearEnd:1947
+
+# CO2 (VARIABLE or STATIC)
+CO2:VARIABLE
+
+# Dynamic or bias run (DYNAMIC or BIAS)
+forcing_mode:transient
+
+# Forcing (NCEP or ERA)
+forcing:ERA
+
+# Tidyup options
+spinupStart:1750
+spinupEnd:1940
+
+# Keep restarts and output frequency (years)
+spinupRestartKeepFrequency:10
+spinupOutputKeepFrequency:10
+runRestartKeepFrequency:10
+runOutputKeepFrequency:1
+
+# Flags for keeping respective files (0 = delete, 1 = keep)
+keepGrid_T:1
+keepGrid_U:0
+keepGrid_V:0
+keepGrid_W:0
+keepDiad:1
+keepPtrc:1
+keepIce:0
+keepLimPhy:0
+
+# Base directory for saving model run data
+basedir:/gpfs/home/vhf24tbu/scratch/ModelRuns/
+
+# Location of file with compiler keys
+compilerKey:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/cpp_ORCA2_LIM_PlankTOM.fcm
+
+
+# ========== INPUT RESOURCES ==========
+# Restart files
+# NOTE: PlankTOM6 requires a restart file with 30 tracers (not 47 like PlankTOM12)
+# You may need to generate a new restart or interpolate from PlankTOM12
+
+# Passive tracers - NEEDS TO BE UPDATED FOR TOM6 (?)
+restart_trc.nc:/gpfs/home/vhf24tbu/Observations/input_data/restart_19471231_trc_RY_HOC_HuangFe.nc
+
+# Ice
+restart_ice_in.nc:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/restart_ice_v3.6.nc
+
+# Restart for the physics parameters
+restart.nc:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/restart_19191231_opa_PT.nc
+
+# Evaporation and precipitation balancing file
+EMPaveFile:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/EMPave_1749.dat
+
+# Horizontal eddy viscosity coefficient
+ahmcoef.nc:/gpfs/data/greenocean/software/resources/ModelResources/EddyViscCoeff/ahmcoef.nc
+
+# Atmospheric CO2
+atmco2.dat.variable:/gpfs/data/greenocean/software/resources/ModelResources/AtmosCO2/atmco2_GCB2025_TJ.dat
+atmco2.dat.static:/gpfs/data/greenocean/software/resources/ModelResources/AtmosCO2/atmco2_PT_v1_CONSTANT_1750.dat
+
+# CFCs
+atmco2cfc.dat:/gpfs/data/greenocean/software/resources/ModelResources/AtmosCO2/atmco2cfc_NEEDS_WORK.dat
+
+# Bathymetry
+bathy_level.nc:/gpfs/data/greenocean/software/resources/ModelResources/Bathymetry/bathy_level.nc
+bathy_meter.nc:/gpfs/data/greenocean/software/resources/ModelResources/Bathymetry/bathy_meter.nc
+bathy.orca.nc:/gpfs/data/greenocean/software/resources/ModelResources/Bathymetry/bathy.orca.nc
+
+# Grid coordinates
+coordinates.nc:/gpfs/data/greenocean/software/resources/ModelResources/GridCoordinates/coordinates.nc
+
+# World Ocean Atlas
+data_1m_potential_temperature_nomask.nc:/gpfs/data/greenocean/software/resources/ModelResources/Atlas/WOA01_ORCA2_1m_potemp.nc
+data_1m_salinity_nomask.nc:/gpfs/data/greenocean/software/resources/ModelResources/Atlas/WOA01_ORCA2_1m_sal.nc
+
+# Dust deposition (Fe source)
+dust.orca.nc:/gpfs/data/greenocean/software/resources/ModelResources/Dust/dust.Jickells2005.times035.ORCA.nc
+
+# Nitrogen deposition
+ndeposition.nc:/gpfs/data/greenocean/software/resources/ModelResources/Dust/ndeposition.orca.nc
+
+# River runoff
+river.nc:/gpfs/data/greenocean/software/resources/ModelResources/River/river.nc
+runoff_core_monthly.nc:/gpfs/data/greenocean/software/resources/ModelResources/River/runoff_core_monthly.nc
+
+# Geothermal heating
+geothermal_heating.nc:/gpfs/data/greenocean/software/resources/ModelResources/Geothermal/geothermal_heating.nc
+
+# Tides
+K1rowdrg.nc:/gpfs/data/greenocean/software/resources/ModelResources/Tides/K1rowdrg.nc
+M2rowdrg.nc:/gpfs/data/greenocean/software/resources/ModelResources/Tides/M2rowdrg.nc
+
+# Chlorophyll
+chlorophyll.nc:/gpfs/data/greenocean/software/resources/ModelResources/Chlorophyll/chlorophyll.nc
+
+# Masks
+mask_itf.nc:/gpfs/data/greenocean/software/resources/ModelResources/Masks/mask_itf.nc
+
+
+# ========== MODEL COMPONENTS ==========
+
+# XIOS server
+xios_server.exe:/gpfs/software/ada/xios/1.0/gcc-openmpi/xios_server.exe
+
+# PlankTOM6 executable
+opa_TOM6:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/BLD/bin/nemo.exe
+
+# ----- NAMELISTS -----
+# Config namelist
+namelist_cfg:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_cfg
+
+# PlankTOM6 tracer list (30 tracers with key_trc_piic)
+namelist_top_ref:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_top_ref_tom6
+
+# ERA forcing namelists
+namelist_ref_era_restart:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era
+namelist_ref_era_coldstart:/gpfs/home/vhf24tbu/EXP00/namelist_ref_era_start
+namelist_ref_era_cycling:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era_looping
+
+# TOP config namelist
+namelist_top_cfg:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_top_cfg
+
+# PlankTOM6 SMS namelist (MEDUSA grazing parameters)
+namelist.trc.sms:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist.trc.sms_tom6
+
+# Ice namelists
+namelist_ice_cfg:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ice_cfg
+namelist_ice_ref:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ice_ref
+
+# ----- XML -----
+# PlankTOM6 field definitions (removed HOC, UFE, PTE, GEL, CRU, MIX, PHA, FIX)
+field_def.xml:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/field_def.xml
+
+# PlankTOM6 output definition
+iodef.xml:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/iodef_tom6.xml
+
+# Domain definition
+domain_def.xml:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/domain_def.xml
