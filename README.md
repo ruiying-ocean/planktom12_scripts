@@ -1,4 +1,4 @@
-# PlankTom Runner
+# PlankTom Toolkit
 
 A comprehensive workflow system for running NEMO-PlankTom ocean biogeochemistry models and generating visualizations and analyses.
 
