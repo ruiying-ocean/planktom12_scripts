@@ -491,7 +491,7 @@ When making changes:
 
 ## License
 
-[To be determined]
+MIT License
 
 ## Citation
 
