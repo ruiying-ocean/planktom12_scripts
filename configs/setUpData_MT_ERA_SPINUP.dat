@@ -159,6 +159,7 @@ xios_server.exe:/gpfs/software/ada/xios/1.0/gcc-openmpi/xios_server.exe
 opa_CR:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/BLD/bin/nemo.exe
 opa_STD:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM12-MAIN/CONFIG/ORCA2_LIM_PlankTOM/BLD/bin/nemo.exe
 opa_DEV:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM12-DEV/CONFIG/ORCA2_LIM_PlankTOM/BLD/bin/nemo.exe
+opa_OLDTOM6:/gpfs/home/vhf24tbu/scratch/ModelRuns/TOM12_RY_T602/opa_DEV
 
 # ----- NAMELISTS -----
 # The NAMELIST of variables that control the run (e.g. how the model starts, defined by the restart file?)

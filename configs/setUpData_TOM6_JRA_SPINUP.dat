@@ -1,8 +1,8 @@
 # -------------------------
 #
-# PlankTOM6 Configuration File
+# PlankTOM6 Configuration File - JRA Forcing SPINUP
 #
-# This file contains all the paths and parameters needed for a run of PlankTOM6 on HALI.
+# This file contains all the paths and parameters needed for a spinup run of PlankTOM6 on HALI.
 #
 # PlankTOM6: Simplified 6-PFT ecosystem model with MEDUSA-style Holling Type II grazing
 #   - 3 phytoplankton: DIA, COC, PIC
@@ -22,7 +22,7 @@ model:TOM6
 
 # Starting year of the run
 yearStart:1750
-yearEnd:1947
+yearEnd:1939
 
 # CO2 (VARIABLE or STATIC)
 CO2:VARIABLE
@@ -30,27 +30,27 @@ CO2:VARIABLE
 # Dynamic or bias run (DYNAMIC or BIAS)
 forcing_mode:spinup
 
-# Forcing (NCEP or ERA)
-forcing:ERA
+# Forcing (NCEP or ERA or JRA)
+forcing:JRA
 
 # Tidyup options
 spinupStart:1750
-spinupEnd:1940
+spinupEnd:1930
 
 # Keep restarts and output frequency (years)
 spinupRestartKeepFrequency:30
 spinupOutputKeepFrequency:30
 runRestartKeepFrequency:30
-runOutputKeepFrequency:1
+runOutputKeepFrequency:10
 
 # Flags for keeping respective files (0 = delete, 1 = keep)
 keepGrid_T:1
-keepGrid_U:0
-keepGrid_V:0
-keepGrid_W:0
+keepGrid_U:1
+keepGrid_V:1
+keepGrid_W:1
 keepDiad:1
 keepPtrc:1
-keepIce:0
+keepIce:1
 keepLimPhy:0
 
 # Base directory for saving model run data
@@ -138,10 +138,10 @@ namelist_cfg:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_Pl
 # PlankTOM6 tracer list (30 tracers with key_trc_piic)
 namelist_top_ref:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_top_ref_tom6
 
-# ERA forcing namelists
-namelist_ref_era_restart:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era
-namelist_ref_era_coldstart:/gpfs/home/vhf24tbu/EXP00/namelist_ref_era_start
-namelist_ref_era_cycling:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era_looping
+# JRA forcing namelists
+namelist_ref_jra_restart:/gpfs/home/vhf24tbu/EXP00/namelist_ref_jra_restart
+namelist_ref_jra_coldstart:/gpfs/home/vhf24tbu/EXP00/namelist_ref_jra_start
+namelist_ref_jra_cycling:/gpfs/home/vhf24tbu/EXP00/namelist_ref_jra_looping
 
 # TOP config namelist
 namelist_top_cfg:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_top_cfg
