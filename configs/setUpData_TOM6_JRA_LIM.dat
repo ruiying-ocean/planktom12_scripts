@@ -22,7 +22,7 @@ model:TOM6
 
 # Starting year of the run
 yearStart:1940
-yearEnd:2024
+yearEnd:2100
 
 # CO2 (VARIABLE or STATIC)
 CO2:VARIABLE
