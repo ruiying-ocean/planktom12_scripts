@@ -81,7 +81,7 @@ EMPaveFile:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/
 ahmcoef.nc:/gpfs/data/greenocean/software/resources/ModelResources/EddyViscCoeff/ahmcoef.nc
 
 # Atmospheric CO2
-atmco2.dat.variable:/gpfs/data/greenocean/software/resources/ModelResources/AtmosCO2/atmco2_GCB2025_TJ.dat
+atmco2.dat.variable:/gpfs/data/greenocean/software/resources/SOZONE_atmo/atmco2_ssp3-70.dat
 atmco2.dat.static:/gpfs/data/greenocean/software/resources/ModelResources/AtmosCO2/atmco2_PT_v1_CONSTANT_1750.dat
 
 # CFCs
