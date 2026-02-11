@@ -42,10 +42,11 @@ class ModelDataLoader:
         data.update(surface_data)
 
         volume_df = self._read_analyser_file("vol")
-        volume_cols = ["PPT", "proara", "prococ", "probsi", "GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE",
+        volume_cols = ["PPT", "PPT_Trop", "proara", "prococ", "probsi", "GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE",
                        "PPT_DIA", "PPT_MIX", "PPT_COC", "PPT_PIC", "PPT_PHA", "PPT_FIX"]
         volume_data = self._extract_arrays(volume_df, volume_cols)
         volume_data["PROCACO3"] = volume_data["proara"] + volume_data["prococ"]
+        volume_data["PPT_ExtTrop"] = volume_data["PPT"] - volume_data["PPT_Trop"]
         # SP (secondary production) = sum of all grazing terms
         volume_data["SP"] = sum(volume_data[col] for col in ["GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"])
         volume_data["SPT"] = sum(volume_data[col] for col in ["GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"])

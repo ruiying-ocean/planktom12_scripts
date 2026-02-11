@@ -35,7 +35,7 @@ subplot_height = 2.0   # Height of each individual subplot
 
 # Grid configurations for different plot types (rows x cols only)
 [layout.global_summary]
-rows = 3
+rows = 4
 cols = 3
 
 [layout.pft_summary]
@@ -150,6 +150,8 @@ PROCACO3 = {title = "CaCO₃ Production [PgC/yr]", color_index = 5}
 EXPCACO3 = {title = "CaCO₃ Export at 100m [PgC/yr]", color_index = 6}
 probsi = {title = "Silica Production [Tmol/yr]", color_index = 7}
 SI_FLX = {title = "Silica Export at 100m [Tmol/yr]", color_index = 8}
+PPT_Trop = {title = "Tropical NPP (30S-30N) [PgC/yr]", color_index = 9}
+PPT_ExtTrop = {title = "Extratropical NPP [PgC/yr]", color_index = 10}
 
 [plot_info.pfts.phytoplankton]
 PIC = {title = "Picophytoplankton", color_index = 0}
