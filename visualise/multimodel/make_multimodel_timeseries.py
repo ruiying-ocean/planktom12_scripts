@@ -1362,10 +1362,7 @@ class DerivedSummaryPlotter(PlotGenerator):
         )
         axes = axes.flatten()
 
-        # Hide unused subplot (6th position)
-        axes[5].set_visible(False)
-
-        setup_axes(axes[:5])  # Setup first 5 axes
+        setup_axes(axes[:6])
 
         self.plot_all_models(fig, axes, self._plot_model)
 
@@ -1418,13 +1415,20 @@ class DerivedSummaryPlotter(PlotGenerator):
                 axes[1].set_title("Residual Production", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[1].set_ylabel("PgC/yr")
 
+            if ppt is not None:
+                min_len = min(len(year), len(sp), len(ppt))
+                spratio = sp[:min_len] / ppt[:min_len]
+                axes[5].plot(year[:min_len], spratio, color=color, linewidth=LINE_WIDTH)
+                axes[5].set_title("SP/NPP", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[5].set_ylabel("Dimensionless")
+                axes[5].set_xlabel("Year", fontweight='bold')
+
         if exp is not None and ppt is not None:
             min_len = min(len(year), len(exp), len(ppt))
             eratio = exp[:min_len] / ppt[:min_len]
             axes[2].plot(year[:min_len], eratio, color=color, linewidth=LINE_WIDTH)
             axes[2].set_title("Export Ratio (e-ratio)", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
             axes[2].set_ylabel("Dimensionless")
-            # Add xlabel to bottom row for the 4-panel layout
             axes[2].set_xlabel("Year", fontweight='bold')
 
         if exp1000 is not None and exp is not None:
@@ -1457,10 +1461,7 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
         )
         axes = axes.flatten()
 
-        # Hide unused subplot (6th position)
-        axes[5].set_visible(False)
-
-        setup_axes(axes[:5])
+        setup_axes(axes[:6])
 
         self.plot_all_models(fig, axes, self._plot_model)
 
@@ -1512,6 +1513,16 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
                 axes[1].set_title("Residual Production anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[1].set_ylabel("PgC/yr")
                 axes[1].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+
+            if ppt is not None:
+                min_len = min(len(year), len(sp), len(ppt))
+                spratio = sp[:min_len] / ppt[:min_len]
+                spratio_norm = GlobalSummaryNormalizedPlotter._normalize_series(spratio)
+                axes[5].plot(year[:min_len], spratio_norm, color=color, linewidth=LINE_WIDTH)
+                axes[5].set_title("SP/NPP anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[5].set_ylabel("Dimensionless")
+                axes[5].set_xlabel("Year", fontweight='bold')
+                axes[5].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
         if exp is not None and ppt is not None:
             min_len = min(len(year), len(exp), len(ppt))

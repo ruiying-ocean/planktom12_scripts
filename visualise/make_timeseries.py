@@ -60,6 +60,7 @@ class ModelDataLoader:
         level_data["Teff"] = level_data["EXP1000"] / level_data["EXP"]  # EXP1000/EXP
         level_data["eratio"] = level_data["EXP"] / volume_data["PPT"]  # export100/NPP
         level_data["recycle"] = volume_data["PPT"] - level_data["EXP"] - volume_data["SP"]  # NPP - EXP100 - SP
+        level_data["spratio"] = volume_data["SP"] / volume_data["PPT"]  # SP/NPP
         data.update(level_data)
 
         average_df = self._read_analyser_file("ave")
@@ -317,6 +318,7 @@ class FigureCreator:
             ("eratio", self.colors[2], "Export Ratio (e-ratio)", "Dimensionless", None, None),
             ("Teff", self.colors[3], "Transfer Efficiency", "Dimensionless", None, None),
             ("rls", self.colors[4], "RLS", "m", None, None),
+            ("spratio", self.colors[5], "SP/NPP", "Dimensionless", None, None),
         ]
 
         fig, axes = plt.subplots(
