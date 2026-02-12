@@ -181,7 +181,7 @@ class FigureCreator:
 
         for i, (var_name, color, title, unit, obs_range, obs_line) in enumerate(plot_configs):
             is_bottom_row = i >= (layout['rows'] - 1) * layout['cols']
-            if var_name in data and data[var_name] is not None and len(data[var_name]) > 0:
+            if var_name in data and data[var_name] is not None and len(data[var_name]) > 0 and not np.all(data[var_name] == -1):
                 self._setup_axis(axes[i], data["year"], data[var_name], color, title, unit,
                                obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
             else:
