@@ -50,6 +50,14 @@ cols = 3
 rows = 1
 cols = 3
 
+[layout.derived_summary]
+rows = 2
+cols = 3
+
+[layout.organic_carbon_summary]
+rows = 2
+cols = 2
+
 [layout.ppt_by_pft_summary]
 rows = 2
 cols = 3
@@ -139,54 +147,69 @@ O2 = 168.3  # Oxygen [μmol/L] - at 300m depth
 Alkalini = 2352.49  # Alkalinity [μmol/L] - GLODAP
 # Fer and AOU have no reliable global observations
 
-# Plot titles and units
+# Plot titles and units (title = subplot heading, unit = y-axis label)
 [plot_info.ecosystem]
-Cflx = {title = "Air-Sea Carbon Flux [PgC/yr]", color_index = 0}
-TChl = {title = "Surface Chlorophyll [μg Chl/L]", color_index = 1}
-PPT = {title = "Primary Production [PgC/yr]", color_index = 2}
-EXP = {title = "Export at 100m [PgC/yr]", color_index = 3}
-EXP1000 = {title = "Export at 1000m [PgC/yr]", color_index = 4}
-PROCACO3 = {title = "CaCO₃ Production [PgC/yr]", color_index = 5}
-EXPCACO3 = {title = "CaCO₃ Export at 100m [PgC/yr]", color_index = 6}
-probsi = {title = "Silica Production [Tmol/yr]", color_index = 7}
-SI_FLX = {title = "Silica Export at 100m [Tmol/yr]", color_index = 8}
-PPT_Trop = {title = "Tropical NPP (30S-30N) [PgC/yr]", color_index = 9}
-PPT_ExtTrop = {title = "Extratropical NPP [PgC/yr]", color_index = 10}
+Cflx = {title = "Air-Sea Carbon Flux", unit = "PgC/yr", color_index = 0}
+TChl = {title = "Surface Chlorophyll", unit = "μg Chl/L", color_index = 1}
+PPT = {title = "Primary Production", unit = "PgC/yr", color_index = 2}
+EXP = {title = "Export at 100m", unit = "PgC/yr", color_index = 3}
+EXP1000 = {title = "Export at 1000m", unit = "PgC/yr", color_index = 4}
+PROCACO3 = {title = "CaCO₃ Production", unit = "PgC/yr", color_index = 5}
+EXPCACO3 = {title = "CaCO₃ Export at 100m", unit = "PgC/yr", color_index = 6}
+probsi = {title = "Silica Production", unit = "Tmol/yr", color_index = 7}
+SI_FLX = {title = "Silica Export at 100m", unit = "Tmol/yr", color_index = 8}
+PPT_Trop = {title = "Tropical NPP (30S-30N)", unit = "PgC/yr", color_index = 9}
+PPT_ExtTrop = {title = "Extratropical NPP", unit = "PgC/yr", color_index = 10}
 
 [plot_info.pfts.phytoplankton]
-PIC = {title = "Picophytoplankton", color_index = 0}
-PHA = {title = "Phaeocystis", color_index = 1}
-MIX = {title = "Mixotrophs", color_index = 2}
-DIA = {title = "Diatoms", color_index = 3}
-COC = {title = "Coccolithophores", color_index = 4}
-FIX = {title = "Nitrogen Fixers", color_index = 5}
+PIC = {title = "Picophytoplankton", unit = "PgC", color_index = 0}
+PHA = {title = "Phaeocystis", unit = "PgC", color_index = 1}
+MIX = {title = "Mixotrophs", unit = "PgC", color_index = 2}
+DIA = {title = "Diatoms", unit = "PgC", color_index = 3}
+COC = {title = "Coccolithophores", unit = "PgC", color_index = 4}
+FIX = {title = "Nitrogen Fixers", unit = "PgC", color_index = 5}
 
 # Primary production by phytoplankton PFT
 [plot_info.ppt_by_pft]
-PPT_PIC = {title = "PIC NPP [PgC/yr]", color_index = 0}
-PPT_PHA = {title = "PHA NPP [PgC/yr]", color_index = 1}
-PPT_MIX = {title = "MIX NPP [PgC/yr]", color_index = 2}
-PPT_DIA = {title = "DIA NPP [PgC/yr]", color_index = 3}
-PPT_COC = {title = "COC NPP [PgC/yr]", color_index = 4}
-PPT_FIX = {title = "FIX NPP [PgC/yr]", color_index = 5}
+PPT_PIC = {title = "PIC NPP", unit = "PgC/yr", color_index = 0}
+PPT_PHA = {title = "PHA NPP", unit = "PgC/yr", color_index = 1}
+PPT_MIX = {title = "MIX NPP", unit = "PgC/yr", color_index = 2}
+PPT_DIA = {title = "DIA NPP", unit = "PgC/yr", color_index = 3}
+PPT_COC = {title = "COC NPP", unit = "PgC/yr", color_index = 4}
+PPT_FIX = {title = "FIX NPP", unit = "PgC/yr", color_index = 5}
 
 [plot_info.pfts.zooplankton]
-GEL = {title = "Gelatinous", color_index = 6}
-PRO = {title = "Protozooplankton", color_index = 7}
-BAC = {title = "Bacteria", color_index = 8}
-CRU = {title = "Crustaceans", color_index = 9}
-PTE = {title = "Pteropods", color_index = 0}
-MES = {title = "Mesozooplankton", color_index = 1}
+GEL = {title = "Gelatinous Zooplankton", unit = "PgC", color_index = 6}
+PRO = {title = "Protozooplankton", unit = "PgC", color_index = 7}
+BAC = {title = "Bacteria", unit = "PgC", color_index = 8}
+CRU = {title = "Crustaceans", unit = "PgC", color_index = 9}
+PTE = {title = "Pteropods", unit = "PgC", color_index = 0}
+MES = {title = "Mesozooplankton", unit = "PgC", color_index = 1}
 
 [plot_info.nutrients]
-PO4 = {title = "Phosphate [mmol/m³]", color_index = 0}
-NO3 = {title = "Nitrate [mmol/m³]", color_index = 1}
-SIL = {title = "Silica [mmol/m³]", color_index = 2}
-FER = {title = "Iron [μmol/m³]", color_index = 3}
-OXY = {title = "Oxygen [mmol/m³]", color_index = 4}
-ALK = {title = "Alkalinity [mmol/m³]", color_index = 5}
+nPO4 = {title = "Surface Phosphate", unit = "μmol/L", color_index = 0, obs_key = "PO4"}
+NO3 = {title = "Surface Nitrate", unit = "μmol/L", color_index = 1}
+nFer = {title = "Surface Iron", unit = "nmol/L", color_index = 2, obs_key = "Fer"}
+Si = {title = "Surface Silica", unit = "μmol/L", color_index = 3}
+O2 = {title = "Oxygen at 300m", unit = "μmol/L", color_index = 4}
+Alkalini = {title = "Surface Alkalinity", unit = "μmol/L", color_index = 5}
+AOU = {title = "AOU at 300m", unit = "μmol/L", color_index = 6}
+
+[plot_info.derived]
+SP = {title = "Secondary Production", unit = "PgC/yr", color_index = 0}
+recycle = {title = "Residual Production", unit = "PgC/yr", color_index = 1}
+eratio = {title = "Export Ratio (e-ratio)", unit = "Dimensionless", color_index = 2}
+Teff = {title = "Transfer Efficiency", unit = "Dimensionless", color_index = 3}
+rls = {title = "RLS", unit = "m", color_index = 4}
+spratio = {title = "SP/NPP", unit = "Dimensionless", color_index = 5}
+
+[plot_info.organic_carbon]
+POC = {title = "POC", unit = "PgC", color_index = 0}
+DOC = {title = "DOC", unit = "PgC", color_index = 1}
+GOC = {title = "GOC", unit = "PgC", color_index = 2}
+HOC = {title = "HOC", unit = "PgC", color_index = 3}
 
 [plot_info.physics]
-SST = {title = "Sea Surface Temperature [°C]", color_index = 0}
-SSS = {title = "Sea Surface Salinity [PSU]", color_index = 1}
-MLD = {title = "Mixed Layer Depth [m]", color_index = 2}
+SST = {title = "Sea Surface Temperature", unit = "°C", color_index = 0}
+SSS = {title = "Sea Surface Salinity", unit = "PSU", color_index = 1}
+MLD = {title = "Mixed Layer Depth", unit = "m", color_index = 2}

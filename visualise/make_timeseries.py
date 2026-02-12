@@ -137,294 +137,101 @@ class FigureCreator:
         path = self.saver.save(fig, filename_base)
         print(f"✓ Saved: {path}")
 
-    def create_global_summary(self, data):
+    def _create_summary_from_config(self, data, plot_info, obs_source, layout_key, filename_suffix):
+        """Config-driven summary plot: reads plot_info dict, looks up observations, creates subplots.
+
+        Args:
+            data: Dict of variable name -> numpy array
+            plot_info: Dict from config, e.g. {var_name: {title, color_index, obs_key?}, ...}
+            obs_source: Observation dict (from ObservationData), or None if no observations
+            layout_key: Key into self.config['layout'], e.g. 'global_summary'
+            filename_suffix: Suffix for output filename, e.g. 'summary_global'
+        """
         year_limits = self._get_global_year_limits(data)
-        layout = self.config['layout']['global_summary']
+        layout = self.config['layout'][layout_key]
         subplot_width = self.config['layout']['subplot_width']
         subplot_height = self.config['layout']['subplot_height']
 
-        obs = ObservationData.get_global()
-        ecosystem_config = self.config['plot_info']['ecosystem']
-
         plot_configs = []
-        for var_name, var_info in ecosystem_config.items():
-            if var_name not in data or data[var_name] is None:
-                continue
+        for var_name, var_info in plot_info.items():
             title = var_info['title']
+            unit = var_info.get('unit', '')
             color = self.colors[var_info['color_index'] % len(self.colors)]
-            # Extract units from title brackets, e.g. "Primary Production [PgC/yr]" -> "PgC/yr"
-            ylabel = title.split("[")[-1].rstrip("]") if "[" in title else ""
-            title_short = title.split("[")[0].strip() if "[" in title else title
             obs_range, obs_line = None, None
-            if var_name in obs:
-                o = obs[var_name]
-                if o.get("type") == "span":
-                    obs_range = ObservationRange(o["min"], o["max"])
-                elif o.get("type") == "line":
-                    obs_line = ObservationLine(o["value"])
-            plot_configs.append((data[var_name], color, title_short, ylabel, obs_range, obs_line))
+            if obs_source is not None:
+                obs_key = var_info.get('obs_key', var_name)
+                if obs_key in obs_source:
+                    o = obs_source[obs_key]
+                    if isinstance(o, dict):
+                        if o.get("type") in ("span", "range"):
+                            obs_range = ObservationRange(o["min"], o["max"])
+                        elif o.get("type") == "line":
+                            obs_line = ObservationLine(o["value"])
+                    elif isinstance(o, (int, float)):
+                        obs_line = ObservationLine(o)
+            plot_configs.append((var_name, color, title, unit, obs_range, obs_line))
 
         fig, axes = plt.subplots(
             layout['rows'], layout['cols'],
             figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
-            sharex=True, constrained_layout=self.config['layout']['use_constrained_layout']
+            sharex=True, squeeze=False,
+            constrained_layout=self.config['layout']['use_constrained_layout']
         )
         axes = axes.flatten()
 
-        for i, (plot_data, color, title, ylabel, obs_range, obs_line) in enumerate(plot_configs):
+        for i, (var_name, color, title, unit, obs_range, obs_line) in enumerate(plot_configs):
             is_bottom_row = i >= (layout['rows'] - 1) * layout['cols']
-            self._setup_axis(axes[i], data["year"], plot_data, color, title, ylabel,
-                           obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
+            if var_name in data and data[var_name] is not None and len(data[var_name]) > 0:
+                self._setup_axis(axes[i], data["year"], data[var_name], color, title, unit,
+                               obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
+            else:
+                axes[i].text(0.5, 0.5, f'{title}\nnot available',
+                           ha='center', va='center', transform=axes[i].transAxes, fontsize=9, color='gray')
+                axes[i].set_title(title, fontweight='bold', pad=5)
+                if is_bottom_row:
+                    axes[i].set_xlabel("Year", fontweight='bold')
 
         for idx in range(len(plot_configs), len(axes)):
             axes[idx].set_visible(False)
 
-        self._save_figure(fig, f"{self.model_name}_summary_global.png")
+        self._save_figure(fig, f"{self.model_name}_{filename_suffix}.png")
 
-    def _get_pft_obs(self, pft_obs, key):
-        """Get observation range or line for a PFT based on its type."""
-        if key not in pft_obs:
-            return None, None
-        obs = pft_obs[key]
-        if obs.get("type") == "line":
-            return None, ObservationLine(obs["value"])
-        elif obs.get("type") == "range" and obs.get("min") is not None:
-            return ObservationRange(obs["min"], obs["max"]), None
-        return None, None
+    def create_global_summary(self, data):
+        self._create_summary_from_config(
+            data, self.config['plot_info']['ecosystem'],
+            ObservationData.get_global(), 'global_summary', 'summary_global')
 
     def create_pft_summary(self, data):
-        year_limits = self._get_global_year_limits(data)
-        layout = self.config['layout']['pft_summary']
-        subplot_width = self.config['layout']['subplot_width']
-        subplot_height = self.config['layout']['subplot_height']
-
-        # Use shared observation data (loaded from config)
-        pft_obs = ObservationData.get_pft()
-
-        pft_configs = [
-            ("PIC", "Picophytoplankton", "PgC"),
-            ("PHA", "Phaeocystis", "PgC"),
-            ("MIX", "Mixotrophs", "PgC"),
-            ("DIA", "Diatoms", "PgC"),
-            ("COC", "Coccolithophores", "PgC"),
-            ("FIX", "Nitrogen Fixers", "PgC"),
-            ("GEL", "Gelatinous Zooplankton", "PgC"),
-            ("PRO", "Protozooplankton", "PgC"),
-            ("BAC", "Bacteria", "PgC"),
-            ("CRU", "Crustaceans", "PgC"),
-            ("PTE", "Pteropods", "PgC"),
-            ("MES", "Mesozooplankton", "PgC")
-        ]
-
-        fig, axes = plt.subplots(
-            layout['rows'], layout['cols'],
-            figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
-            sharex=True, constrained_layout=self.config['layout']['use_constrained_layout']
-        )
-        axes = axes.flatten()
-
-        for i, (var_name, title, ylabel) in enumerate(pft_configs):
-            color = self.colors[i % len(self.colors)]
-            is_bottom_row = i >= (layout['rows'] - 1) * layout['cols']
-            obs_range, obs_line = self._get_pft_obs(pft_obs, var_name)
-            self._setup_axis(axes[i], data["year"], data[var_name], color, title, ylabel,
-                           obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
-
-        self._save_figure(fig, f"{self.model_name}_summary_pfts.png")
+        plot_info = dict(self.config['plot_info']['pfts']['phytoplankton'])
+        plot_info.update(self.config['plot_info']['pfts']['zooplankton'])
+        self._create_summary_from_config(
+            data, plot_info,
+            ObservationData.get_pft(), 'pft_summary', 'summary_pfts')
 
     def create_nutrient_summary(self, data):
-        year_limits = self._get_global_year_limits(data)
-        layout = self.config['layout']['nutrient_summary']
-        subplot_width = self.config['layout']['subplot_width']
-        subplot_height = self.config['layout']['subplot_height']
-
-        # Use shared observation data (loaded from config)
-        nut_obs = ObservationData.get_nutrients()
-
-        nutrient_configs = [
-            ("nPO4", self.colors[0], "Surface Phosphate", "μmol/L",
-             ObservationLine(nut_obs["PO4"]) if nut_obs.get("PO4") else None),
-            ("NO3", self.colors[1], "Surface Nitrate", "μmol/L",
-             ObservationLine(nut_obs["NO3"]) if nut_obs.get("NO3") else None),
-            ("nFer", self.colors[2], "Surface Iron", "nmol/L",
-             ObservationLine(nut_obs["Fer"]) if nut_obs.get("Fer") else None),
-            ("Si", self.colors[3], "Surface Silica", "μmol/L",
-             ObservationLine(nut_obs["Si"]) if nut_obs.get("Si") else None),
-            ("O2", self.colors[4], "Oxygen at 300m", "μmol/L",
-             ObservationLine(nut_obs["O2"]) if nut_obs.get("O2") else None),
-            ("Alkalini", self.colors[5], "Surface Alkalinity", "μmol/L",
-             ObservationLine(nut_obs["Alkalini"]) if nut_obs.get("Alkalini") else None),
-            ("AOU", self.colors[6] if len(self.colors) > 6 else self.colors[0],
-             "AOU at 300m", "μmol/L",
-             ObservationLine(nut_obs["AOU"]) if nut_obs.get("AOU") else None),
-        ]
-
-        fig, axes = plt.subplots(
-            layout['rows'], layout['cols'],
-            figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
-            sharex=True, constrained_layout=self.config['layout']['use_constrained_layout']
-        )
-        axes = axes.flatten()
-
-        for i, (var_name, color, title, ylabel, obs_line) in enumerate(nutrient_configs):
-            is_bottom_row = i >= (layout['rows'] - 1) * layout['cols']
-            if var_name in data and data[var_name] is not None and len(data[var_name]) > 0:
-                self._setup_axis(axes[i], data["year"], data[var_name], color, title, ylabel,
-                               None, obs_line, year_limits, add_xlabel=is_bottom_row)
-            else:
-                axes[i].text(0.5, 0.5, f'{title}\nnot available',
-                           ha='center', va='center', transform=axes[i].transAxes, fontsize=9, color='gray')
-                axes[i].set_title(title, fontweight='bold', pad=5)
-                if is_bottom_row:
-                    axes[i].set_xlabel("Year", fontweight='bold')
-
-        for idx in range(len(nutrient_configs), len(axes)):
-            axes[idx].set_visible(False)
-
-        self._save_figure(fig, f"{self.model_name}_summary_nutrients.png")
+        self._create_summary_from_config(
+            data, self.config['plot_info']['nutrients'],
+            ObservationData.get_nutrients(), 'nutrient_summary', 'summary_nutrients')
 
     def create_physics_summary(self, data):
-        year_limits = self._get_global_year_limits(data)
-        layout = self.config['layout']['physics_summary']
-        subplot_width = self.config['layout']['subplot_width']
-        subplot_height = self.config['layout']['subplot_height']
-
-        physics_configs = [
-            (data["SST"], self.colors[0], "SST", "°C", None, None),
-            (data["SSS"], self.colors[1], "SSS", "‰", None, None),
-            (data["MLD"], self.colors[2], "MLD", "m", None, None),
-        ]
-
-        fig, axes = plt.subplots(
-            layout['rows'], layout['cols'],
-            figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
-            sharex=True, constrained_layout=self.config['layout']['use_constrained_layout']
-        )
-
-        for i, (plot_data, color, title, ylabel, obs_range, obs_line) in enumerate(physics_configs):
-            self._setup_axis(axes[i], data["year"], plot_data, color, title, ylabel,
-                           obs_range, obs_line, year_limits, add_xlabel=True)
-
-        self._save_figure(fig, f"{self.model_name}_summary_physics.png")
+        self._create_summary_from_config(
+            data, self.config['plot_info']['physics'],
+            None, 'physics_summary', 'summary_physics')
 
     def create_derived_summary(self, data):
-        """Create summary plots for derived ecosystem variables."""
-        year_limits = self._get_global_year_limits(data)
-        layout = {'rows': 2, 'cols': 3}
-        subplot_width = self.config['layout']['subplot_width']
-        subplot_height = self.config['layout']['subplot_height']
-
-        # Build derived_configs with available data
-        derived_configs = [
-            ("SP", self.colors[0], "Secondary Production", "PgC/yr", None, None),
-            ("recycle", self.colors[1], "Residual Production", "PgC/yr", None, None),
-            ("eratio", self.colors[2], "Export Ratio (e-ratio)", "Dimensionless", None, None),
-            ("Teff", self.colors[3], "Transfer Efficiency", "Dimensionless", None, None),
-            ("rls", self.colors[4], "RLS", "m", None, None),
-            ("spratio", self.colors[5], "SP/NPP", "Dimensionless", None, None),
-        ]
-
-        fig, axes = plt.subplots(
-            layout['rows'], layout['cols'],
-            figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
-            sharex=True, constrained_layout=self.config['layout']['use_constrained_layout']
-        )
-        axes = axes.flatten()
-
-        for i, (var_name, color, title, ylabel, obs_range, obs_line) in enumerate(derived_configs):
-            is_bottom_row = i >= layout['cols']
-            # Check if data is available
-            if var_name in data and data[var_name] is not None and len(data[var_name]) > 0:
-                self._setup_axis(axes[i], data["year"], data[var_name], color, title, ylabel,
-                               obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
-            else:
-                # Variable not available - show placeholder
-                axes[i].text(0.5, 0.5, f'{title}\nnot available',
-                           ha='center', va='center', transform=axes[i].transAxes, fontsize=9, color='gray')
-                axes[i].set_title(title, fontweight='bold', pad=5)
-                if is_bottom_row:
-                    axes[i].set_xlabel("Year", fontweight='bold')
-
-        # Hide unused subplots
-        for idx in range(len(derived_configs), len(axes)):
-            axes[idx].set_visible(False)
-
-        self._save_figure(fig, f"{self.model_name}_summary_derived.png")
+        self._create_summary_from_config(
+            data, self.config['plot_info']['derived'],
+            None, 'derived_summary', 'summary_derived')
 
     def create_organic_carbon_summary(self, data):
-        """Create summary plots for organic carbon pools (POC, DOC, GOC, HOC)."""
-        year_limits = self._get_global_year_limits(data)
-        layout = {'rows': 2, 'cols': 2}
-        subplot_width = self.config['layout']['subplot_width']
-        subplot_height = self.config['layout']['subplot_height']
-
-        oc_configs = [
-            ("POC", "POC", "PgC", None),
-            ("DOC", "DOC", "PgC", None),
-            ("GOC", "GOC", "PgC", None),
-            ("HOC", "HOC", "PgC", None),
-        ]
-
-        fig, axes = plt.subplots(
-            layout['rows'], layout['cols'],
-            figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
-            sharex=True, constrained_layout=self.config['layout']['use_constrained_layout']
-        )
-        axes = axes.flatten()
-
-        for i, (var_name, title, ylabel, obs_range) in enumerate(oc_configs):
-            if var_name not in data or data[var_name] is None or len(data[var_name]) == 0:
-                axes[i].text(0.5, 0.5, f'{var_name} not available',
-                           ha='center', va='center', transform=axes[i].transAxes)
-                axes[i].set_title(title, fontweight='bold', pad=5)
-                continue
-            color = self.colors[i % len(self.colors)]
-            is_bottom_row = i >= layout['cols']
-            self._setup_axis(axes[i], data["year"], data[var_name], color, title, ylabel,
-                           obs_range, None, year_limits, add_xlabel=is_bottom_row)
-
-        self._save_figure(fig, f"{self.model_name}_summary_organic_carbon.png")
+        self._create_summary_from_config(
+            data, self.config['plot_info']['organic_carbon'],
+            None, 'organic_carbon_summary', 'summary_organic_carbon')
 
     def create_ppt_by_pft_summary(self, data):
-        """Create summary plots for primary production by phytoplankton PFT."""
-        year_limits = self._get_global_year_limits(data)
-        layout = {'rows': 2, 'cols': 3}
-        subplot_width = self.config['layout']['subplot_width']
-        subplot_height = self.config['layout']['subplot_height']
-
-        # Primary production by PFT configs (matching the phytoplankton order in PFT summary)
-        ppt_configs = [
-            ("PPT_PIC", "Picophytoplankton PP", "PgC/yr"),
-            ("PPT_PHA", "Phaeocystis PP", "PgC/yr"),
-            ("PPT_MIX", "Mixotrophs PP", "PgC/yr"),
-            ("PPT_DIA", "Diatoms PP", "PgC/yr"),
-            ("PPT_COC", "Coccolithophores PP", "PgC/yr"),
-            ("PPT_FIX", "Nitrogen Fixers PP", "PgC/yr"),
-        ]
-
-        fig, axes = plt.subplots(
-            layout['rows'], layout['cols'],
-            figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
-            sharex=True, constrained_layout=self.config['layout']['use_constrained_layout']
-        )
-        axes = axes.flatten()
-
-        for i, (var_name, title, ylabel) in enumerate(ppt_configs):
-            color = self.colors[i % len(self.colors)]
-            is_bottom_row = i >= layout['cols']
-            # Check if data is available
-            if var_name in data and data[var_name] is not None and len(data[var_name]) > 0:
-                self._setup_axis(axes[i], data["year"], data[var_name], color, title, ylabel,
-                               None, None, year_limits, add_xlabel=is_bottom_row)
-            else:
-                # Variable not available - show placeholder
-                axes[i].text(0.5, 0.5, f'{title}\nnot available',
-                           ha='center', va='center', transform=axes[i].transAxes, fontsize=9, color='gray')
-                axes[i].set_title(title, fontweight='bold', pad=5)
-                if is_bottom_row:
-                    axes[i].set_xlabel("Year", fontweight='bold')
-
-        self._save_figure(fig, f"{self.model_name}_summary_ppt_by_pft.png")
+        self._create_summary_from_config(
+            data, self.config['plot_info']['ppt_by_pft'],
+            None, 'ppt_by_pft_summary', 'summary_ppt_by_pft')
 
 def main():
     parser = argparse.ArgumentParser(
