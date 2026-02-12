@@ -296,7 +296,7 @@ class PlotStyler:
         # Color palette
         color_palette_name = config.get('colors', {}).get('palette', 'tab10')
         self.color_palette = plt.get_cmap(color_palette_name)
-        self.colors = [self.color_palette(i) for i in np.linspace(0, 1, 10)]
+        self.colors = [self.color_palette(i) for i in np.linspace(0, 1, 12)]
 
         # Style configuration
         style_cfg = config.get('style', {})

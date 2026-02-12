@@ -163,6 +163,8 @@ class FigureCreator:
              ObservationRange(obs["probsi"]["min"], obs["probsi"]["max"]), None),
             (data["SI_FLX"], self.colors[8], "Silica Export at 100m", "Tmol/yr",
              ObservationRange(obs["SI_FLX"]["min"], obs["SI_FLX"]["max"]), None),
+            (data["PPT_Trop"], self.colors[9], "Tropical NPP (30S-30N)", "PgC/yr", None, None),
+            (data["PPT_ExtTrop"], self.colors[10], "Extratropical NPP", "PgC/yr", None, None),
         ]
 
         fig, axes = plt.subplots(
