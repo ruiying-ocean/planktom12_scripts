@@ -143,29 +143,26 @@ class FigureCreator:
         subplot_width = self.config['layout']['subplot_width']
         subplot_height = self.config['layout']['subplot_height']
 
-        # Use shared observation data (loaded from config)
         obs = ObservationData.get_global()
+        ecosystem_config = self.config['plot_info']['ecosystem']
 
-        plot_configs = [
-            (data["Cflx"], self.colors[0], "Surface Carbon Flux", "PgC/yr", None, None),
-            (data["TChl"], self.colors[1], "Surface Chlorophyll", "μg Chl/L", None,
-             ObservationLine(obs["TChl"]["value"])),
-            (data["PPT"], self.colors[2], "Primary Production", "PgC/yr",
-             ObservationRange(obs["PPT"]["min"], obs["PPT"]["max"]), None),
-            (data["EXP"], self.colors[3], "Export at 100m", "PgC/yr",
-             ObservationRange(obs["EXP"]["min"], obs["EXP"]["max"]), None),
-            (data["EXP1000"], self.colors[4], "Export at 1000m", "PgC/yr", None, None),
-            (data["PROCACO3"], self.colors[5], "CaCO₃ Production", "PgC/yr",
-             ObservationRange(obs["PROCACO3"]["min"], obs["PROCACO3"]["max"]), None),
-            (data["EXPCACO3"], self.colors[6], "CaCO₃ Export at 100m", "PgC/yr",
-             ObservationRange(obs["EXPCACO3"]["min"], obs["EXPCACO3"]["max"]), None),
-            (data["probsi"], self.colors[7], "Silica Production", "Tmol/yr",
-             ObservationRange(obs["probsi"]["min"], obs["probsi"]["max"]), None),
-            (data["SI_FLX"], self.colors[8], "Silica Export at 100m", "Tmol/yr",
-             ObservationRange(obs["SI_FLX"]["min"], obs["SI_FLX"]["max"]), None),
-            (data["PPT_Trop"], self.colors[9], "Tropical NPP (30S-30N)", "PgC/yr", None, None),
-            (data["PPT_ExtTrop"], self.colors[10], "Extratropical NPP", "PgC/yr", None, None),
-        ]
+        plot_configs = []
+        for var_name, var_info in ecosystem_config.items():
+            if var_name not in data or data[var_name] is None:
+                continue
+            title = var_info['title']
+            color = self.colors[var_info['color_index'] % len(self.colors)]
+            # Extract units from title brackets, e.g. "Primary Production [PgC/yr]" -> "PgC/yr"
+            ylabel = title.split("[")[-1].rstrip("]") if "[" in title else ""
+            title_short = title.split("[")[0].strip() if "[" in title else title
+            obs_range, obs_line = None, None
+            if var_name in obs:
+                o = obs[var_name]
+                if o.get("type") == "span":
+                    obs_range = ObservationRange(o["min"], o["max"])
+                elif o.get("type") == "line":
+                    obs_line = ObservationLine(o["value"])
+            plot_configs.append((data[var_name], color, title_short, ylabel, obs_range, obs_line))
 
         fig, axes = plt.subplots(
             layout['rows'], layout['cols'],
@@ -178,6 +175,9 @@ class FigureCreator:
             is_bottom_row = i >= (layout['rows'] - 1) * layout['cols']
             self._setup_axis(axes[i], data["year"], plot_data, color, title, ylabel,
                            obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
+
+        for idx in range(len(plot_configs), len(axes)):
+            axes[idx].set_visible(False)
 
         self._save_figure(fig, f"{self.model_name}_summary_global.png")
 
