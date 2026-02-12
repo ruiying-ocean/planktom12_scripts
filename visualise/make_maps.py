@@ -17,6 +17,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 
+try:
+    import colormaps as cmps
+    PFT_CMAP = cmps.roma_r
+except ImportError:
+    PFT_CMAP = 'turbo'
+
 # Import our plotting utilities
 from map_utils import (
     OceanMapPlotter,
@@ -43,7 +49,7 @@ def plot_pft_maps(
     pft_list: list,
     pft_type: str,
     output_path: Path,
-    cmap: str = 'turbo',
+    cmap=PFT_CMAP,
     biomass_threshold: float = 4e-3
 ):
     """
@@ -820,8 +826,7 @@ def main():
         ptrc_ds=ptrc_ds,
         pft_list=PHYTOS,
         pft_type='phyto',
-        output_path=output_dir / f"{args.run_name}_{args.year}_phytos.png",
-        cmap='turbo'
+        output_path=output_dir / f"{args.run_name}_{args.year}_phytos.png"
     )
 
     # 3. Zooplankton PFTs
@@ -831,8 +836,7 @@ def main():
         ptrc_ds=ptrc_ds,
         pft_list=ZOOS,
         pft_type='zoo',
-        output_path=output_dir / f"{args.run_name}_{args.year}_zoos.png",
-        cmap='turbo'
+        output_path=output_dir / f"{args.run_name}_{args.year}_zoos.png"
     )
 
     # 4. Nutrient maps

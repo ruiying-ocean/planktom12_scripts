@@ -160,8 +160,7 @@ def main():
             ptrc_ds=ptrc_ds,
             pft_list=PHYTOS,
             pft_type='phyto',
-            output_path=output_dir / f"{args.run_name}_{args.year}_phytos.png",
-            cmap='turbo'
+            output_path=output_dir / f"{args.run_name}_{args.year}_phytos.png"
         )
 
         # 2.3 Zooplankton maps
@@ -171,8 +170,7 @@ def main():
             ptrc_ds=ptrc_ds,
             pft_list=ZOOS,
             pft_type='zoo',
-            output_path=output_dir / f"{args.run_name}_{args.year}_zoos.png",
-            cmap='turbo'
+            output_path=output_dir / f"{args.run_name}_{args.year}_zoos.png"
         )
 
         # 2.4 Nutrient maps
