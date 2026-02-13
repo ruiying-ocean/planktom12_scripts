@@ -27,7 +27,7 @@ yearEnd:2024
 # CO2 (VARIABLE or STATIC)
 CO2:VARIABLE
 
-# Dynamic or bias run (DYNAMIC or BIAS)
+# Dynamic or bias run (transient or spinup)
 forcing_mode:transient
 
 # Forcing (NCEP or ERA)

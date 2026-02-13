@@ -230,10 +230,13 @@ fi
 # - other_years: uses cycling (spinup) or restart (transient)
 echo $forcing_mode
 ln -sf namelist_ref_coldstart namelist_ref_first_year
-if [ $forcing_mode == "spinup" ]; then
+if [ "$forcing_mode" == "spinup" ]; then
 	ln -sf namelist_ref_cycling namelist_ref_other_years
-else
+elif [ "$forcing_mode" == "transient" ]; then
 	ln -sf namelist_ref_restart namelist_ref_other_years
+else
+	echo "ERROR: unrecognized forcing_mode '$forcing_mode' (expected 'spinup' or 'transient')"
+	exit 1
 fi
 
 # Layer 3: Final symlink (based on restart file existence)
