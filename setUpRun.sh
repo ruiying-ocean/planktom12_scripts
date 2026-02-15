@@ -56,6 +56,7 @@ while IFS= read -r line; do
 			if [[ $name == "model" ]]; then Model=$val; fi
 			if [[ $name == "forcing_mode" ]]; then forcing_mode=$val; fi
 			if [[ $name == "compilerKey" ]]; then compKey=$val; fi
+			if [[ $name == "redate_restart" ]]; then redate_restart=$val; fi
 
 			# Tidy up parameters
 			if [[ $name == "spinupStart" ]]; then spinupStart=$val; fi
@@ -249,6 +250,8 @@ fi
 #   | Continued          | transient    | Yes         | restart  |
 #   | From spinup (*)    | spinup      | Yes         | cycling  |
 #   | From spinup (*)    | transient    | Yes         | restart  |
+#   | Redate             | spinup       | Yes         | redate   |
+#   | Redate             | transient    | Yes         | redate   |
 #   (*) setup_spin.sh copies restart files then switches namelist_ref -> other_years
 #
 if [ ! -f restart_0000.nc ]; then
@@ -355,10 +358,27 @@ if [ -n "$spinupModelId" ]; then
 	fi
 fi
 
+# ----- Redate mode -----
+if [ "$redate_restart" == "true" ]; then
+	echo "Redate mode: will read restart state but start at ${yearStart}0101"
+
+	# Create redate namelist from the other_years namelist (restart or cycling)
+	# but override nn_rstctl=0 so NEMO uses nn_date0 instead of restart date
+	cp -f namelist_ref_other_years namelist_ref_redate
+	sed -i "s/nn_rstctl.*=.*/nn_rstctl  = 0/"              namelist_ref_redate
+	sed -i "s/nn_date0.*=.*/nn_date0   = ${yearStart}0101/" namelist_ref_redate
+	sed -i "s/nn_it000.*=.*/nn_it000   = 1/"                namelist_ref_redate
+
+	# Use redate namelist for first year, then nemo.job switches to other_years
+	ln -sf namelist_ref_redate namelist_ref_first_year
+	rm -f namelist_ref
+	ln -s namelist_ref_first_year namelist_ref
+fi
+
 # ----- Export parameters the nemo.job file will need -----
 yearToRun=$yearStart
 
-echo "Exporting " $yearToRun $yearEnd $basedir $modelDir $simulation $Model $forcing_prefix $forcing_mode
+echo "Exporting " $yearToRun $yearEnd $basedir $modelDir $simulation $Model $forcing_prefix $forcing_mode $redate_restart
 export yearToRun yearStart yearEnd basedir modelDir simulation Model forcing_prefix forcing_mode
 
 read -p "Press any key to run it? (cntr+c otherwise)"
