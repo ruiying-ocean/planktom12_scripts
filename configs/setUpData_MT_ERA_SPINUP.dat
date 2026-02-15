@@ -188,7 +188,7 @@ namelist_top_cfg:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LI
 # Namelist of passive tracer information specific to PlankTOM
 #namelist.trc.sms:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist.trc.sms_tom12
 #namelist.trc.sms:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist.trc.sms_tom12ref
-namelist.trc.sms:/gpfs/home/vhf24tbu/EXP00/namelist.trc.sms.dev
+namelist.trc.sms:/gpfs/home/vhf24tbu/EXP00/namelist.trc.sms
 
 # Namelist for information specific to ice
 namelist_ice_cfg:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ice_cfg 
