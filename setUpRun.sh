@@ -1,5 +1,12 @@
 #!/bin/sh
 
+# Colors
+GREEN='\e[1;32m'
+CYAN='\e[1;36m'
+YELLOW='\e[1;33m'
+RED='\e[1;31m'
+RESET='\e[0m'
+
 date
 echo "To use: setUpRun <setUpData.dat> <Full Run ID> [SPINUP_MODEL_ID]"
 
@@ -28,8 +35,9 @@ version=$(echo $id | awk -F'_' '{print $1}')
 initials=$(echo $id | awk -F'_' '{print $2}')
 simulation=$(echo $id | awk -F'_' '{print $3}')
 
-echo "Setting up:                  " $version $initials $simulation
-echo "Reading run parameters from: " $setUpDatafile
+echo -e "${CYAN}--- Setup ---${RESET}"
+echo "  Run ID:     $version $initials $simulation"
+echo "  Config:     $setUpDatafile"
 
 # ----- Read setup data -----
 # Check if setUpDatafile is already an absolute path
@@ -134,9 +142,9 @@ while IFS= read -r line; do
 			fi
 
 			if [ "$skip" = true ]; then
-				echo "Skipping $name (forcing is $forcing)"
+				echo -e "${YELLOW}[SKIP]${RESET} $name (forcing is $forcing)"
 			elif [ -f $name ]; then
-				echo $name " exists so no fresh copy made "
+				echo -e "${YELLOW}[SKIP]${RESET} $name exists, no fresh copy made"
 			else
 				cp $val $name
 			fi
@@ -145,7 +153,7 @@ while IFS= read -r line; do
 		# Copy xml files in a way so changes can be made
 		if [[ $name == *".xml" ]]; then
 			if [ -f $name ]; then
-				echo $name " exists so no fresh copy made "
+				echo -e "${YELLOW}[SKIP]${RESET} $name exists, no fresh copy made"
 			else
 				cp $val $name
 			fi
@@ -153,7 +161,7 @@ while IFS= read -r line; do
 
 		# Copy the executable over, good to keep these.
 		if [[ $name == "opa"*$Model ]]; then
-			echo "copying " $val $name " for " $Model
+			echo -e "${GREEN}[OK]${RESET} Copying executable $name for $Model"
 			cp $val $name
 			ln -s $name opa
 		fi
@@ -166,7 +174,7 @@ if [ ! -f EMPave_${prevYear}.dat ]; then
 	ln -fs $EMPaveFile EMPave_${prevYear}.dat
 	ln -fs EMPave_${prevYear}.dat EMPave_old.dat
 else
-	echo "EMPave exists, using existing file!!!"
+	echo -e "${YELLOW}[SKIP]${RESET} EMPave exists, using existing file"
 	ln -fs EMPave_${prevYear}.dat EMPave_old.dat
 fi
 
@@ -184,13 +192,13 @@ if [ -s tmp ]; then
 fi
 
 rm tmp
-echo ${PIIC^^} ${C14^^}
+echo -e "${GREEN}[OK]${RESET} Compiler keys: ${PIIC^^} ${C14^^}"
 
 # ----- Process flags -----
 # CO2
 rm -f atmco2.dat
 
-echo $CO2
+echo -e "${GREEN}[OK]${RESET} CO2: $CO2"
 if [ $CO2 == "VARIABLE" ]; then
 	ln -s atmco2.dat.variable atmco2.dat
 else
@@ -200,7 +208,7 @@ fi
 # Forcing
 rm -f namelist_ref
 
-echo $forcing
+echo -e "${GREEN}[OK]${RESET} Forcing: $forcing"
 if [ $forcing == "NCEP" ]; then
 	forcing_prefix="ncep"
 elif [ $forcing == "ERA" ]; then
@@ -222,21 +230,21 @@ expectedDate="${yearStart}0101"
 currentDate=$( grep "nn_date0" namelist_ref_coldstart | head -1 | awk -F'=' '{print $2}' | awk '{print $1}' )
 
 if [ "$currentDate" != "$expectedDate" ]; then
-	echo -e "\e[1;33mNOTE\e[0m: Updating nn_date0 from $currentDate to $expectedDate to match yearStart"
+	echo -e "${YELLOW}NOTE${RESET}: Updating nn_date0 from $currentDate to $expectedDate to match yearStart"
 	sed -i "s/nn_date0.*=.*/nn_date0    = $expectedDate/" namelist_ref_coldstart
 fi
 
 # Layer 2: Temporal symlinks (when each is used)
 # - first_year:  always uses coldstart
 # - other_years: uses cycling (spinup) or restart (transient)
-echo $forcing_mode
+echo -e "${GREEN}[OK]${RESET} Forcing mode: $forcing_mode"
 ln -sf namelist_ref_coldstart namelist_ref_first_year
 if [ "$forcing_mode" == "spinup" ]; then
 	ln -sf namelist_ref_cycling namelist_ref_other_years
 elif [ "$forcing_mode" == "transient" ]; then
 	ln -sf namelist_ref_restart namelist_ref_other_years
 else
-	echo "ERROR: unrecognized forcing_mode '$forcing_mode' (expected 'spinup' or 'transient')"
+	echo -e "${RED}ERROR${RESET}: unrecognized forcing_mode '$forcing_mode' (expected 'spinup' or 'transient')"
 	exit 1
 fi
 
@@ -266,15 +274,15 @@ SR=$( grep "nn_sssr " namelist_ref | awk -F' ' '{print $3}' )
 LP=$( grep "ln_lop" namelist_top_ref | awk -F' ' '{print $3}' )
 
 if [ $TR = 1 ]; then
-	echo "TEMPERATURE RESTORING"
+	echo -e "${GREEN}[OK]${RESET} Temperature restoring: ON"
 else
-	echo "NO TEMPERATURE RESTORING"
+	echo -e "${CYAN}[--]${RESET} Temperature restoring: OFF"
 fi
 
 if [ $SR = 1 ]; then
-	echo "SALINITY RESTORING"
+	echo -e "${GREEN}[OK]${RESET} Salinity restoring: ON"
 else
-	echo "NO SALINITY RESTORING"
+	echo -e "${CYAN}[--]${RESET} Salinity restoring: OFF"
 fi
 
 # Check that files for LIMPHY are set correctly
@@ -283,24 +291,24 @@ KP=$( grep "^keepLimPhy:" $setUpDatafile | awk -F':' '{print $NF}' )
 err=0
 
 if [ $LP = ".true." ]; then
-	echo "LIMPHY TRUE"
+	echo -e "${GREEN}[OK]${RESET} LimPhy: ON"
 
 	if [ $KP != 1 ]; then
-		echo -e "\e[1;31mWARNING\e[0m : KEEP value for LimPhy not set to 1"
+		echo -e "${RED}WARNING${RESET}: KEEP value for LimPhy not set to 1"
 		err=1
 	fi
 else
-	echo "LIMPHY FALSE"
+	echo -e "${CYAN}[--]${RESET} LimPhy: OFF"
 
 	if [ $KP != 0 ]; then
-		echo -e "\e[1;31mWARNING\e[0m : KEEP value for LimPhy not set to 0"
+		echo -e "${RED}WARNING${RESET}: KEEP value for LimPhy not set to 0"
 		err=1
 	fi
 fi
 
 # Check iodef file exists
 if [ ! -f "$IODEF_PATH" ]; then
-	echo -e "\e[1;31mWARNING\e[0m : IODEF file does not exist: $IODEF_PATH"
+	echo -e "${RED}WARNING${RESET}: IODEF file does not exist: $IODEF_PATH"
 	err=1
 fi
 
@@ -334,7 +342,7 @@ fi
 
 # If analyser_config.toml does not exist (as specified in setUpData file) copy in default
 if [ ! -f analyser_config.toml ]; then
-	echo "Copying in default script for analyser_config.toml"
+	echo -e "${YELLOW}[SKIP]${RESET} analyser_config.toml missing, copying default"
 	cp ${SCRIPT_DIR}/analyser/analyser_config.toml analyser_config.toml
 fi
 
@@ -353,14 +361,14 @@ cp ${SCRIPT_DIR}/setUpRun.sh .
 if [ -n "$spinupModelId" ]; then
 	bash ${SCRIPT_DIR}/setup_spin.sh $id $spinupModelId
 	if [ $? -ne 0 ]; then
-		echo "Error: Spinup setup failed"
+		echo -e "${RED}Error${RESET}: Spinup setup failed"
 		exit 1
 	fi
 fi
 
 # ----- Redate mode -----
 if [ "$redate_restart" == "true" ]; then
-	echo "Redate mode: will read restart state but start at ${yearStart}0101"
+	echo -e "${CYAN}Redate mode${RESET}: will read restart state but start at ${yearStart}0101"
 
 	# Create redate namelist from the other_years namelist (restart or cycling)
 	# but override nn_rstctl=0 so NEMO uses nn_date0 instead of restart date
@@ -378,7 +386,14 @@ fi
 # ----- Export parameters the nemo.job file will need -----
 yearToRun=$yearStart
 
-echo "Exporting " $yearToRun $yearEnd $basedir $modelDir $simulation $Model $forcing_prefix $forcing_mode $redate_restart
+echo -e "${CYAN}--- Exporting ---${RESET}"
+echo "  yearToRun:      $yearToRun"
+echo "  yearEnd:        $yearEnd"
+echo "  modelDir:       $modelDir"
+echo "  simulation:     $simulation"
+echo "  Model:          $Model"
+echo "  forcing:        ${forcing_prefix} / ${forcing_mode}"
+echo "  redate_restart: ${redate_restart:-false}"
 export yearToRun yearStart yearEnd basedir modelDir simulation Model forcing_prefix forcing_mode
 
 read -p "Press any key to run it? (cntr+c otherwise)"
@@ -386,14 +401,14 @@ read -p "Press any key to run it? (cntr+c otherwise)"
 # Auto-select job file: use compute if 2+ jobs already on ib
 ib_jobs=$(squeue -p ib -u $USER -h 2>/dev/null | wc -l)
 if [ "$ib_jobs" -ge 2 ]; then
-	echo "IB partition has $ib_jobs jobs, using compute partition"
+	echo -e "${YELLOW}NOTE${RESET}: IB partition has $ib_jobs jobs, using compute partition"
 	sbatch -J${simulation}${yearToRun} < nemo_compute.job
 else
-	echo "IB partition has $ib_jobs jobs, using ib partition"
+	echo -e "${GREEN}[OK]${RESET} IB partition has $ib_jobs jobs, using ib partition"
 	sbatch -J${simulation}${yearToRun} < nemo.job
 fi
 
-echo "To check status of job 'squeue | grep <you user name>' "
+echo -e "${GREEN}[OK]${RESET} Job submitted. Check status: squeue -u \$USER"
 
 # ----- Save model details -----
 echo $2 "("$(date '+%a %d %b %T %Z %Y')")" >> ${HOME}/scratch/ModelRuns/modelRuns.txt
