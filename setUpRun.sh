@@ -56,7 +56,7 @@ else
 	dataFileFullPath=$(pwd)"/"$setUpDatafile
 fi
 
-while IFS= read -r line; do
+while IFS= read -r line || [ -n "$line" ]; do
 	if [ ! ${line:0:1} == "#" ]; then
 
 		# Pre-link processing
@@ -120,7 +120,7 @@ rm -f opa
 
 section "Links & Files"
 
-while IFS= read -r line; do
+while IFS= read -r line || [ -n "$line" ]; do
 	if [ ! ${line:0:1} == "#" ]; then
 
 		# Pre-link processing

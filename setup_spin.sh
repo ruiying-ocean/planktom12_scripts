@@ -157,7 +157,7 @@ ok "EMP file copied"
 
 ## copy namelist.trc.sms to make sure both are consistent - skip for spinup runs
 if [ "$FORCING_MODE" == "spinup" ]; then
-    skip "Spinup run: keeping existing namelist.trc.sms"
+    warn "Spinup run: keeping existing namelist.trc.sms"
 else
     NAMELIST_SOURCE="${SPIN_DIR}/namelist.trc.sms"
     NAMELIST_TARGET="${MODEL_RUN_DIR}/${MODEL_ID}/namelist.trc.sms"
