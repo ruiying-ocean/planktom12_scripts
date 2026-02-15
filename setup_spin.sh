@@ -119,7 +119,17 @@ echo "Updated namelist_ref -> namelist_ref_other_years"
 echo "============================================"
 
 ## copy EMP to new run directory
-EMP_SOURCE="${SPIN_DIR}/EMPave_$((FIRST_YEAR_TRANSIENT - 1)).dat"
+if [ "$REDATE_RESTART" == "true" ]; then
+    # Find the latest EMP file from the spinup directory
+    EMP_SOURCE=$(ls "${SPIN_DIR}"/EMPave_*.dat 2>/dev/null | sort -t'_' -k2 -n | tail -1)
+    if [ -z "$EMP_SOURCE" ]; then
+        echo "Error: No EMPave files found in ${SPIN_DIR}"
+        exit 1
+    fi
+    echo "Redate mode: using latest EMP file $(basename "$EMP_SOURCE")"
+else
+    EMP_SOURCE="${SPIN_DIR}/EMPave_$((FIRST_YEAR_TRANSIENT - 1)).dat"
+fi
 EMP_TARGET="${MODEL_RUN_DIR}/${MODEL_ID}/EMPave_$((FIRST_YEAR_TRANSIENT - 1)).dat"
 EMP_OLD="${MODEL_RUN_DIR}/${MODEL_ID}/EMPave.old"
 
