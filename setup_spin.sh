@@ -68,7 +68,20 @@ if [ -z "$FORCING_MODE" ]; then
     FORCING_MODE="spinup"
 fi
 
-TIMESTEP=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
+# Parse redate_restart from setup data file
+REDATE_RESTART=$(grep "^redate_restart:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
+
+if [ "$REDATE_RESTART" == "true" ]; then
+    # Find the latest restart timestep from the spinup directory
+    LATEST_RESTART=$(ls "${SPIN_DIR}"/ORCA2_*_restart_0000.nc 2>/dev/null | sort | tail -1)
+    if [ -z "$LATEST_RESTART" ]; then
+        echo "Error: No restart files found in ${SPIN_DIR}"
+        exit 1
+    fi
+    TIMESTEP=$(basename "$LATEST_RESTART" | sed 's/ORCA2_\(.*\)_restart_0000\.nc/\1/')
+else
+    TIMESTEP=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
+fi
 
 echo "============================================"
 echo "Using setUpData file: $TRANSIENT_SETUP_DATA"
