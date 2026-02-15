@@ -207,4 +207,3 @@ iodef.xml:/gpfs/home/vhf24tbu/EXP00/iodef_tom12piicc14.xml
 # How the domains (each area that a CPU calculates) are defined
 domain_def.xml:/gpfs/home/vhf24tbu/EXP00/domain_def.xml
 
-redate_restart:true

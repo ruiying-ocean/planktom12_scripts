@@ -83,20 +83,7 @@ if [ -z "$FORCING_MODE" ]; then
     FORCING_MODE="spinup"
 fi
 
-# Parse redate_restart from setup data file
-REDATE_RESTART=$(grep "^redate_restart:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
-
-if [ "$REDATE_RESTART" == "true" ]; then
-    # Find the latest restart timestep from the spinup directory
-    LATEST_RESTART=$(ls "${SPIN_DIR}"/ORCA2_*_restart_0000.nc 2>/dev/null | sort | tail -1)
-    if [ -z "$LATEST_RESTART" ]; then
-        warn "No restart files found in ${SPIN_DIR}"
-        exit 1
-    fi
-    TIMESTEP=$(basename "$LATEST_RESTART" | sed 's/ORCA2_\(.*\)_restart_0000\.nc/\1/')
-else
-    TIMESTEP=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
-fi
+TIMESTEP=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
 
 echo -e "  ${DIM}First year:${RESET}    $FIRST_YEAR_TRANSIENT"
 echo -e "  ${DIM}Forcing:${RESET}       $FORCING ($FORCING_MODE)"
@@ -124,17 +111,7 @@ ln -s namelist_ref_other_years ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
 ok "namelist_ref → namelist_ref_other_years"
 
 ## copy EMP to new run directory
-if [ "$REDATE_RESTART" == "true" ]; then
-    # Find the latest EMP file from the spinup directory
-    EMP_SOURCE=$(ls "${SPIN_DIR}"/EMPave_*.dat 2>/dev/null | sort -t'_' -k2 -n | tail -1)
-    if [ -z "$EMP_SOURCE" ]; then
-        warn "No EMPave files found in ${SPIN_DIR}"
-        exit 1
-    fi
-    info "Redate: using $(basename "$EMP_SOURCE")"
-else
-    EMP_SOURCE="${SPIN_DIR}/EMPave_$((FIRST_YEAR_TRANSIENT - 1)).dat"
-fi
+EMP_SOURCE="${SPIN_DIR}/EMPave_$((FIRST_YEAR_TRANSIENT - 1)).dat"
 EMP_TARGET="${MODEL_RUN_DIR}/${MODEL_ID}/EMPave_$((FIRST_YEAR_TRANSIENT - 1)).dat"
 EMP_OLD="${MODEL_RUN_DIR}/${MODEL_ID}/EMPave.old"
 
