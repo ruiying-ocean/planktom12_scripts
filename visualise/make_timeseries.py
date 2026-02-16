@@ -80,6 +80,10 @@ class ModelDataLoader:
         if average_df is not None and "RLS" in average_df.columns:
             rls_data = self._extract_arrays(average_df, ["RLS"])
             avg_data["rls"] = rls_data["RLS"]
+        # Try to load AMOC if available in analyser output
+        if average_df is not None and "AMOC" in average_df.columns:
+            amoc_data = self._extract_arrays(average_df, ["AMOC"])
+            avg_data.update(amoc_data)
         data.update(avg_data)
 
         int_df = self._read_analyser_file("int")
@@ -216,7 +220,7 @@ class FigureCreator:
     def create_physics_summary(self, data):
         self._create_summary_from_config(
             data, self.config['plot_info']['physics'],
-            None, 'physics_summary', 'summary_physics')
+            ObservationData.get_physics(), 'physics_summary', 'summary_physics')
 
     def create_derived_summary(self, data):
         self._create_summary_from_config(

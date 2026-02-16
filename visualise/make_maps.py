@@ -634,6 +634,29 @@ def plot_carbon_chemistry(
     print(f"Saved: {output_path}")
 
 
+def plot_amoc_streamfunction(
+    moc_path: Path,
+    output_path: Path,
+):
+    """
+    Plot AMOC streamfunction from a MOC NetCDF file produced by cdfmoc.
+
+    Reads the MOC file, extracts the Atlantic streamfunction, and creates
+    a depth-latitude contour plot with RdBu_r colormap.
+
+    Args:
+        moc_path: Path to moc_{year}.nc file
+        output_path: Where to save the figure
+    """
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'shared'))
+    from amoc import read_moc_file, plot_amoc_streamfunction as _plot_sf
+
+    moc_ds = read_moc_file(str(moc_path))
+    _plot_sf(moc_ds, str(output_path))
+    moc_ds.close()
+
+
 def plot_derived_variables(
     plotter: OceanMapPlotter,
     diad_ds: xr.Dataset,

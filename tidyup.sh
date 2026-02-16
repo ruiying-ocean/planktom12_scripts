@@ -59,6 +59,13 @@ fi
 echo "Copying data centrally"
 for (( y=$yearFrom; y<=$yearTo; y++ )); do
 
+         # Compute AMOC from grid_V using CDFtools (before analyser so moc file is ready)
+	grid_v_file="ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc"
+	grid_t_file="ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc"
+	if [ -f "$grid_v_file" ]; then
+		bash compute_amoc.sh "$grid_v_file" "$grid_t_file"
+	fi
+
          # Python based totalling
          echo "Python version: $(which python)"
 	python3 analyser.py analyser_config.toml ${y} ${y}
@@ -89,6 +96,12 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 		if [[ $keepGrid_V -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc $afm_dir$model_id; fi
 		if [[ $keepGrid_W -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc $afm_dir$model_id; fi
 		if [[ $keepLimPhy -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_limphy.nc $afm_dir$model_id; fi
+
+		# Copy MOC file if it exists
+		if [[ -f MOC/moc_${y}.nc ]]; then
+			mkdir -p $afm_dir$model_id/MOC
+			cp MOC/moc_${y}.nc $afm_dir$model_id/MOC/
+		fi
 
 		echo "Copying extra set up data and EMPave files"
 		cp EMPave_${y}.dat $afm_dir$model_id
@@ -171,6 +184,13 @@ if [[ $yearTo -eq $yearEnd ]]; then
 	# copy all analyser files to base model directory
 	echo "copying analyser files"
 	cp analyser* $afm_dir$model_id
+
+	# copy all MOC files to base model directory
+	if [ -d MOC ] && ls MOC/moc_*.nc 1>/dev/null 2>&1; then
+		echo "copying MOC files"
+		mkdir -p $afm_dir$model_id/MOC
+		cp MOC/moc_*.nc $afm_dir$model_id/MOC/
+	fi
 
 	# run script to generate monthly regional plots
 	python3 make_monthly_plots.py --model-id $model_id --model-dir $modelOutputDir

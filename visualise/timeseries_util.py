@@ -48,6 +48,7 @@ class ObservationData:
     GLOBAL = {}
     PFT = {}
     NUTRIENTS = {}
+    PHYSICS = {}
 
     @classmethod
     def _ensure_loaded(cls):
@@ -85,6 +86,15 @@ class ObservationData:
         # Load nutrient observations
         cls.NUTRIENTS = obs_config.get('nutrients', {})
 
+        # Load physics observations
+        physics_config = obs_config.get('physics', {})
+        cls.PHYSICS = {}
+        for key, value in physics_config.items():
+            if isinstance(value, list) and len(value) == 2:
+                cls.PHYSICS[key] = {"min": value[0], "max": value[1], "type": "range"}
+            elif isinstance(value, (int, float)):
+                cls.PHYSICS[key] = {"value": value, "type": "line"}
+
         cls._loaded = True
 
     @classmethod
@@ -104,6 +114,12 @@ class ObservationData:
         """Get nutrient observation data."""
         cls._ensure_loaded()
         return cls.NUTRIENTS
+
+    @classmethod
+    def get_physics(cls) -> Dict[str, Any]:
+        """Get physics observation data (e.g., AMOC from RAPID)."""
+        cls._ensure_loaded()
+        return cls.PHYSICS
 
     # Monthly pCO2 data by region (from data products)
     PCO2_MONTHLY = {

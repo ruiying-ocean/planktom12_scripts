@@ -77,6 +77,10 @@ ${SETUPDATA_SUMMARY}
 
 ![](${identifier}_${end_year}_carbon_chemistry.png)
 
+## AMOC Streamfunction
+
+![](${identifier}_${end_year}_amoc_streamfunction.png)
+
 ## Vertical Transects
 
 ### Atlantic (35°W)
@@ -143,6 +147,7 @@ Basin-averaged vertical profiles comparing model output with observations.
 - **Nutrients**: [World Ocean Atlas 2018](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.nodc:NCEI-WOA18)
 - **Iron**: [Huang et al. (2022)](https://doi.org/10.3389/fmars.2022.837183)
 - **Carbon Chemistry (ALK, DIC)**: [GLODAP v2](https://www.glodap.info/)
+- **AMOC**: [RAPID/MOCHA array](https://rapid.ac.uk/) (Smeed et al., 2018)
 - **pCO₂**: [Global Carbon Budget 2022](https://essd.copernicus.org/articles/14/4811/2022/)
 - **Temperature & Salinity**: WOA18 (2005-2018 period)
 :::

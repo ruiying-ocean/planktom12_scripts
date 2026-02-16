@@ -26,7 +26,8 @@ from make_maps import (
     plot_ecosystem_diagnostics,
     plot_nutrient_comparison,
     plot_carbon_chemistry,
-    plot_derived_variables
+    plot_derived_variables,
+    plot_amoc_streamfunction
 )
 from make_transects import plot_basin_transects, plot_pft_transects
 from make_vertical_profiles import plot_vertical_profiles
@@ -64,6 +65,8 @@ def main():
                        help='Skip loading and comparing with observations')
     parser.add_argument('--with-difference-maps', action='store_true',
                        help='Generate detailed model-observation difference maps')
+    parser.add_argument('--skip-amoc', action='store_true',
+                       help='Skip generating AMOC streamfunction plot')
     parser.add_argument('--max-depth', type=float, default=500.0,
                        help='Maximum depth for PFT transects in meters (default: 500)')
 
@@ -260,6 +263,21 @@ def main():
             )
 
         print_success("Spatial maps complete\n")
+
+    # ========================================================================
+    # STEP 2b: AMOC Streamfunction
+    # ========================================================================
+    if not args.skip_amoc:
+        moc_file = run_dir / "MOC" / f"moc_{args.year}.nc"
+        if moc_file.exists():
+            print_step(1, 1, "AMOC streamfunction")
+            plot_amoc_streamfunction(
+                moc_path=moc_file,
+                output_path=output_dir / f"{args.run_name}_{args.year}_amoc_streamfunction.png"
+            )
+            print_success("AMOC streamfunction complete\n")
+        else:
+            print_warning(f"MOC file not found ({moc_file}), skipping AMOC streamfunction")
 
     # ========================================================================
     # STEP 3: Generate Transects
