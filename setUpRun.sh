@@ -342,6 +342,7 @@ fi
 # Get tidying up scripts
 ln -fs ${SCRIPT_DIR}/tidyup.sh tidyup.sh
 ln -fs ${SCRIPT_DIR}/tidyup.job tidyup.job
+ln -fs ${SCRIPT_DIR}/compute_amoc.sh compute_amoc.sh
 
 # Get analyser scripts
 cp ${SCRIPT_DIR}/analyser/analyser*.py .
