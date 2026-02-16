@@ -145,7 +145,8 @@ NO3 = 5.044  # Nitrate [μmol/L] - surface
 Si = 7.227  # Silica [μmol/L] - surface
 O2 = 168.3  # Oxygen [μmol/L] - at 300m depth
 Alkalini = 2352.49  # Alkalinity [μmol/L] - GLODAP
-# Fer and AOU have no reliable global observations
+AOU = 110.68  # AOU [μmol/kg] - at 300m depth
+# Fer has no reliable global observations
 
 # Plot titles and units (title = subplot heading, unit = y-axis label)
 [plot_info.ecosystem]
