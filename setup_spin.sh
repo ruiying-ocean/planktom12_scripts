@@ -91,7 +91,7 @@ echo -e "  ${DIM}Timestep:${RESET}      $TIMESTEP"
 
 # Command
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-bash ${SCRIPT_DIR}/setup_restarts_RY.sh $SPIN_DIR $TIMESTEP ${MODEL_RUN_DIR}/${MODEL_ID}
+bash ${SCRIPT_DIR}/setup_restarts.sh $SPIN_DIR $TIMESTEP ${MODEL_RUN_DIR}/${MODEL_ID}
 if [ $? -ne 0 ]; then
     warn "Setup restarts script failed"
     exit 1
