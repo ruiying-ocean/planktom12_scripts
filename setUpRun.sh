@@ -348,16 +348,10 @@ ln -fs ${SCRIPT_DIR}/compute_amoc.sh compute_amoc.sh
 for file in ${SCRIPT_DIR}/analyser/analyser*.py; do
 	ln -fs $file $(basename $file)
 done
-cp ${SCRIPT_DIR}/analyser/analyser_config.toml .
+ln -fs ${SCRIPT_DIR}/analyser/analyser_config.toml .
 ln -fs ${SCRIPT_DIR}/shared shared
 if [ -f ${SCRIPT_DIR}/iodef_tom12piicc14.xml ]; then
 	cp ${SCRIPT_DIR}/iodef_tom12piicc14.xml .
-fi
-
-# If analyser_config.toml does not exist (as specified in setUpData file) copy in default
-if [ ! -f analyser_config.toml ]; then
-	skip "analyser_config.toml missing, copying default"
-	cp ${SCRIPT_DIR}/analyser/analyser_config.toml analyser_config.toml
 fi
 
 # Get visualise scripts and files

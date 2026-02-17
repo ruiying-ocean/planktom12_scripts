@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import numpy as np
-import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -65,35 +64,28 @@ class ModelDataLoader:
         data.update(level_data)
 
         average_df = self._read_analyser_file("ave")
-        avg_cols = ["TChl", "PO4", "NO3", "Fer", "Si", "O2", "tos", "sos", "mldr10_1", "Alkalini", "DIC"]
+        avg_cols = [
+            "TChl", "PO4", "NO3", "Fer", "Si", "O2",
+            "tos", "sos", "mldr10_1", "pCO2", "Alkalini", "DIC",
+            "AOU", "RLS", "AMOC",
+            "bPO4", "bNO3", "bFer", "bSi", "bO2", "bAlkalini", "bDIC",
+        ]
         avg_data = self._extract_arrays(average_df, avg_cols)
-        avg_data["nFer"] = avg_data["Fer"] * 1000
-        avg_data["nPO4"] = avg_data["PO4"] / 122
-        avg_data["ALK_DIC"] = avg_data["Alkalini"] - avg_data["DIC"]
-        avg_data["SST"] = avg_data["tos"]
-        avg_data["SSS"] = avg_data["sos"]
-        avg_data["MLD"] = avg_data["mldr10_1"]
-        # Try to load AOU if available in analyser output
-        if average_df is not None and "AOU" in average_df.columns:
-            aou_data = self._extract_arrays(average_df, ["AOU"])
-            avg_data.update(aou_data)
-        # Try to load RLS if available in analyser output
-        if average_df is not None and "RLS" in average_df.columns:
-            rls_data = self._extract_arrays(average_df, ["RLS"])
-            avg_data["rls"] = rls_data["RLS"]
-        # Try to load AMOC if available in analyser output
-        if average_df is not None and "AMOC" in average_df.columns:
-            amoc_data = self._extract_arrays(average_df, ["AMOC"])
-            avg_data.update(amoc_data)
-        # Load benthic (deep-ocean) variables if available
-        benthic_cols = ["bPO4", "bNO3", "bFer", "bSi", "bO2", "bAlkalini", "bDIC"]
-        if average_df is not None:
-            available_benthic = [c for c in benthic_cols if c in average_df.columns]
-            if available_benthic:
-                benthic_data = self._extract_arrays(average_df, available_benthic)
-                if "bFer" in benthic_data:
-                    benthic_data["bFer"] = benthic_data["bFer"] * 1000  # mol->nmol
-                avg_data.update(benthic_data)
+        # Derived variables: (output_key, [dependencies], transform)
+        # Skipped automatically when dependencies are missing from the CSV
+        derived = [
+            ("nFer",    ["Fer"],              lambda d: d["Fer"] * 1000),
+            ("nPO4",    ["PO4"],              lambda d: d["PO4"] / 122),
+            ("ALK_DIC", ["Alkalini", "DIC"],  lambda d: d["Alkalini"] - d["DIC"]),
+            ("SST",     ["tos"],              lambda d: d["tos"]),
+            ("SSS",     ["sos"],              lambda d: d["sos"]),
+            ("MLD",     ["mldr10_1"],         lambda d: d["mldr10_1"]),
+            ("rls",     ["RLS"],              lambda d: d["RLS"]),
+            ("bFer",    ["bFer"],             lambda d: d["bFer"] * 1000),
+        ]
+        for key, deps, func in derived:
+            if all(d in avg_data for d in deps):
+                avg_data[key] = func(avg_data)
         data.update(avg_data)
 
         int_df = self._read_analyser_file("int")
