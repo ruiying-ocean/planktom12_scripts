@@ -65,10 +65,11 @@ class ModelDataLoader:
         data.update(level_data)
 
         average_df = self._read_analyser_file("ave")
-        avg_cols = ["TChl", "PO4", "NO3", "Fer", "Si", "O2", "tos", "sos", "mldr10_1", "Alkalini"]
+        avg_cols = ["TChl", "PO4", "NO3", "Fer", "Si", "O2", "tos", "sos", "mldr10_1", "Alkalini", "DIC"]
         avg_data = self._extract_arrays(average_df, avg_cols)
         avg_data["nFer"] = avg_data["Fer"] * 1000
         avg_data["nPO4"] = avg_data["PO4"] / 122
+        avg_data["ALK_DIC"] = avg_data["Alkalini"] - avg_data["DIC"]
         avg_data["SST"] = avg_data["tos"]
         avg_data["SSS"] = avg_data["sos"]
         avg_data["MLD"] = avg_data["mldr10_1"]
@@ -225,7 +226,7 @@ class FigureCreator:
     def create_derived_summary(self, data):
         self._create_summary_from_config(
             data, self.config['plot_info']['derived'],
-            None, 'derived_summary', 'summary_derived')
+            ObservationData.get_derived(), 'derived_summary', 'summary_derived')
 
     def create_organic_carbon_summary(self, data):
         self._create_summary_from_config(

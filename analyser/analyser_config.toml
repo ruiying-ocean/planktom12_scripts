@@ -576,3 +576,66 @@ depth_to_m = 0.0
 units = "u/L"
 lon_range = [ -180, 180 ]
 lat_range = [ -90, 90 ]
+
+[[average]]
+variable = "DIC"
+depth_from_m = 0.0
+depth_to_m = 0.0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+
+# Deep-ocean nutrients (>2000m average)
+[[average]]
+variable = "PO4"
+depth_from_m = 2000.0
+depth_to_m = 6000.0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+column_name = "dPO4"
+
+[[average]]
+variable = "NO3"
+depth_from_m = 2000.0
+depth_to_m = 6000.0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+column_name = "dNO3"
+
+[[average]]
+variable = "Si"
+depth_from_m = 2000.0
+depth_to_m = 6000.0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+column_name = "dSi"
+
+[[average]]
+variable = "O2"
+depth_from_m = 2000.0
+depth_to_m = 6000.0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+column_name = "dO2"
+
+[[average]]
+variable = "Fer"
+depth_from_m = 2000.0
+depth_to_m = 6000.0
+units = "u/L"
+lon_range = [ -180, 180 ]
+lat_range = [ -90, 90 ]
+column_name = "dFer"
+
+# AOU configuration (derived variable, computed from O2 + T + S)
+[[aou]]
+target_depth_m = 300.0
+column_name = "AOU"
+
+[[aou]]
+target_depth_m = 2000.0
+column_name = "dAOU"

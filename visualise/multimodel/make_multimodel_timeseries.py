@@ -1104,7 +1104,7 @@ class NutrientPlotter(PlotGenerator):
     """Generates nutrient summary plots"""
 
     def generate(self):
-        # Use 3x3 grid for 7 nutrients (matching single-model)
+        # Use 3x3 grid for 8 nutrients (matching single-model)
         fig, axes = plt.subplots(
             3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=True,
             constrained_layout=USE_CONSTRAINED_LAYOUT
@@ -1140,7 +1140,8 @@ class NutrientPlotter(PlotGenerator):
             ("Si", axes[3], "Surface Silica", "μmol/L", 1, False),
             ("O2", axes[4], "Oxygen at 300m", "μmol/L", 1, False),
             ("Alkalini", axes[5], "Surface Alkalinity", "μmol/L", 1, False),
-            ("AOU", axes[6], "AOU at 300m", "μmol/L", 1, False),
+            ("DIC", axes[6], "Surface DIC", "μmol/L", 1, False),
+            ("AOU", axes[7], "AOU at 300m", "μmol/L", 1, False),
         ]
 
         for idx, (col_name, ax, title, ylabel, scale, add_label) in enumerate(plot_configs):
@@ -1157,13 +1158,13 @@ class NutrientPlotter(PlotGenerator):
                 )
                 ax.set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 ax.set_ylabel(ylabel)
-                # Add xlabel only to bottom row (indices 6, 7, 8 in 3x3 grid)
-                if idx >= 6:
+                # Add xlabel only to bottom row (last 3 in 3x3 grid)
+                if idx >= 5:
                     ax.set_xlabel("Year", fontweight='bold')
 
     def _add_observational_data(self, axes):
-        # Add observation lines for all 7 nutrients
-        nutrient_keys = ["PO4", "NO3", "Fer", "Si", "O2", "Alkalini", "AOU"]
+        # Add observation lines for all 8 nutrients
+        nutrient_keys = ["PO4", "NO3", "Fer", "Si", "O2", "Alkalini", "DIC", "AOU"]
         for i, key in enumerate(nutrient_keys):
             if i < len(axes) and key in ObservationData.get_nutrients():
                 obs_value = ObservationData.get_nutrients()[key]
@@ -1357,14 +1358,23 @@ class DerivedSummaryPlotter(PlotGenerator):
 
     def generate(self):
         fig, axes = plt.subplots(
-            2, 3, figsize=(3 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
+            3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=True,
             constrained_layout=USE_CONSTRAINED_LAYOUT
         )
         axes = axes.flatten()
 
-        setup_axes(axes[:6])
+        setup_axes(axes[:7])
 
         self.plot_all_models(fig, axes, self._plot_model)
+
+        # Add observation line for ALK-DIC
+        derived_obs = ObservationData.get_derived()
+        if "ALK_DIC" in derived_obs:
+            axes[6].axhline(derived_obs["ALK_DIC"], **LINE_STYLE)
+
+        # Hide unused subplots
+        for idx in range(7, len(axes)):
+            axes[idx].set_visible(False)
 
         self.add_legend(fig)
         self.save_figure(fig, "multimodel_summary_derived.png")
@@ -1421,7 +1431,6 @@ class DerivedSummaryPlotter(PlotGenerator):
                 axes[5].plot(year[:min_len], spratio, color=color, linewidth=LINE_WIDTH)
                 axes[5].set_title("SP/NPP", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[5].set_ylabel("Dimensionless")
-                axes[5].set_xlabel("Year", fontweight='bold')
 
         if exp is not None and ppt is not None:
             min_len = min(len(year), len(exp), len(ppt))
@@ -1429,7 +1438,6 @@ class DerivedSummaryPlotter(PlotGenerator):
             axes[2].plot(year[:min_len], eratio, color=color, linewidth=LINE_WIDTH)
             axes[2].set_title("Export Ratio (e-ratio)", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
             axes[2].set_ylabel("Dimensionless")
-            axes[2].set_xlabel("Year", fontweight='bold')
 
         if exp1000 is not None and exp is not None:
             min_len = min(len(year), len(exp1000), len(exp))
@@ -1437,9 +1445,8 @@ class DerivedSummaryPlotter(PlotGenerator):
             axes[3].plot(year[:min_len], teff, color=color, linewidth=LINE_WIDTH)
             axes[3].set_title("Transfer Efficiency", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
             axes[3].set_ylabel("Dimensionless")
-            axes[3].set_xlabel("Year", fontweight='bold')
 
-        # RLS from average file
+        # RLS and ALK-DIC from average file
         ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
         if ave_data is not None:
             rls = DataLoader.safe_load_column(ave_data, "RLS", indices)
@@ -1448,7 +1455,16 @@ class DerivedSummaryPlotter(PlotGenerator):
                 axes[4].plot(plot_year, plot_rls, color=color, linewidth=LINE_WIDTH)
                 axes[4].set_title("RLS", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[4].set_ylabel("m")
-                axes[4].set_xlabel("Year", fontweight='bold')
+
+            alk = DataLoader.safe_load_column(ave_data, "Alkalini", indices)
+            dic = DataLoader.safe_load_column(ave_data, "DIC", indices)
+            if alk is not None and dic is not None:
+                min_len = min(len(year), len(alk), len(dic))
+                alk_dic = alk[:min_len] - dic[:min_len]
+                axes[6].plot(year[:min_len], alk_dic, color=color, linewidth=LINE_WIDTH)
+                axes[6].set_title("ALK \u2212 DIC", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[6].set_ylabel("\u03bcmol/L")
+                axes[6].set_xlabel("Year", fontweight='bold')
 
 
 class DerivedSummaryNormalizedPlotter(PlotGenerator):
@@ -1456,14 +1472,18 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
 
     def generate(self):
         fig, axes = plt.subplots(
-            2, 3, figsize=(3 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
+            3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=True,
             constrained_layout=USE_CONSTRAINED_LAYOUT
         )
         axes = axes.flatten()
 
-        setup_axes(axes[:6])
+        setup_axes(axes[:7])
 
         self.plot_all_models(fig, axes, self._plot_model)
+
+        # Hide unused subplots
+        for idx in range(7, len(axes)):
+            axes[idx].set_visible(False)
 
         self.add_legend(fig)
         self.save_figure(fig, "multimodel_summary_derived_normalized.png")
@@ -1521,7 +1541,6 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
                 axes[5].plot(year[:min_len], spratio_norm, color=color, linewidth=LINE_WIDTH)
                 axes[5].set_title("SP/NPP anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[5].set_ylabel("Dimensionless")
-                axes[5].set_xlabel("Year", fontweight='bold')
                 axes[5].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
         if exp is not None and ppt is not None:
@@ -1531,7 +1550,6 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
             axes[2].plot(year[:min_len], eratio_norm, color=color, linewidth=LINE_WIDTH)
             axes[2].set_title("Export Ratio anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
             axes[2].set_ylabel("Dimensionless")
-            axes[2].set_xlabel("Year", fontweight='bold')
             axes[2].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
         if exp1000 is not None and exp is not None:
@@ -1541,10 +1559,9 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
             axes[3].plot(year[:min_len], teff_norm, color=color, linewidth=LINE_WIDTH)
             axes[3].set_title("Transfer Efficiency anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
             axes[3].set_ylabel("Dimensionless")
-            axes[3].set_xlabel("Year", fontweight='bold')
             axes[3].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
-        # RLS from average file
+        # RLS and ALK-DIC from average file
         ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
         if ave_data is not None:
             rls = DataLoader.safe_load_column(ave_data, "RLS", indices)
@@ -1554,8 +1571,19 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
                 axes[4].plot(plot_year, rls_norm, color=color, linewidth=LINE_WIDTH)
                 axes[4].set_title("RLS anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[4].set_ylabel("m")
-                axes[4].set_xlabel("Year", fontweight='bold')
                 axes[4].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+
+            alk = DataLoader.safe_load_column(ave_data, "Alkalini", indices)
+            dic = DataLoader.safe_load_column(ave_data, "DIC", indices)
+            if alk is not None and dic is not None:
+                min_len = min(len(year), len(alk), len(dic))
+                alk_dic = alk[:min_len] - dic[:min_len]
+                alk_dic_norm = GlobalSummaryNormalizedPlotter._normalize_series(alk_dic)
+                axes[6].plot(year[:min_len], alk_dic_norm, color=color, linewidth=LINE_WIDTH)
+                axes[6].set_title("ALK \u2212 DIC anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                axes[6].set_ylabel("\u03bcmol/L")
+                axes[6].set_xlabel("Year", fontweight='bold')
+                axes[6].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
 
 class OrganicMatterPlotter(PlotGenerator):

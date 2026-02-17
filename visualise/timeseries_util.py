@@ -48,6 +48,7 @@ class ObservationData:
     GLOBAL = {}
     PFT = {}
     NUTRIENTS = {}
+    DERIVED = {}
     PHYSICS = {}
 
     @classmethod
@@ -86,6 +87,9 @@ class ObservationData:
         # Load nutrient observations
         cls.NUTRIENTS = obs_config.get('nutrients', {})
 
+        # Load derived variable observations
+        cls.DERIVED = obs_config.get('derived', {})
+
         # Load physics observations
         physics_config = obs_config.get('physics', {})
         cls.PHYSICS = {}
@@ -114,6 +118,12 @@ class ObservationData:
         """Get nutrient observation data."""
         cls._ensure_loaded()
         return cls.NUTRIENTS
+
+    @classmethod
+    def get_derived(cls) -> Dict[str, Any]:
+        """Get derived variable observation data."""
+        cls._ensure_loaded()
+        return cls.DERIVED
 
     @classmethod
     def get_physics(cls) -> Dict[str, Any]:
