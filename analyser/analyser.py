@@ -393,7 +393,7 @@ for year in range(year_from, year_to + 1):
     try:
         moc_file = Path(f"MOC/moc_{year}.nc")
         if moc_file.exists():
-            sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'shared'))
+            sys.path.insert(0, str(Path(__file__).parent / 'shared'))
             from amoc import read_moc_file, extract_amoc_26n
             moc_ds = read_moc_file(str(moc_file))
             amoc_result = extract_amoc_26n(moc_ds)
