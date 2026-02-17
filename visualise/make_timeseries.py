@@ -85,6 +85,15 @@ class ModelDataLoader:
         if average_df is not None and "AMOC" in average_df.columns:
             amoc_data = self._extract_arrays(average_df, ["AMOC"])
             avg_data.update(amoc_data)
+        # Load benthic (deep-ocean) variables if available
+        benthic_cols = ["bPO4", "bNO3", "bFer", "bSi", "bO2", "bAlkalini", "bDIC"]
+        if average_df is not None:
+            available_benthic = [c for c in benthic_cols if c in average_df.columns]
+            if available_benthic:
+                benthic_data = self._extract_arrays(average_df, available_benthic)
+                if "bFer" in benthic_data:
+                    benthic_data["bFer"] = benthic_data["bFer"] * 1000  # mol->nmol
+                avg_data.update(benthic_data)
         data.update(avg_data)
 
         int_df = self._read_analyser_file("int")
@@ -228,6 +237,11 @@ class FigureCreator:
             data, self.config['plot_info']['derived'],
             ObservationData.get_derived(), 'derived_summary', 'summary_derived')
 
+    def create_benthic_summary(self, data):
+        self._create_summary_from_config(
+            data, self.config['plot_info']['benthic'],
+            ObservationData.get_benthic(), 'benthic_summary', 'summary_benthic')
+
     def create_organic_carbon_summary(self, data):
         self._create_summary_from_config(
             data, self.config['plot_info']['organic_carbon'],
@@ -279,6 +293,7 @@ def main():
         creator.create_nutrient_summary(data)
         creator.create_physics_summary(data)
         creator.create_derived_summary(data)
+        creator.create_benthic_summary(data)
         creator.create_organic_carbon_summary(data)
         creator.create_ppt_by_pft_summary(data)
 

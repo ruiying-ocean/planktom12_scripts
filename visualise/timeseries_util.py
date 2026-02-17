@@ -49,6 +49,7 @@ class ObservationData:
     PFT = {}
     NUTRIENTS = {}
     DERIVED = {}
+    BENTHIC = {}
     PHYSICS = {}
 
     @classmethod
@@ -90,6 +91,9 @@ class ObservationData:
         # Load derived variable observations
         cls.DERIVED = obs_config.get('derived', {})
 
+        # Load benthic (deep-ocean) observations
+        cls.BENTHIC = obs_config.get('benthic', {})
+
         # Load physics observations
         physics_config = obs_config.get('physics', {})
         cls.PHYSICS = {}
@@ -124,6 +128,12 @@ class ObservationData:
         """Get derived variable observation data."""
         cls._ensure_loaded()
         return cls.DERIVED
+
+    @classmethod
+    def get_benthic(cls) -> Dict[str, Any]:
+        """Get benthic (deep-ocean) observation data."""
+        cls._ensure_loaded()
+        return cls.BENTHIC
 
     @classmethod
     def get_physics(cls) -> Dict[str, Any]:

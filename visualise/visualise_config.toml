@@ -58,6 +58,10 @@ cols = 3
 rows = 2
 cols = 2
 
+[layout.benthic_summary]
+rows = 3
+cols = 3
+
 [layout.ppt_by_pft_summary]
 rows = 2
 cols = 3
@@ -152,6 +156,15 @@ AOU = 110.68  # AOU [μmol/kg] - at 300m depth
 [observations.derived]
 ALK_DIC = 275.13  # ALK-DIC [μmol/kg] - GLODAPv2.2016b (2296.80 - 2021.67)
 
+[observations.benthic]
+bPO4 = 2.23  # Phosphate [μmol/kg] - GLODAP 2000-5000m area-weighted mean
+bNO3 = 32.00  # Nitrate [μmol/kg] - GLODAP 2000-5000m area-weighted mean
+bSi = 110.24  # Silica [μmol/kg] - WOA 2000-5000m area-weighted mean
+bO2 = 179.52  # Oxygen [μmol/kg] - GLODAP 2000-5000m area-weighted mean
+bDIC = 2277.37  # DIC [μmol/kg] - GLODAP 2000-5000m area-weighted mean
+bAlkalini = 2380.37  # Alkalinity [μmol/kg] - GLODAP 2000-5000m area-weighted mean
+# bFer has no reliable deep-ocean observations
+
 # Plot titles and units (title = subplot heading, unit = y-axis label)
 [plot_info.ecosystem]
 Cflx = {title = "Air-Sea Carbon Flux", unit = "PgC/yr", color_index = 0}
@@ -209,6 +222,15 @@ Teff = {title = "Transfer Efficiency", unit = "Dimensionless", color_index = 3}
 rls = {title = "RLS", unit = "m", color_index = 4}
 spratio = {title = "SP/NPP", unit = "Dimensionless", color_index = 5}
 ALK_DIC = {title = "ALK − DIC", unit = "μmol/L", color_index = 6}
+
+[plot_info.benthic]
+bPO4 = {title = "Deep Phosphate", unit = "μmol/L", color_index = 0}
+bNO3 = {title = "Deep Nitrate", unit = "μmol/L", color_index = 1}
+bFer = {title = "Deep Iron", unit = "nmol/L", color_index = 2}
+bSi = {title = "Deep Silica", unit = "μmol/L", color_index = 3}
+bO2 = {title = "Deep Oxygen", unit = "μmol/L", color_index = 4}
+bAlkalini = {title = "Deep Alkalinity", unit = "μmol/L", color_index = 5}
+bDIC = {title = "Deep DIC", unit = "μmol/L", color_index = 6}
 
 [plot_info.organic_carbon]
 POC = {title = "POC", unit = "PgC", color_index = 0}

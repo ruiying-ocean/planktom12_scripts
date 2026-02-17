@@ -1175,6 +1175,78 @@ class NutrientPlotter(PlotGenerator):
             axes[idx].set_visible(False)
 
 
+class BenthicPlotter(PlotGenerator):
+    """Generates deep-ocean (benthic) nutrient summary plots"""
+
+    def generate(self):
+        # 3x3 grid for 7 benthic variables
+        fig, axes = plt.subplots(
+            3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=True,
+            constrained_layout=USE_CONSTRAINED_LAYOUT
+        )
+        flat_axes = axes.flatten()
+
+        setup_axes(flat_axes[:7])
+
+        self.plot_all_models(fig, flat_axes, self._plot_model)
+        self._add_observational_data(flat_axes)
+
+        # Hide unused subplots
+        for idx in range(7, len(flat_axes)):
+            flat_axes[idx].set_visible(False)
+
+        self.add_legend(fig)
+        self.save_figure(fig, "multimodel_summary_benthic.png")
+
+    def _plot_model(self, model, axes, color):
+        ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
+        if ave_data is None:
+            return
+
+        actual_years = DataLoader.get_actual_years(ave_data)
+        indices = model.get_year_range_indices(actual_years)
+        if indices[0] is None:
+            return
+
+        year = DataLoader.safe_load_column(ave_data, "year", indices)
+        if year is None:
+            return
+
+        plot_configs = [
+            ("bPO4", axes[0], "Deep Phosphate", "\u03bcmol/L", 1, False),
+            ("bNO3", axes[1], "Deep Nitrate", "\u03bcmol/L", 1, True),
+            ("bFer", axes[2], "Deep Iron", "nmol/L", 1000, False),
+            ("bSi", axes[3], "Deep Silica", "\u03bcmol/L", 1, False),
+            ("bO2", axes[4], "Deep Oxygen", "\u03bcmol/L", 1, False),
+            ("bAlkalini", axes[5], "Deep Alkalinity", "\u03bcmol/L", 1, False),
+            ("bDIC", axes[6], "Deep DIC", "\u03bcmol/L", 1, False),
+        ]
+
+        for idx, (col_name, ax, title, ylabel, scale, add_label) in enumerate(plot_configs):
+            values = DataLoader.safe_load_column(ave_data, col_name, indices)
+            plot_year, plot_values = DataLoader.align_year_and_values(year, values)
+            if plot_year is not None:
+                label = model.label if add_label else None
+                ax.plot(
+                    plot_year,
+                    plot_values * scale,
+                    color=color,
+                    label=label,
+                    linewidth=LINE_WIDTH,
+                )
+                ax.set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                ax.set_ylabel(ylabel)
+
+    def _add_observational_data(self, axes):
+        benthic_obs = ObservationData.get_benthic()
+        benthic_keys = ["bPO4", "bNO3", "bFer", "bSi", "bO2", "bAlkalini", "bDIC"]
+        for i, key in enumerate(benthic_keys):
+            if i < len(axes) and key in benthic_obs:
+                obs_value = benthic_obs[key]
+                if obs_value is not None:
+                    axes[i].axhline(obs_value, **LINE_STYLE)
+
+
 class PCO2Plotter(RegionalPlotter):
     """Generates pCO2 summary plots"""
 
@@ -1722,6 +1794,7 @@ class MultiModelPlotter:
             PPTByPFTPlotter(self.models, self.save_dir),
             PPTByPFTNormalizedPlotter(self.models, self.save_dir),
             NutrientPlotter(self.models, self.save_dir),
+            BenthicPlotter(self.models, self.save_dir),
             PCO2Plotter(self.models, self.save_dir),
             PhysicsPlotter(self.models, self.save_dir),
             DerivedSummaryPlotter(self.models, self.save_dir),
