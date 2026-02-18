@@ -44,23 +44,33 @@ class ModelDataLoader:
         volume_cols = ["PPT", "PPT_Trop", "proara", "prococ", "probsi", "GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE",
                        "PPT_DIA", "PPT_MIX", "PPT_COC", "PPT_PIC", "PPT_PHA", "PPT_FIX"]
         volume_data = self._extract_arrays(volume_df, volume_cols)
-        volume_data["PROCACO3"] = volume_data["proara"] + volume_data["prococ"]
-        volume_data["PPT_ExtTrop"] = volume_data["PPT"] - volume_data["PPT_Trop"]
+        if "proara" in volume_data and "prococ" in volume_data:
+            volume_data["PROCACO3"] = volume_data["proara"] + volume_data["prococ"]
+        if "PPT" in volume_data and "PPT_Trop" in volume_data:
+            volume_data["PPT_ExtTrop"] = volume_data["PPT"] - volume_data["PPT_Trop"]
         # SP (secondary production) = sum of all grazing terms
-        volume_data["SP"] = sum(volume_data[col] for col in ["GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"])
-        volume_data["SPT"] = sum(volume_data[col] for col in ["GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"])
+        grazing_cols = ["GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"]
+        if all(col in volume_data for col in grazing_cols):
+            volume_data["SP"] = sum(volume_data[col] for col in grazing_cols)
+            volume_data["SPT"] = volume_data["SP"]
         data.update(volume_data)
 
         level_df = self._read_analyser_file("lev")
         level_cols = ["EXP", "ExpARA", "ExpCO3", "sinksil", "EXP1000"]
         level_data = self._extract_arrays(level_df, level_cols)
-        level_data["EXPCACO3"] = level_data["ExpARA"] + level_data["ExpCO3"]
-        level_data["SI_FLX"] = level_data["sinksil"]
+        if "ExpARA" in level_data and "ExpCO3" in level_data:
+            level_data["EXPCACO3"] = level_data["ExpARA"] + level_data["ExpCO3"]
+        if "sinksil" in level_data:
+            level_data["SI_FLX"] = level_data["sinksil"]
         # Derived variables: Teff (transfer efficiency), e-ratio (export ratio), and recycle
-        level_data["Teff"] = level_data["EXP1000"] / level_data["EXP"]  # EXP1000/EXP
-        level_data["eratio"] = level_data["EXP"] / volume_data["PPT"]  # export100/NPP
-        level_data["recycle"] = volume_data["PPT"] - level_data["EXP"] - volume_data["SP"]  # NPP - EXP100 - SP
-        level_data["spratio"] = volume_data["SP"] / volume_data["PPT"]  # SP/NPP
+        if "EXP1000" in level_data and "EXP" in level_data:
+            level_data["Teff"] = level_data["EXP1000"] / level_data["EXP"]  # EXP1000/EXP
+        if "EXP" in level_data and "PPT" in volume_data:
+            level_data["eratio"] = level_data["EXP"] / volume_data["PPT"]  # export100/NPP
+        if "PPT" in volume_data and "EXP" in level_data and "SP" in volume_data:
+            level_data["recycle"] = volume_data["PPT"] - level_data["EXP"] - volume_data["SP"]  # NPP - EXP100 - SP
+        if "SP" in volume_data and "PPT" in volume_data:
+            level_data["spratio"] = volume_data["SP"] / volume_data["PPT"]  # SP/NPP
         data.update(level_data)
 
         average_df = self._read_analyser_file("ave")
