@@ -273,7 +273,7 @@ def main():
             print_step(1, 1, "AMOC streamfunction")
             plot_amoc_streamfunction(
                 moc_path=moc_file,
-                output_path=output_dir / f"{args.run_name}_{args.year}_amoc_streamfunction.png"
+                output_path=output_dir / f"{args.run_name}_{args.year}_moc_streamfunction.png"
             )
             print_success("AMOC streamfunction complete\n")
         else:

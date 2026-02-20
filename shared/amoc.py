@@ -108,9 +108,23 @@ def extract_amoc_26n(moc_ds: xr.Dataset, y_index: int = 94) -> float:
     return amoc_value
 
 
+def _find_moc_variable(moc_ds: xr.Dataset, candidates: list):
+    """Find a MOC variable by trying candidate names, then fallback search."""
+    for name in candidates:
+        if name in moc_ds:
+            return name
+    for name in moc_ds.data_vars:
+        if 'msf' in name.lower() or 'moc' in name.lower():
+            return name
+    return None
+
+
 def plot_amoc_streamfunction(moc_ds: xr.Dataset, output_path: str) -> None:
     """
-    Plot the Atlantic MOC streamfunction as a depth-latitude contour plot.
+    Plot Atlantic and Global MOC streamfunctions side by side.
+
+    Creates a two-panel depth-latitude contour plot showing the Atlantic
+    and Global meridional overturning streamfunctions.
 
     Args:
         moc_ds: MOC dataset from cdfmoc
@@ -120,96 +134,64 @@ def plot_amoc_streamfunction(moc_ds: xr.Dataset, output_path: str) -> None:
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
-    # Find Atlantic MOC variable
-    moc_var = None
-    for name in ['zomsfatl', 'zomsf_atl', 'moc_atl']:
-        if name in moc_ds:
-            moc_var = name
-            break
-    if moc_var is None:
-        for name in moc_ds.data_vars:
-            if 'msf' in name.lower() or 'moc' in name.lower():
-                moc_var = name
-                break
+    # --- resolve coordinate arrays ---
+    depths = -moc_ds['depthw'].values
+    lats = moc_ds['nav_lat'].values.squeeze()
 
-    if moc_var is None:
-        print(f"Warning: No MOC variable found, skipping streamfunction plot")
+    levels = np.arange(-22, 22, 1)
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4),
+                             layout='constrained', sharey=True)
+
+    # --- Atlantic MOC ---
+    atl_var = _find_moc_variable(
+        moc_ds, ['zomsfatl', 'zomsf_atl', 'moc_atl'])
+    if atl_var is None:
+        print("Warning: No Atlantic MOC variable found, skipping plot")
+        plt.close(fig)
         return
 
-    moc = moc_ds[moc_var]
+    atl_yslice = slice(20, 130)  # crop to avoid tripolar artifacts
+    atl = moc_ds[atl_var].squeeze(dim='x').mean(dim='time_counter')
+    atl_plot = atl.isel(y=atl_yslice).values
 
-    # Time average if time dimension exists
-    for dim in list(moc.dims):
-        if 'time' in dim:
-            moc = moc.mean(dim=dim)
+    cs = axes[0].contourf(lats[atl_yslice], depths, atl_plot,
+                          levels=levels, cmap='RdBu_r', extend='both')
+    cl = axes[0].contour(lats[atl_yslice], depths, atl_plot,
+                         levels=levels[::2], colors='k',
+                         linewidths=0.4, alpha=0.5)
+    axes[0].clabel(cl, inline=True, fontsize=8, fmt='%.0f')
+    axes[0].set_ylim(5500, 0)
+    axes[0].set_xlim(-34, 70)
+    axes[0].set_xlabel('Latitude (\u00b0N)', fontsize=13)
+    axes[0].set_ylabel('Depth (m)', fontsize=13)
+    axes[0].set_title('Atlantic Meridional Overturning Streamfunction',
+                      fontsize=11)
 
-    # Remove any singleton x dimension
-    for dim in list(moc.dims):
-        if dim.startswith('x') or dim == 'nav_x':
-            moc = moc.squeeze(dim=dim)
-
-    # Get 2D array (depth x lat)
-    data = moc.values.squeeze()
-    if data.ndim != 2:
-        print(f"Warning: MOC data has {data.ndim} dimensions after squeezing, expected 2")
-        return
-
-    # Crop to useful latitude range (y=20:130 in ORCA2 ≈ 30S-80N)
-    data = data[:, 20:130]
-
-    # Determine axis values
-    # Approximate ORCA2 latitudes for y indices 20-130
-    lats = np.linspace(-30, 80, data.shape[1])
-
-    # Get depth values if available
-    depth_dim = None
-    for dim in moc.dims:
-        if 'depth' in dim or dim == 'z' or dim == 'nav_lev':
-            depth_dim = dim
-            break
-
-    if depth_dim is not None and depth_dim in moc.coords:
-        depths = moc.coords[depth_dim].values
+    # --- Global MOC ---
+    glo_var = _find_moc_variable(
+        moc_ds, ['zomsfglo', 'zomsf_glo', 'moc_glo'])
+    if glo_var is None:
+        print("Warning: No Global MOC variable found, skipping global panel")
+        axes[1].set_visible(False)
     else:
-        depths = np.arange(data.shape[0])
+        glo_yslice = slice(1, 148)  # full range, skip boundary
+        glo = moc_ds[glo_var].squeeze(dim='x').mean(dim='time_counter')
+        glo_plot = glo.isel(y=glo_yslice).values
 
-    # Extract AMOC value at 26N for annotation
-    y_26n = int((26.5 - (-30)) / (80 - (-30)) * data.shape[1])
-    amoc_value = np.nanmax(data[:, y_26n])
+        axes[1].contourf(lats[glo_yslice], depths, glo_plot,
+                         levels=levels, cmap='RdBu_r', extend='both')
+        cl2 = axes[1].contour(lats[glo_yslice], depths, glo_plot,
+                              levels=levels[::2], colors='k',
+                              linewidths=0.4, alpha=0.5)
+        axes[1].clabel(cl2, inline=True, fontsize=8, fmt='%.0f')
+        axes[1].set_xlim(-80, 80)
+        axes[1].set_xlabel('Latitude (\u00b0N)', fontsize=13)
+        axes[1].set_title('Global Meridional Overturning Streamfunction',
+                          fontsize=11)
 
-    # Create figure
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig.colorbar(cs, ax=axes.tolist(), pad=0.02, shrink=0.9, label='Sv')
 
-    # Symmetric colorbar limits
-    vmax = np.nanpercentile(np.abs(data), 98)
-    levels = np.linspace(-vmax, vmax, 21)
-
-    cf = ax.contourf(lats, depths, data, levels=levels, cmap='RdBu_r', extend='both')
-    ax.contour(lats, depths, data, levels=levels, colors='k', linewidths=0.3, alpha=0.5)
-
-    # Zero contour
-    ax.contour(lats, depths, data, levels=[0], colors='k', linewidths=1.0)
-
-    ax.set_ylabel('Depth (m)')
-    ax.set_xlabel('Latitude')
-    ax.set_title('Atlantic Meridional Overturning Streamfunction')
-    ax.invert_yaxis()
-
-    cbar = fig.colorbar(cf, ax=ax, orientation='vertical', pad=0.02, shrink=0.9)
-    cbar.set_label('Sv')
-
-    # Annotate AMOC value
-    ax.annotate(
-        f'AMOC at 26.5N: {amoc_value:.1f} Sv',
-        xy=(26.5, depths[0]), xytext=(0.02, 0.02),
-        textcoords='axes fraction',
-        fontsize=10, fontweight='bold',
-        bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8)
-    )
-
-    # Mark 26.5N line
-    ax.axvline(26.5, color='k', linestyle='--', alpha=0.5, linewidth=0.8)
-
-    fig.savefig(output_path, dpi=300, bbox_inches='tight')
+    fig.savefig(output_path, dpi=200, bbox_inches='tight')
     plt.close(fig)
     print(f"Saved: {output_path}")
