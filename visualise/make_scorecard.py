@@ -26,8 +26,8 @@ VARIABLES = [
         "model_file": "diad",
         "obs_file": "OC-CCI/climatology/OC-CCI_climatology_orca2.nc",
         "obs_var": "chlor_a",
-        "model_factor": 1.0,
-        "unit": "µg/L",
+        "model_factor": 1e3,        # mg/L → mg/m³ (OC-CCI unit)
+        "unit": "mg/m³",
         "surface_only": True,       # diad TChl is already 2-D
     },
     {
