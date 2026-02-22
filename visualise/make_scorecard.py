@@ -32,7 +32,7 @@ VARIABLES = [
     },
     {
         "name": "NO3",
-        "model_var": "_NO3",
+        "model_var": "NO3",
         "model_file": "ptrc",
         "obs_file": "woa_orca_bil.nc",
         "obs_var": "no3",
@@ -42,17 +42,17 @@ VARIABLES = [
     },
     {
         "name": "PO4",
-        "model_var": "_PO4",
+        "model_var": "PO4",
         "model_file": "ptrc",
         "obs_file": "woa_orca_bil.nc",
         "obs_var": "po4",
-        "model_factor": 1e6,
+        "model_factor": 1e6 / 122,   # mol-C/L → µmol-P/L (Redfield C:P=122)
         "unit": "µmol/L",
         "surface_only": False,
     },
     {
         "name": "Si",
-        "model_var": "_Si",
+        "model_var": "Si",
         "model_file": "ptrc",
         "obs_file": "woa_orca_bil.nc",
         "obs_var": "si",
@@ -62,7 +62,7 @@ VARIABLES = [
     },
     {
         "name": "Fer",
-        "model_var": "_Fer",
+        "model_var": "Fer",
         "model_file": "ptrc",
         "obs_file": "Huang2022_orca.nc",
         "obs_var": "fe",
