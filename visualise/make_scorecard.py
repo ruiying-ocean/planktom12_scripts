@@ -90,6 +90,13 @@ def compute_metrics(model_vals, obs_vals):
 
 
 # ── Data loading helpers ────────────────────────────────────────────────
+def _ensure_2d(arr):
+    """Collapse leading dimensions until the array is 2-D (y, x)."""
+    while arr.ndim > 2:
+        arr = arr[0]
+    return arr
+
+
 def load_model_surface(ds, var_name, surface_only, factor):
     """Extract annual-mean surface field from a model dataset."""
     da = ds[var_name]
@@ -100,7 +107,7 @@ def load_model_surface(ds, var_name, surface_only, factor):
     if not surface_only and "deptht" in da.dims:
         da = da.isel(deptht=0)
     da = da.squeeze()
-    return da.values * factor
+    return _ensure_2d(da.values * factor)
 
 
 def load_obs_surface(obs_path, obs_var):
@@ -116,7 +123,7 @@ def load_obs_surface(obs_path, obs_var):
         if zdim in da.dims:
             da = da.isel({zdim: 0})
     da = da.squeeze()
-    vals = da.values.astype(np.float64)
+    vals = _ensure_2d(da.values.astype(np.float64))
     ds.close()
     return vals
 
@@ -179,12 +186,19 @@ def main():
         )
         obs = load_obs_surface(obs_path, var["obs_var"])
 
-        # Build common valid-ocean mask
+        if mod.shape != obs.shape:
+            print(f"Warning: shape mismatch for {var['name']}: "
+                  f"model {mod.shape} vs obs {obs.shape}", file=sys.stderr)
+            continue
+
+        # Flatten to 1-D and build common valid-ocean mask
+        mod_f = mod.ravel()
+        obs_f = obs.ravel()
         valid = (
-            np.isfinite(mod) & np.isfinite(obs)
-            & (mod != 0) & (obs != 0)
+            np.isfinite(mod_f) & np.isfinite(obs_f)
+            & (mod_f != 0) & (obs_f != 0)
         )
-        r2, rmse, bias, n = compute_metrics(mod[valid], obs[valid])
+        r2, rmse, bias, n = compute_metrics(mod_f[valid], obs_f[valid])
         rows.append((var["name"], r2, rmse, bias, n, var["unit"]))
 
     ptrc_ds.close()
