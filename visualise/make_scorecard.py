@@ -85,18 +85,22 @@ MONTH_NAMES = [
 
 # ── Metrics ─────────────────────────────────────────────────────────────
 def compute_metrics(model_vals, obs_vals):
-    """Return (R², RMSE, bias, N) for paired 1-D arrays."""
+    """Return (R², RMSE, bias, M-score) for paired 1-D arrays."""
     mask = np.isfinite(model_vals) & np.isfinite(obs_vals)
     m = model_vals[mask]
     o = obs_vals[mask]
     n = len(m)
     if n < 2:
-        return np.nan, np.nan, np.nan, n
+        return np.nan, np.nan, np.nan, np.nan
     r = np.corrcoef(m, o)[0, 1]
     r2 = r ** 2
     rmse = np.sqrt(np.mean((m - o) ** 2))
     bias = np.mean(m - o)
-    return r2, rmse, bias, n
+    # M-score (Watterson, 1996)
+    mse = np.mean((m - o) ** 2)
+    denom = m.var() + o.var() + (m.mean() - o.mean()) ** 2
+    mscore = (2.0 / np.pi) * np.arcsin(1.0 - mse / denom) if denom > 0 else np.nan
+    return r2, rmse, bias, mscore
 
 
 # ── Data loading helpers ────────────────────────────────────────────────
@@ -227,7 +231,7 @@ def main():
     model_datasets = {"ptrc": ptrc_ds, "diad": diad_ds}
 
     # ── Compute & collect rows ──────────────────────────────────────────
-    rows = []  # list of (label, r2, rmse, bias, n, unit)
+    rows = []  # list of (label, r2, rmse, bias, mscore, unit)
     for var in VARIABLES:
         obs_path = obs_dir / var["obs_file"]
         if not obs_path.exists():
@@ -242,21 +246,31 @@ def main():
             continue
 
         if args.monthly and var.get("obs_has_months"):
-            # Per-month comparison
+            # Pool all months into a single comparison
             mod_months = load_model_surface_monthly(
                 ds, var["model_var"], var["model_factor"]
             )
             obs_months = load_obs_surface_monthly(obs_path, var["obs_var"])
             n_months = min(len(mod_months), len(obs_months))
+            mod_all, obs_all = [], []
             for m in range(n_months):
-                result = _compare(mod_months[m], obs_months[m])
-                if result is None:
+                if mod_months[m].shape != obs_months[m].shape:
                     print(f"Warning: shape mismatch for {var['name']} month {m+1}",
                           file=sys.stderr)
                     continue
-                r2, rmse, bias, n = result
-                label = f"{var['name']} {MONTH_NAMES[m]}"
-                rows.append((label, r2, rmse, bias, n, var["unit"]))
+                mod_f = mod_months[m].ravel()
+                obs_f = obs_months[m].ravel()
+                valid = (
+                    np.isfinite(mod_f) & np.isfinite(obs_f)
+                    & (mod_f != 0) & (obs_f != 0)
+                )
+                mod_all.append(mod_f[valid])
+                obs_all.append(obs_f[valid])
+            if mod_all:
+                mod_cat = np.concatenate(mod_all)
+                obs_cat = np.concatenate(obs_all)
+                r2, rmse, bias, mscore = compute_metrics(mod_cat, obs_cat)
+                rows.append((var["name"], r2, rmse, bias, mscore, var["unit"]))
         else:
             # Annual mean comparison
             mod = load_model_surface(ds, var["model_var"], var["model_factor"])
@@ -266,24 +280,25 @@ def main():
                 print(f"Warning: shape mismatch for {var['name']}: "
                       f"model {mod.shape} vs obs {obs.shape}", file=sys.stderr)
                 continue
-            r2, rmse, bias, n = result
-            rows.append((var["name"], r2, rmse, bias, n, var["unit"]))
+            r2, rmse, bias, mscore = result
+            rows.append((var["name"], r2, rmse, bias, mscore, var["unit"]))
 
     ptrc_ds.close()
     diad_ds.close()
 
     # ── Print table ─────────────────────────────────────────────────────
     mode = "Monthly" if args.monthly else "Annual"
-    sep = "\u2500" * 60
+    sep = "\u2500" * 70
     print(f"\nSurface Model-Obs Statistics: {args.run_name} (year {args.year}, {mode})")
     print(sep)
-    print(f"{'Variable':<12} {'R²':>8} {'RMSE':>10} {'Bias':>10} {'N':>8}  Unit")
+    print(f"{'Variable':<12} {'R²':>8} {'RMSE':>10} {'Bias':>10} {'M':>8}  Unit")
     print(sep)
-    for label, r2, rmse, bias, n, unit in rows:
+    for label, r2, rmse, bias, mscore, unit in rows:
         r2_s = f"{r2:.2f}" if np.isfinite(r2) else "  N/A"
         rmse_s = f"{rmse:.3f}" if np.isfinite(rmse) else "     N/A"
         bias_s = f"{bias:+.3f}" if np.isfinite(bias) else "     N/A"
-        print(f"{label:<12} {r2_s:>8} {rmse_s:>10} {bias_s:>10} {n:>8}  {unit}")
+        m_s = f"{mscore:.2f}" if np.isfinite(mscore) else "  N/A"
+        print(f"{label:<12} {r2_s:>8} {rmse_s:>10} {bias_s:>10} {m_s:>8}  {unit}")
     print(sep)
 
 
