@@ -403,7 +403,4 @@ fi
 ok "Job submitted. Check: ${DIM}squeue -u \$USER${RESET}"
 
 # ----- Save model details -----
-printf "%s\t%s\t%s-%s\t%s/%s\t%s\t\n" \
-    "$id" "$codeVersion" "$yearStart" "$yearEnd" \
-    "$forcing" "${forcing_mode,,}" \
-    "$(date '+%Y-%m-%d')" >> "${HOME}/scratch/ModelRuns/modelRuns.tsv"
+echo "$id [$(date '+%Y-%m-%d')] [$codeVersion] [$yearStart-$yearEnd] [$forcing/${forcing_mode,,}] []" >> "${HOME}/scratch/ModelRuns/modelRuns.org"
