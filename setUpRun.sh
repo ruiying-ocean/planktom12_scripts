@@ -403,4 +403,7 @@ fi
 ok "Job submitted. Check: ${DIM}squeue -u \$USER${RESET}"
 
 # ----- Save model details -----
-echo $2 "("$(date '+%a %d %b %T %Z %Y')")" >> ${HOME}/scratch/ModelRuns/modelRuns.txt
+printf "| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |  |\n" \
+    "$id" "$codeVersion" "$yearStart" "$yearEnd" "${CO2,,}" \
+    "$forcing" "${forcing_mode,,}" "$TR" "$SR" \
+    "$(date '+%Y-%m-%d')" >> "${HOME}/scratch/ModelRuns/modelRuns.org"
