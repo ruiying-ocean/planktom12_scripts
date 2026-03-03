@@ -403,4 +403,4 @@ fi
 ok "Job submitted. Check: ${DIM}squeue -u \$USER${RESET}"
 
 # ----- Save model details -----
-echo "$id [$(date '+%Y-%m-%d')] [$codeVersion] [$yearStart-$yearEnd] [$forcing/${forcing_mode,,}] []" >> "${HOME}/scratch/ModelRuns/modelRuns.org"
+echo "$id [$(date '+%Y-%m-%d')]" >> "${HOME}/scratch/ModelRuns/modelRuns.org"
