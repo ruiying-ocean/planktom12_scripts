@@ -51,6 +51,7 @@ class ObservationData:
     DERIVED = {}
     BENTHIC = {}
     PHYSICS = {}
+    ORGANIC_CARBON = {}
 
     @classmethod
     def _ensure_loaded(cls):
@@ -103,6 +104,15 @@ class ObservationData:
             elif isinstance(value, (int, float)):
                 cls.PHYSICS[key] = {"value": value, "type": "line"}
 
+        # Load organic carbon observations
+        oc_config = obs_config.get('organic_carbon', {})
+        cls.ORGANIC_CARBON = {}
+        for key, value in oc_config.items():
+            if isinstance(value, list) and len(value) == 2:
+                cls.ORGANIC_CARBON[key] = {"min": value[0], "max": value[1], "type": "span"}
+            elif isinstance(value, (int, float)):
+                cls.ORGANIC_CARBON[key] = {"value": value, "type": "line"}
+
         cls._loaded = True
 
     @classmethod
@@ -140,6 +150,12 @@ class ObservationData:
         """Get physics observation data (e.g., AMOC from RAPID)."""
         cls._ensure_loaded()
         return cls.PHYSICS
+
+    @classmethod
+    def get_organic_carbon(cls) -> Dict[str, Any]:
+        """Get organic carbon observation data."""
+        cls._ensure_loaded()
+        return cls.ORGANIC_CARBON
 
     # Monthly pCO2 data by region (from data products)
     PCO2_MONTHLY = {

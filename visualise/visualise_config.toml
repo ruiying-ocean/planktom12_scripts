@@ -246,3 +246,6 @@ AMOC = {title = "AMOC at 26.5N", unit = "Sv", color_index = 3}
 
 [observations.physics]
 AMOC = [15.5, 18.5]  # RAPID array mean and range [Sv]
+
+[observations.organic_carbon]
+DOC = [47.6, 49.2]  # DOC inventory 0-200m [PgC] - derived from DOC_climatology.nc (Hansell et al. 2022)

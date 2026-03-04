@@ -247,7 +247,7 @@ class FigureCreator:
     def create_organic_carbon_summary(self, data):
         self._create_summary_from_config(
             data, self.config['plot_info']['organic_carbon'],
-            None, 'organic_carbon_summary', 'summary_organic_carbon')
+            ObservationData.get_organic_carbon(), 'organic_carbon_summary', 'summary_organic_carbon')
 
     def create_ppt_by_pft_summary(self, data):
         self._create_summary_from_config(
