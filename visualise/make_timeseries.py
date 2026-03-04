@@ -78,7 +78,7 @@ class ModelDataLoader:
             "TChl", "PO4", "NO3", "Fer", "Si", "O2",
             "tos", "sos", "mldr10_1", "pCO2", "Alkalini", "DIC",
             "AOU", "RLS", "AMOC",
-            "bPO4", "bNO3", "bFer", "bSi", "bO2", "bAlkalini", "bDIC",
+            "bPO4", "bNO3", "bFer", "bSi", "bO2", "bAlkalini", "bDIC", "bDOC",
         ]
         avg_data = self._extract_arrays(average_df, avg_cols)
         # Derived variables: (output_key, [dependencies], transform)

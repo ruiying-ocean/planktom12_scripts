@@ -163,6 +163,7 @@ bSi = 111.88  # Silica [μmol/L] - WOA18 2000-5000m cos-lat-weighted mean
 bO2 = 183.62  # Oxygen [μmol/L] - WOA18 2000-5000m cos-lat-weighted mean
 bDIC = 2277.37  # DIC [μmol/kg] - GLODAP 2000-5000m area-weighted mean
 bAlkalini = 2380.37  # Alkalinity [μmol/kg] - GLODAP 2000-5000m area-weighted mean
+bDOC = 39.98  # DOC [μmol/kg] - DOC_climatology.nc bathypelagic (>1000m) cos-lat-weighted mean (Panaïotis et al. 2025)
 # bFer has no reliable deep-ocean observations
 
 # Plot titles and units (title = subplot heading, unit = y-axis label)
@@ -231,6 +232,7 @@ bSi = {title = "Deep Silica", unit = "μmol/L", color_index = 3}
 bO2 = {title = "Deep Oxygen", unit = "μmol/L", color_index = 4}
 bAlkalini = {title = "Deep Alkalinity", unit = "μmol/L", color_index = 5}
 bDIC = {title = "Deep DIC", unit = "μmol/L", color_index = 6}
+bDOC = {title = "Deep DOC", unit = "μmol/L", color_index = 7}
 
 [plot_info.organic_carbon]
 POC = {title = "POC", unit = "PgC", color_index = 0}

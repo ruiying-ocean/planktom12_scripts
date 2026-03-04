@@ -1186,13 +1186,13 @@ class BenthicPlotter(PlotGenerator):
         )
         flat_axes = axes.flatten()
 
-        setup_axes(flat_axes[:7])
+        setup_axes(flat_axes[:8])
 
         self.plot_all_models(fig, flat_axes, self._plot_model)
         self._add_observational_data(flat_axes)
 
         # Hide unused subplots
-        for idx in range(7, len(flat_axes)):
+        for idx in range(8, len(flat_axes)):
             flat_axes[idx].set_visible(False)
 
         self.add_legend(fig)
@@ -1220,6 +1220,7 @@ class BenthicPlotter(PlotGenerator):
             ("bO2", axes[4], "Deep Oxygen", "\u03bcmol/L", 1, False),
             ("bAlkalini", axes[5], "Deep Alkalinity", "\u03bcmol/L", 1, False),
             ("bDIC", axes[6], "Deep DIC", "\u03bcmol/L", 1, False),
+            ("bDOC", axes[7], "Deep DOC", "\u03bcmol/L", 1, False),
         ]
 
         for idx, (col_name, ax, title, ylabel, scale, add_label) in enumerate(plot_configs):
@@ -1239,7 +1240,7 @@ class BenthicPlotter(PlotGenerator):
 
     def _add_observational_data(self, axes):
         benthic_obs = ObservationData.get_benthic()
-        benthic_keys = ["bPO4", "bNO3", "bFer", "bSi", "bO2", "bAlkalini", "bDIC"]
+        benthic_keys = ["bPO4", "bNO3", "bFer", "bSi", "bO2", "bAlkalini", "bDIC", "bDOC"]
         for i, key in enumerate(benthic_keys):
             if i < len(axes) and key in benthic_obs:
                 obs_value = benthic_obs[key]
