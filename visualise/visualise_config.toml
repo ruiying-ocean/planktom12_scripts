@@ -157,10 +157,10 @@ AOU = 110.68  # AOU [μmol/kg] - at 300m depth
 ALK_DIC = 275.13  # ALK-DIC [μmol/kg] - GLODAPv2.2016b (2296.80 - 2021.67)
 
 [observations.benthic]
-bPO4 = 2.23  # Phosphate [μmol/kg] - GLODAP 2000-5000m area-weighted mean
-bNO3 = 32.00  # Nitrate [μmol/kg] - GLODAP 2000-5000m area-weighted mean
-bSi = 110.24  # Silica [μmol/kg] - WOA 2000-5000m area-weighted mean
-bO2 = 179.52  # Oxygen [μmol/kg] - GLODAP 2000-5000m area-weighted mean
+bPO4 = 2.21  # Phosphate [μmol/L] - WOA18 2000-5000m cos-lat-weighted mean
+bNO3 = 31.89  # Nitrate [μmol/L] - WOA18 2000-5000m cos-lat-weighted mean
+bSi = 111.88  # Silica [μmol/L] - WOA18 2000-5000m cos-lat-weighted mean
+bO2 = 183.62  # Oxygen [μmol/L] - WOA18 2000-5000m cos-lat-weighted mean
 bDIC = 2277.37  # DIC [μmol/kg] - GLODAP 2000-5000m area-weighted mean
 bAlkalini = 2380.37  # Alkalinity [μmol/kg] - GLODAP 2000-5000m area-weighted mean
 # bFer has no reliable deep-ocean observations

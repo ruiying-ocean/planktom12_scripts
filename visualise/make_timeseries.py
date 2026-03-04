@@ -91,6 +91,7 @@ class ModelDataLoader:
             ("SSS",     ["sos"],              lambda d: d["sos"]),
             ("MLD",     ["mldr10_1"],         lambda d: d["mldr10_1"]),
             ("rls",     ["RLS"],              lambda d: d["RLS"]),
+            ("bPO4",    ["bPO4"],             lambda d: d["bPO4"] / 122),
             ("bFer",    ["bFer"],             lambda d: d["bFer"] * 1000),
         ]
         for key, deps, func in derived:

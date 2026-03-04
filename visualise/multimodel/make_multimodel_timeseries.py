@@ -1213,7 +1213,7 @@ class BenthicPlotter(PlotGenerator):
             return
 
         plot_configs = [
-            ("bPO4", axes[0], "Deep Phosphate", "\u03bcmol/L", 1, False),
+            ("bPO4", axes[0], "Deep Phosphate", "\u03bcmol/L", 1/122, False),
             ("bNO3", axes[1], "Deep Nitrate", "\u03bcmol/L", 1, True),
             ("bFer", axes[2], "Deep Iron", "nmol/L", 1000, False),
             ("bSi", axes[3], "Deep Silica", "\u03bcmol/L", 1, False),
