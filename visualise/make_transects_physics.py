@@ -17,6 +17,7 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
+from scipy.interpolate import interp1d
 
 from logging_utils import print_warning
 
@@ -123,7 +124,12 @@ def plot_physics_sections(
     ds_m.close()
 
     # --- Load WOA on ORCA2 grid ---
-    ds_w = xr.open_dataset(woa_file, decode_times=False)
+    ds_w  = xr.open_dataset(woa_file, decode_times=False)
+    # Detect WOA depth coordinate name
+    woa_depth_dim = next(
+        (d for d in ds_w.dims if 'depth' in d.lower()), None
+    )
+    deps_w = ds_w[woa_depth_dim].values if woa_depth_dim else None
 
     woa_zm_cache = {}
     for v in PHYSICS_VARS:
@@ -158,7 +164,24 @@ def plot_physics_sections(
 
             model_zm = _zonal_mean(model_zm_cache[v['model_var']], lon_m, mask_fn)
             woa_zm   = _zonal_mean(woa_zm_cache[v['woa_var']],     lon_m, mask_fn)
-            diff     = model_zm - woa_zm
+
+            # Interpolate WOA onto model depth levels for the difference panel
+            # (WOA may have more depth levels than the model)
+            if deps_w is not None and len(deps_w) != len(deps_m):
+                woa_zm_on_m = np.ma.masked_all(model_zm.shape)
+                for j in range(woa_zm.shape[1]):
+                    col = woa_zm[:, j]
+                    if col.count() > 0:
+                        f = interp1d(deps_w, col.filled(np.nan),
+                                     bounds_error=False, fill_value=np.nan)
+                        woa_zm_on_m[:, j] = np.ma.masked_invalid(f(deps_m))
+                    else:
+                        woa_zm_on_m[:, j] = np.ma.masked
+            else:
+                woa_zm_on_m = woa_zm
+
+            diff = model_zm - woa_zm_on_m
+            deps_w_plot = deps_w if deps_w is not None else deps_m
 
             xlim = basin_cfg['xlim']
 
@@ -174,13 +197,13 @@ def plot_physics_sections(
             fig.colorbar(cf1, ax=ax_mod, label=v['units'])
             ax_mod.set_title(f"Model — {v['name']} ({year})")
 
-            # WOA panel
+            # WOA panel (plotted on its own depth grid)
             cf2 = ax_woa.contourf(
-                lat1d, deps_m, woa_zm,
+                lat1d, deps_w_plot, woa_zm,
                 levels=v['levels'], cmap=v['cmap'], extend='both'
             )
             ax_woa.contour(
-                lat1d, deps_m, woa_zm,
+                lat1d, deps_w_plot, woa_zm,
                 levels=v['levels'][::4], colors='k', linewidths=0.4
             )
             fig.colorbar(cf2, ax=ax_woa, label=v['units'])
@@ -195,8 +218,12 @@ def plot_physics_sections(
             fig.colorbar(cf3, ax=ax_diff, label=f"Model − WOA ({v['units']})")
             ax_diff.set_title(f"Difference — {v['name']}")
 
-            for ax in (ax_mod, ax_woa, ax_diff):
-                ax.set_ylim(deps_m[-1], 0)
+            for ax, dep_max in (
+                (ax_mod,  deps_m[-1]),
+                (ax_woa,  deps_w_plot[-1]),
+                (ax_diff, deps_m[-1]),
+            ):
+                ax.set_ylim(dep_max, 0)
                 ax.set_xlim(*xlim)
                 ax.set_xlabel('Latitude (°N)')
                 ax.set_ylabel('Depth (m)')
