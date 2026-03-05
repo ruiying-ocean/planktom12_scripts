@@ -296,7 +296,7 @@ class OutputWriter:
         # Strip the leading 'year' column
         if existing and existing[0] == 'year':
             existing = existing[1:]
-        if existing != expected_headers:
+        if existing[:len(expected_headers)] != expected_headers:
             raise ValueError(
                 f"Column mismatch in '{filename}'.\n"
                 f"  Expected {len(expected_headers)} columns: {expected_headers}\n"
