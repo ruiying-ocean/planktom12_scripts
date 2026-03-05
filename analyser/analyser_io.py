@@ -255,6 +255,57 @@ class OutputWriter:
     """Unified output file writer for all analyser output types."""
 
     @staticmethod
+    def _build_csv_headers(variables: List, var_index: int = 0,
+                           include_units: bool = False, include_keys: bool = False) -> List[str]:
+        """Build the list of column header names for the given variables."""
+        headers = []
+        for var in variables:
+            if hasattr(var, 'column_name') and var.column_name:
+                col_name = var.column_name
+            elif hasattr(var, 'name'):
+                name = var.name
+                units = var.units if include_units else None
+                key = var.key if include_keys else None
+                col_name = name
+                if include_units and units:
+                    col_name += f" ({units})"
+                if include_keys and key:
+                    col_name += f" [{key}]"
+            else:
+                name = var[var_index]
+                units = var[1] if include_units and len(var) > 1 else None
+                key = var[-3] if include_keys else None
+                col_name = name
+                if include_units and units:
+                    col_name += f" ({units})"
+                if include_keys and key:
+                    col_name += f" [{key}]"
+            headers.append(col_name)
+        return headers
+
+    @staticmethod
+    def _check_csv_header(filename: Path, expected_headers: List[str]):
+        """
+        Verify that the existing CSV file's header matches expected_headers.
+        Raises ValueError if there is a mismatch, prompting the user to delete
+        the stale file and re-run the analyser.
+        """
+        with filename.open('r') as f:
+            first_line = f.readline().rstrip('\n')
+        existing = first_line.split(',')
+        # Strip the leading 'year' column
+        if existing and existing[0] == 'year':
+            existing = existing[1:]
+        if existing != expected_headers:
+            raise ValueError(
+                f"Column mismatch in '{filename}'.\n"
+                f"  Expected {len(expected_headers)} columns: {expected_headers}\n"
+                f"  Found    {len(existing)} columns: {existing}\n"
+                f"The analyser config has changed since this file was created. "
+                f"Delete the file and re-run the analyser to regenerate it."
+            )
+
+    @staticmethod
     def write_annual_csv(
         filename: Union[str, Path],
         variables: List,
@@ -277,40 +328,15 @@ class OutputWriter:
             include_keys: Whether to include keys in column names
         """
         filename = Path(filename)
-        write_headers = not filename.exists()
+        headers = OutputWriter._build_csv_headers(variables, var_index, include_units, include_keys)
 
-        if write_headers:
+        if not filename.exists():
             with filename.open('w') as f:
-                # Write single header row with variable names (optionally with units/keys)
                 f.write("year,")
-                headers = []
-                for var in variables:
-                    # Use custom column name if available, otherwise build from variable name
-                    if hasattr(var, 'column_name') and var.column_name:
-                        col_name = var.column_name
-                    elif hasattr(var, 'name'):
-                        name = var.name
-                        units = var.units if include_units else None
-                        key = var.key if include_keys else None
-                        col_name = name
-                        if include_units and units:
-                            col_name += f" ({units})"
-                        if include_keys and key:
-                            col_name += f" [{key}]"
-                    else:
-                        name = var[var_index]
-                        units = var[1] if include_units and len(var) > 1 else None
-                        key = var[-3] if include_keys else None
-                        col_name = name
-                        if include_units and units:
-                            col_name += f" ({units})"
-                        if include_keys and key:
-                            col_name += f" [{key}]"
-
-                    headers.append(col_name)
-
                 f.write(",".join(headers))
                 f.write("\n")
+        else:
+            OutputWriter._check_csv_header(filename, headers)
 
         # Write or append data
         with filename.open('a') as f:
@@ -360,28 +386,18 @@ class OutputWriter:
             include_keys: Whether to include keys in column names
         """
         filename = Path(filename)
-        write_headers = not filename.exists()
+        headers = OutputWriter._build_csv_headers(variables, include_units=include_units,
+                                                  include_keys=include_keys)
 
-        with filename.open('a') as f:
-            if write_headers:
-                # Write single header row with variable names
+        if not filename.exists():
+            with filename.open('w') as f:
                 f.write("year,")
-                headers = []
-                for var in variables:
-                    if hasattr(var, 'column_name') and var.column_name:
-                        col_name = var.column_name
-                    elif hasattr(var, 'name'):
-                        name = var.name
-                        col_name = name
-                        if include_units and var.units:
-                            col_name += f" ({var.units})"
-                        if include_keys and var.key:
-                            col_name += f" [{var.key}]"
-                    else:
-                        col_name = var[0] if isinstance(var, (list, tuple)) else 'unknown'
-                    headers.append(col_name)
                 f.write(",".join(headers))
                 f.write("\n")
+        else:
+            OutputWriter._check_csv_header(filename, headers)
+
+        with filename.open('a') as f:
 
             # Write this year's data (results[0] since we only processed one year)
             f.write(f"{year},")

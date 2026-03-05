@@ -294,7 +294,15 @@ class DataFileLoader:
         for path, fmt in analyser_paths + breakdown_paths:
             try:
                 if fmt == "csv":
-                    df = pd.read_csv(path)
+                    try:
+                        df = pd.read_csv(path)
+                    except pd.errors.ParserError:
+                        import warnings
+                        warnings.warn(
+                            f"Column mismatch in '{path}' (analyser config may have changed). "
+                            f"Rows with extra columns skipped. Re-run the analyser to fix."
+                        )
+                        df = pd.read_csv(path, on_bad_lines='skip')
                 else:
                     # Legacy TSV format - 3 header rows, tab-separated
                     # Row 0: variable names, Row 1: units, Row 2: keys
