@@ -33,6 +33,7 @@ from map_utils import (
 
 # Import transect plotting functions
 from make_transects import plot_basin_transects, plot_pft_transects
+from make_transects_physics import plot_physics_sections
 
 # Import preprocessing utilities
 from preprocess_data import (
@@ -768,6 +769,8 @@ def main():
                        help='Directory containing observational data files')
     parser.add_argument('--no-nutrient-comparison', action='store_true',
                        help='Disable model vs observations nutrient comparison plots (generate model-only)')
+    parser.add_argument('--skip-physics-sections', action='store_true',
+                       help='Skip generating T/S zonal-mean section plots')
 
     args = parser.parse_args()
 
@@ -998,6 +1001,17 @@ def main():
         output_path=output_dir / f"{args.run_name}_{args.year}_carbon_chemistry.png",
         variables=carbon_vars
     )
+
+    # 7. Physical sections (T/S zonal-mean, Atlantic & Pacific vs WOA18)
+    if not args.skip_physics_sections and compute_aou:  # grid_T must exist
+        print("7. Physical sections (T/S Atlantic & Pacific)...")
+        plot_physics_sections(
+            grid_t_file=grid_t_file,
+            obs_dir=args.obs_dir,
+            output_dir=output_dir,
+            run_name=args.run_name,
+            year=args.year,
+        )
 
     print("\n=== All maps generated successfully ===")
     print(f"Output directory: {output_dir}")

@@ -30,6 +30,7 @@ from make_maps import (
     plot_amoc_streamfunction
 )
 from make_transects import plot_basin_transects, plot_pft_transects
+from make_transects_physics import plot_physics_sections
 from make_vertical_profiles import plot_vertical_profiles
 from difference_utils import plot_comparison_panel
 from logging_utils import print_header, print_step, print_success, print_warning
@@ -67,6 +68,8 @@ def main():
                        help='Generate detailed model-observation difference maps')
     parser.add_argument('--skip-amoc', action='store_true',
                        help='Skip generating AMOC streamfunction plot')
+    parser.add_argument('--skip-physics-sections', action='store_true',
+                       help='Skip generating T/S zonal-mean section plots')
     parser.add_argument('--max-depth', type=float, default=500.0,
                        help='Maximum depth for PFT transects in meters (default: 500)')
 
@@ -331,6 +334,20 @@ def main():
         except ValueError as e:
             print_warning(f"{e}")
             print(f"  Skipping transects\n")
+
+    # ========================================================================
+    # STEP 3b: Physical Sections (T/S zonal-mean, Atlantic & Pacific)
+    # ========================================================================
+    if not args.skip_physics_sections and compute_aou:  # grid_T must exist
+        print_header("Step 3b: Generating Physical Sections (T/S)")
+        plot_physics_sections(
+            grid_t_file=grid_t_file,
+            obs_dir=args.obs_dir,
+            output_dir=output_dir,
+            run_name=args.run_name,
+            year=args.year,
+        )
+        print_success("Physical sections complete\n")
 
     # ========================================================================
     # STEP 4: Generate Vertical Profiles
