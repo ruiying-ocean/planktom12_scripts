@@ -370,7 +370,8 @@ class OutputWriter:
         variables: List,
         year: int,
         include_units: bool = False,
-        include_keys: bool = False
+        include_keys: bool = False,
+        extra: Optional[Dict[str, Any]] = None
     ):
         """
         Write a single year's results to CSV (streaming/append mode).
@@ -384,10 +385,15 @@ class OutputWriter:
             year: The year to write
             include_units: Whether to include units in column names
             include_keys: Whether to include keys in column names
+            extra: Optional dict of {column_name: value} for derived variables
+                   (e.g. {"AOU": 1.23, "RLS": 45.6}). None values are written
+                   as NaN. Keys are always included in the header.
         """
         filename = Path(filename)
         headers = OutputWriter._build_csv_headers(variables, include_units=include_units,
                                                   include_keys=include_keys)
+        if extra:
+            headers = headers + list(extra.keys())
 
         if not filename.exists():
             with filename.open('w') as f:
@@ -398,14 +404,12 @@ class OutputWriter:
             OutputWriter._check_csv_header(filename, headers)
 
         with filename.open('a') as f:
-
-            # Write this year's data (results[0] since we only processed one year)
             f.write(f"{year},")
             values = []
             for var in variables:
                 if hasattr(var, 'results'):
                     if len(var.results) > 0 and len(var.results[0]) > 0:
-                        value = var.results[0][0]  # First (only) year's result
+                        value = var.results[0][0]
                     else:
                         log.warning(f"Missing data for year {year} in variable {getattr(var, 'name', 'unknown')}")
                         value = np.nan
@@ -417,6 +421,9 @@ class OutputWriter:
                         log.warning(f"Missing data for year {year} in variable {var_name}")
                         value = np.nan
                 values.append(f"{value:.4e}")
+            if extra:
+                for v in extra.values():
+                    values.append("nan" if v is None else f"{v:.4e}")
             f.write(",".join(values))
             f.write("\n")
 

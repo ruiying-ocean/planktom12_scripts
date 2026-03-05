@@ -410,41 +410,14 @@ for year in range(year_from, year_to + 1):
     writer.write_annual_csv_streaming("analyser.lev.annual.csv", config.level_vars, year)
     writer.write_annual_csv_streaming("analyser.vol.annual.csv", config.volume_vars, year)
     writer.write_annual_csv_streaming("analyser.int.annual.csv", config.integration_vars, year)
-    writer.write_annual_csv_streaming("analyser.ave.annual.csv", config.average_vars, year)
-
-    # Write AOU, RLS, and AMOC to average file (append columns)
-    aou_file = Path("analyser.ave.annual.csv")
-    if aou_result is not None or rls_result is not None or amoc_result is not None:
-        # Read existing content and add columns
-        if aou_file.exists():
-            with open(aou_file, 'r') as f:
-                lines = f.readlines()
-
-            # First year: add headers
-            if year == year_from:
-                if lines:
-                    header_suffix = ''
-                    if aou_result is not None and ',AOU' not in lines[0]:
-                        header_suffix += ',AOU'
-                    if rls_result is not None and ',RLS' not in lines[0]:
-                        header_suffix += ',RLS'
-                    if amoc_result is not None and ',AMOC' not in lines[0]:
-                        header_suffix += ',AMOC'
-                    lines[0] = lines[0].rstrip('\n') + header_suffix + '\n'
-
-            # Add values to the last line (current year)
-            if lines:
-                value_suffix = ''
-                if aou_result is not None:
-                    value_suffix += f',{aou_result[0]:.4e}'
-                if rls_result is not None:
-                    value_suffix += f',{rls_result:.2f}'
-                if amoc_result is not None:
-                    value_suffix += f',{amoc_result:.2f}'
-                lines[-1] = lines[-1].rstrip('\n') + value_suffix + '\n'
-
-            with open(aou_file, 'w') as f:
-                f.writelines(lines)
+    writer.write_annual_csv_streaming(
+        "analyser.ave.annual.csv", config.average_vars, year,
+        extra={
+            "AOU":  aou_result[0] if aou_result is not None else None,
+            "RLS":  rls_result,
+            "AMOC": amoc_result,
+        }
+    )
 
     # 5. Close NetCDF files to free memory
     for file_list in nc_run_ids:
