@@ -140,8 +140,9 @@ def plot_physics_sections(
         # Drop time dim if present
         if raw.ndim == 4:
             raw = raw[0]
-        raw = np.ma.masked_where(np.abs(raw) < 1e-6, raw)
-        woa_zm_cache[v['woa_var']] = raw
+        # Use masked_invalid: xarray decodes fill values as NaN, so this is
+        # sufficient without clobbering valid near-zero temperatures
+        woa_zm_cache[v['woa_var']] = np.ma.masked_invalid(raw)
     ds_w.close()
 
     # --- One figure per basin ---
