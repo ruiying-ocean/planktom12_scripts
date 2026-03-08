@@ -263,15 +263,17 @@ class OceanMapPlotter:
                     ds[new_name] = (ds[pft] * volume * 12.01 * 1e3 * 1e-12).sum(dim='deptht')  ## Tg C
 
             # Predator-Prey Encounter Efficiency (Xue et al. 2022)
-            # EE(x,y) = PHY(x,y) * ZOO(x,y) / (PHY_mean * ZOO_mean)
-            # > 1: predator-prey co-occurrence hotspot; < 1: spatial mismatch
+            # EE(x,y,t) = PHY(x,y,t) * ZOO(x,y,t) / (PHY_mean(t) * ZOO_mean(t))
+            # Normalised by global spatial mean at each time step so each month
+            # is independently scaled. > 1: co-occurrence hotspot; < 1: mismatch.
             if '_PHYINT' in ds and '_ZOOINT' in ds:
                 phy = ds['_PHYINT']
                 zoo = ds['_ZOOINT']
-                phy_mean = float(phy.mean())
-                zoo_mean = float(zoo.mean())
-                if phy_mean > 0 and zoo_mean > 0:
-                    ds['_EE'] = (phy * zoo) / (phy_mean * zoo_mean)
+                spatial_dims = [d for d in ['x', 'y'] if d in phy.dims]
+                phy_mean = phy.mean(dim=spatial_dims)
+                zoo_mean = zoo.mean(dim=spatial_dims)
+                denom = phy_mean * zoo_mean
+                ds['_EE'] = xr.where(denom > 0, (phy * zoo) / denom, np.nan)
             return ds
 
         elif suffix == 'diad':
