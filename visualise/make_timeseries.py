@@ -71,6 +71,17 @@ class ModelDataLoader:
             level_data["recycle"] = volume_data["PPT"] - level_data["EXP"] - volume_data["SP"]  # NPP - EXP100 - SP
         if "SP" in volume_data and "PPT" in volume_data:
             level_data["spratio"] = volume_data["SP"] / volume_data["PPT"]  # SP/NPP
+        # Trophic coupling indices following Xue et al. (2022)
+        # Ingestion ratio at each trophic level relative to NPP
+        # TL2: microzooplankton (PRO)
+        # TL3: middle predators (MES + PTE)
+        # FCE: top predators (GEL + CRU) / NPP — Food Chain Efficiency
+        if "GRAPRO" in volume_data and "PPT" in volume_data:
+            level_data["ratio_TL2"] = volume_data["GRAPRO"] / volume_data["PPT"]
+        if all(c in volume_data for c in ["GRAMES", "GRAPTE"]) and "PPT" in volume_data:
+            level_data["ratio_TL3"] = (volume_data["GRAMES"] + volume_data["GRAPTE"]) / volume_data["PPT"]
+        if all(c in volume_data for c in ["GRAGEL", "GRACRU"]) and "PPT" in volume_data:
+            level_data["FCE"] = (volume_data["GRAGEL"] + volume_data["GRACRU"]) / volume_data["PPT"]
         data.update(level_data)
 
         average_df = self._read_analyser_file("ave")

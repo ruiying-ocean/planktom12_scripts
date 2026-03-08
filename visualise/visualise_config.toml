@@ -51,7 +51,7 @@ rows = 2
 cols = 2
 
 [layout.derived_summary]
-rows = 3
+rows = 4
 cols = 3
 
 [layout.organic_carbon_summary]
@@ -223,6 +223,9 @@ Teff = {title = "Transfer Efficiency", unit = "Dimensionless", color_index = 3}
 rls = {title = "RLS", unit = "m", color_index = 4}
 spratio = {title = "SP/NPP", unit = "Dimensionless", color_index = 5}
 ALK_DIC = {title = "ALK − DIC", unit = "μmol/L", color_index = 6}
+ratio_TL2 = {title = "Microzooplankton/NPP (TL2)", unit = "Dimensionless", color_index = 7}
+ratio_TL3 = {title = "Middle Predators/NPP (TL3)", unit = "Dimensionless", color_index = 8}
+FCE = {title = "Food Chain Efficiency (FCE)", unit = "Dimensionless", color_index = 9}
 
 [plot_info.benthic]
 bPO4 = {title = "Deep Phosphate", unit = "μmol/L", color_index = 0}
