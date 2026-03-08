@@ -256,49 +256,49 @@ class FigureCreator:
     def create_global_summary(self, data):
         self._create_summary_from_config(
             data, self.config['plot_info']['ecosystem'],
-            ObservationData.get_global(), 'global_summary', 'summary_global')
+            ObservationData.get_global(), 'global_summary', 'ts_global')
 
     def create_pft_summary(self, data):
         plot_info = dict(self.config['plot_info']['pfts']['phytoplankton'])
         plot_info.update(self.config['plot_info']['pfts']['zooplankton'])
         self._create_summary_from_config(
             data, plot_info,
-            ObservationData.get_pft(), 'pft_summary', 'summary_pfts')
+            ObservationData.get_pft(), 'pft_summary', 'ts_pfts')
 
     def create_nutrient_summary(self, data):
         self._create_summary_from_config(
             data, self.config['plot_info']['nutrients'],
-            ObservationData.get_nutrients(), 'nutrient_summary', 'summary_nutrients')
+            ObservationData.get_nutrients(), 'nutrient_summary', 'ts_nutrients')
 
     def create_physics_summary(self, data):
         self._create_summary_from_config(
             data, self.config['plot_info']['physics'],
-            ObservationData.get_physics(), 'physics_summary', 'summary_physics')
+            ObservationData.get_physics(), 'physics_summary', 'ts_physics')
 
     def create_derived_summary(self, data):
         self._create_summary_from_config(
             data, self.config['plot_info']['derived'],
-            ObservationData.get_derived(), 'derived_summary', 'summary_derived')
+            ObservationData.get_derived(), 'derived_summary', 'ts_derived')
 
     def create_benthic_summary(self, data):
         self._create_summary_from_config(
             data, self.config['plot_info']['benthic'],
-            ObservationData.get_benthic(), 'benthic_summary', 'summary_benthic')
+            ObservationData.get_benthic(), 'benthic_summary', 'ts_benthic')
 
     def create_organic_carbon_summary(self, data):
         self._create_summary_from_config(
             data, self.config['plot_info']['organic_carbon'],
-            ObservationData.get_organic_carbon(), 'organic_carbon_summary', 'summary_organic_carbon')
+            ObservationData.get_organic_carbon(), 'organic_carbon_summary', 'ts_organic_carbon')
 
     def create_ppt_by_pft_summary(self, data):
         self._create_summary_from_config(
             data, self.config['plot_info']['ppt_by_pft'],
-            None, 'ppt_by_pft_summary', 'summary_ppt_by_pft')
+            None, 'ppt_by_pft_summary', 'ts_ppt_by_pft')
 
     def create_trophic_summary(self, data):
         self._create_summary_from_config(
             data, self.config['plot_info']['trophic'],
-            None, 'trophic_summary', 'summary_trophic')
+            None, 'trophic_summary', 'ts_trophic')
 
 def main():
     parser = argparse.ArgumentParser(
