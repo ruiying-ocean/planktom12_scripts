@@ -229,9 +229,9 @@ ALK_DIC = {title = "ALK − DIC", unit = "μmol/L", color_index = 6}
 SP = {title = "Secondary Production", unit = "PgC/yr", color_index = 0}
 recycle = {title = "Residual Production", unit = "PgC/yr", color_index = 1}
 spratio = {title = "SP/NPP", unit = "Dimensionless", color_index = 5}
-ratio_TL2 = {title = "Microzooplankton/NPP (TL2)", unit = "Dimensionless", color_index = 7}
-ratio_TL3 = {title = "Middle Predators/NPP (TL3)", unit = "Dimensionless", color_index = 8}
-FCE = {title = "Food Chain Efficiency (FCE)", unit = "Dimensionless", color_index = 9}
+ratio_TL2 = {title = "TL2/NPP", unit = "Dimensionless", color_index = 7}
+ratio_TL3 = {title = "TL3/NPP", unit = "Dimensionless", color_index = 8}
+FCE = {title = "TL4/NPP", unit = "Dimensionless", color_index = 9}
 
 [plot_info.benthic]
 bPO4 = {title = "Deep Phosphate", unit = "μmol/L", color_index = 0}
