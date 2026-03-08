@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import calendar
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -7,6 +8,7 @@ import matplotlib.pyplot as plt
 import pathlib
 import sys
 import argparse
+import xarray as xr
 
 # Import shared utilities
 from timeseries_util import (
@@ -150,7 +152,35 @@ class ModelDataLoader:
         return data
 
 class FigureCreator:
-    def __init__(self, save_dir, model_name, config_path=None):
+    TCHL_REGION_DEFS = [
+        {
+            "title": "N. Pacific gyres",
+            "lat_range": (15.0, 35.0),
+            "lon_range": (140.0, -120.0),
+        },
+        {
+            "title": "N. subpolar Pacific",
+            "lat_range": (40.0, 60.0),
+            "lon_range": (140.0, -120.0),
+        },
+        {
+            "title": "North Atlantic",
+            "lat_range": (40.0, 65.0),
+            "lon_range": (-80.0, 0.0),
+        },
+        {
+            "title": "Equatorial Pacific",
+            "lat_range": (-5.0, 5.0),
+            "lon_range": (160.0, -90.0),
+        },
+        {
+            "title": "Subantarctic",
+            "lat_range": (-55.0, -40.0),
+            "lon_range": None,
+        },
+    ]
+
+    def __init__(self, save_dir, model_name, model_output_dir, config_path=None):
         """
         Initialize figure creator with configurable settings.
 
@@ -161,6 +191,7 @@ class FigureCreator:
         """
         self.save_dir = pathlib.Path(save_dir)
         self.model_name = model_name
+        self.model_output_dir = pathlib.Path(model_output_dir)
 
         # Load configuration using shared utility
         self.config = ConfigLoader.load_config(config_path)
@@ -174,6 +205,71 @@ class FigureCreator:
 
         # Initialize figure saver
         self.saver = FigureSaver(self.save_dir, self.styler.dpi, self.styler.format)
+
+    @staticmethod
+    def _build_lon_mask(lon, lon_range):
+        if lon_range is None:
+            return xr.ones_like(lon, dtype=bool)
+
+        lon_min, lon_max = lon_range
+        lon_0360 = xr.where(lon < 0, lon + 360, lon)
+        min_0360 = lon_min if lon_min >= 0 else lon_min + 360
+        max_0360 = lon_max if lon_max >= 0 else lon_max + 360
+
+        if min_0360 <= max_0360:
+            return (lon_0360 >= min_0360) & (lon_0360 <= max_0360)
+        return (lon_0360 >= min_0360) | (lon_0360 <= max_0360)
+
+    def _load_tchl_seasonal_regions(self):
+        run_dir = self.model_output_dir / self.model_name
+        annual_path = run_dir / "analyser.sur.annual.csv"
+        if not annual_path.exists():
+            annual_path = run_dir / "breakdown.sur.annual.csv"
+        if not annual_path.exists():
+            return None, None
+
+        try:
+            latest_year = int(DataFileLoader.read_analyser_file(self.model_output_dir, self.model_name, "sur", "annual")["year"].dropna().iloc[-1])
+        except Exception:
+            return None, None
+
+        nc_file = run_dir / f"ORCA2_1m_{latest_year}0101_{latest_year}1231_diad_T.nc"
+        if not nc_file.exists():
+            return None, None
+
+        try:
+            with xr.open_dataset(nc_file, decode_times=False) as ds:
+                if "TChl" not in ds:
+                    return None, None
+
+                tchl = ds["TChl"]
+                depth_dim = next((d for d in ["deptht", "nav_lev", "z"] if d in tchl.dims), None)
+                if depth_dim is not None:
+                    tchl = tchl.isel({depth_dim: 0})
+
+                lat_name = "nav_lat" if "nav_lat" in ds else "lat"
+                lon_name = "nav_lon" if "nav_lon" in ds else "lon"
+                if lat_name not in ds or lon_name not in ds:
+                    return None, None
+
+                lat = ds[lat_name]
+                lon = ds[lon_name]
+                spatial_dims = lat.dims
+                weights = xr.where(np.isfinite(lat), np.cos(np.deg2rad(lat)), 0.0)
+
+                region_series = []
+                for region in self.TCHL_REGION_DEFS:
+                    lat_min, lat_max = region["lat_range"]
+                    lat_mask = (lat >= lat_min) & (lat <= lat_max)
+                    lon_mask = self._build_lon_mask(lon, region["lon_range"])
+                    region_mask = lat_mask & lon_mask & np.isfinite(tchl.isel(time_counter=0))
+                    weighted_mean = tchl.where(region_mask).weighted(weights.where(region_mask)).mean(dim=spatial_dims)
+                    region_series.append(weighted_mean.to_numpy().astype(float))
+
+                month_names = list(calendar.month_abbr)[1:len(region_series[0]) + 1]
+                return month_names, region_series
+        except Exception:
+            return None, None
 
     def _get_global_year_limits(self, data):
         return data["year"].min(), data["year"].max()
@@ -430,6 +526,31 @@ class FigureCreator:
 
         self._save_figure(fig, f"{self.model_name}_ts_trophic.png")
 
+    def create_tchl_seasonal_regions(self):
+        month_names, region_series = self._load_tchl_seasonal_regions()
+        if month_names is None or region_series is None:
+            return
+
+        fig, axes = plt.subplots(
+            3, 2,
+            figsize=(2 * self.config['layout']['subplot_width'], 3 * self.config['layout']['subplot_height']),
+            squeeze=False,
+            constrained_layout=self.config['layout']['use_constrained_layout']
+        )
+        axes = axes.flatten()
+
+        for ax, region, series in zip(axes, self.TCHL_REGION_DEFS, region_series):
+            ax.plot(month_names, series, color=self.colors[1], linewidth=self.styler.linewidth)
+            ax.set_title(region["title"], fontweight='bold', pad=5)
+            ax.set_ylabel("μg Chl/L")
+            ax.set_xlabel("Month", fontweight='bold')
+            ax.grid(True)
+
+        for ax in axes[len(self.TCHL_REGION_DEFS):]:
+            ax.set_visible(False)
+
+        self._save_figure(fig, f"{self.model_name}_ts_tchl_seasonal.png")
+
 def main():
     parser = argparse.ArgumentParser(
         description='Create annual summary visualizations for ocean model output',
@@ -463,10 +584,11 @@ def main():
         loader = ModelDataLoader(model_output_dir, model_name)
         data = loader.load_all_data()
         
-        creator = FigureCreator(save_dir, model_name)
+        creator = FigureCreator(save_dir, model_name, model_output_dir)
         
         print("\n📈 Creating visualizations...")
         creator.create_global_summary(data)
+        creator.create_tchl_seasonal_regions()
         creator.create_pft_summary(data)
         creator.create_nutrient_summary(data)
         creator.create_physics_summary(data)

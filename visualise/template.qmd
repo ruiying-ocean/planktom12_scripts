@@ -29,6 +29,10 @@ ${SETUPDATA_SUMMARY}
 
 ![](${identifier}_ts_global.${img_format})
 
+## Seasonal Chlorophyll by Region
+
+![](${identifier}_ts_tchl_seasonal.${img_format})
+
 ## Plankton Functional Types
 
 ![](${identifier}_ts_pfts.${img_format})

@@ -1040,7 +1040,7 @@ class TChlPlotter(RegionalPlotter):
         setup_axes(axes)
 
         self.plot_all_models(fig, axes, self._plot_model)
-        self._add_observational_data(axes)  # MODIFICATION: This line was added
+        self._add_observational_data(axes)
 
         self.add_legend(fig)
         self.save_figure(fig, "mm_tchl.png")
@@ -1092,17 +1092,12 @@ class TChlPlotter(RegionalPlotter):
             )
 
     def _add_observational_data(self, axes):
-        """
-        MODIFICATION: This entire method was added.
-        Plots observational TChl data on the regional summary plots.
-        """
         month_names = list(calendar.month_abbr)[1:]
         regions = ["global", "reg1", "reg2", "reg3", "reg4", "reg5"]
         titles = ["Global", "45N-90N", "15N-45N", "15S-15N", "45S-15S", "90S-45S"]
 
         for i, (region, title) in enumerate(zip(regions, titles)):
             ax = axes[i + 1]
-            # Assumes you have a similar data structure for TChl observational data
             data = ObservationData.TCHL_MONTHLY[region]
             normalized = data - data[0]
             label = "data-products" if i == 0 else None
