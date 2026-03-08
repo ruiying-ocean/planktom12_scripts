@@ -155,8 +155,8 @@ class FigureCreator:
     TCHL_REGION_DEFS = [
         {
             "title": "N. Pacific gyres",
-            "lat_range": (15.0, 35.0),
-            "lon_range": (140.0, -120.0),
+            "lat_range": (15.0, 30.0),
+            "lon_range": (-170.0, -145.0),
         },
         {
             "title": "N. subpolar Pacific",
