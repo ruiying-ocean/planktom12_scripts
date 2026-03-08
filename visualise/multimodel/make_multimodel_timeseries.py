@@ -361,7 +361,7 @@ class GlobalSummaryPlotter(PlotGenerator):
         self._add_observational_data(axes)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_global.png")
+        self.save_figure(fig, "mm_global.png")
 
     def _plot_model(self, model, axes, color):
         sur_data = DataLoader.load_analyser_data(model, "sur", "annual")
@@ -469,7 +469,7 @@ class GlobalSummaryNormalizedPlotter(PlotGenerator):
         self.plot_all_models(fig, axes, self._plot_model)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_global_normalized.png")
+        self.save_figure(fig, "mm_global_normalized.png")
 
     @staticmethod
     def _normalize_series(values: np.ndarray) -> np.ndarray:
@@ -636,7 +636,7 @@ class CflxPlotter(RegionalPlotter):
         self.plot_all_models(fig, axes, self._plot_model)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_cflx.png")
+        self.save_figure(fig, "mm_cflx.png")
 
     def _plot_model(self, model, axes, color):
         sur_annual = DataLoader.load_analyser_data(model, "sur", "annual")
@@ -710,7 +710,7 @@ class PFTPlotter(PlotGenerator):
         self._add_observational_ranges(flat_axes)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_pfts.png")
+        self.save_figure(fig, "mm_pfts.png")
 
     def _setup_pft_axes(self, axes):
         setup_axes(axes)
@@ -810,7 +810,7 @@ class PFTNormalizedPlotter(PlotGenerator):
         self.plot_all_models(fig, flat_axes, self._plot_model)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_pfts_normalized.png")
+        self.save_figure(fig, "mm_pfts_normalized.png")
 
     def _plot_model(self, model, axes, color):
         int_data = DataLoader.load_analyser_data(model, "int", "annual")
@@ -879,7 +879,7 @@ class PPTByPFTPlotter(PlotGenerator):
         self.plot_all_models(fig, flat_axes, self._plot_model)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_ppt_by_pft.png")
+        self.save_figure(fig, "mm_ppt_by_pft.png")
 
     def _plot_model(self, model, axes, color):
         vol_data = DataLoader.load_analyser_data(model, "vol", "annual")
@@ -941,7 +941,7 @@ class PPTByPFTNormalizedPlotter(PlotGenerator):
         self.plot_all_models(fig, flat_axes, self._plot_model)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_ppt_by_pft_normalized.png")
+        self.save_figure(fig, "mm_ppt_by_pft_normalized.png")
 
     def _plot_model(self, model, axes, color):
         vol_data = DataLoader.load_analyser_data(model, "vol", "annual")
@@ -1020,7 +1020,7 @@ class TChlPlotter(RegionalPlotter):
         self._add_observational_data(axes)  # MODIFICATION: This line was added
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_tchl.png")
+        self.save_figure(fig, "mm_tchl.png")
 
     def _plot_model(self, model, axes, color):
         ave_annual = DataLoader.load_analyser_data(model, "ave", "annual")
@@ -1117,7 +1117,7 @@ class NutrientPlotter(PlotGenerator):
         self._add_observational_data(flat_axes)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_nutrients.png")
+        self.save_figure(fig, "mm_nutrients.png")
 
     def _plot_model(self, model, axes, color):
         ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
@@ -1196,7 +1196,7 @@ class BenthicPlotter(PlotGenerator):
             flat_axes[idx].set_visible(False)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_benthic.png")
+        self.save_figure(fig, "mm_benthic.png")
 
     def _plot_model(self, model, axes, color):
         ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
@@ -1298,7 +1298,7 @@ class PCO2Plotter(RegionalPlotter):
         self._add_observational_data(axes)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_pco2.png")
+        self.save_figure(fig, "mm_pco2.png")
 
     def _plot_model(self, model, axes, color):
         ave_annual = DataLoader.load_analyser_data(model, "ave", "annual")
@@ -1381,7 +1381,7 @@ class PhysicsPlotter(PlotGenerator):
         self.plot_all_models(fig, axes, self._plot_model)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_physics.png")
+        self.save_figure(fig, "mm_physics.png")
 
     def _plot_model(self, model, axes, color):
         ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
@@ -1450,7 +1450,7 @@ class DerivedSummaryPlotter(PlotGenerator):
             axes[idx].set_visible(False)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_derived.png")
+        self.save_figure(fig, "mm_derived.png")
 
     def _plot_model(self, model, axes, color):
         vol_data = DataLoader.load_analyser_data(model, "vol", "annual")
@@ -1559,7 +1559,7 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
             axes[idx].set_visible(False)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_derived_normalized.png")
+        self.save_figure(fig, "mm_derived_normalized.png")
 
     def _plot_model(self, model, axes, color):
         vol_data = DataLoader.load_analyser_data(model, "vol", "annual")
@@ -1675,7 +1675,7 @@ class OrganicMatterPlotter(PlotGenerator):
         self.plot_all_models(fig, axes, self._plot_model)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_organic_matter.png")
+        self.save_figure(fig, "mm_organic_matter.png")
 
     def _plot_model(self, model, axes, color):
         int_data = DataLoader.load_analyser_data(model, "int", "annual")
@@ -1732,7 +1732,7 @@ class OrganicMatterNormalizedPlotter(PlotGenerator):
         self.plot_all_models(fig, axes, self._plot_model)
 
         self.add_legend(fig)
-        self.save_figure(fig, "multimodel_summary_organic_matter_normalized.png")
+        self.save_figure(fig, "mm_organic_matter_normalized.png")
 
     def _plot_model(self, model, axes, color):
         int_data = DataLoader.load_analyser_data(model, "int", "annual")

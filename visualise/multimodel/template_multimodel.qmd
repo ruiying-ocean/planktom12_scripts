@@ -21,13 +21,13 @@ format:
 
 Comparison of global ecosystem metrics across models.
 
-![](multimodel_summary_global.png)
+![](mm_global.png)
 
 ## Normalized Timeseries
 
 Normalized anomalies for key global metrics (Cflx, TChl, PPT, EXP/EXP1000, CaCO₃ production/export, silica production/export). All variables are normalized by subtracting the mean of the first 10 years (or all available years if less than 10) to highlight changes over time.
 
-![](multimodel_summary_global_normalized.png)
+![](mm_global_normalized.png)
 
 # Regional and Monthly Patterns
 
@@ -35,67 +35,67 @@ Normalized anomalies for key global metrics (Cflx, TChl, PPT, EXP/EXP1000, CaCO�
 
 Regional and monthly carbon flux comparison.
 
-![](multimodel_summary_cflx.png)
+![](mm_cflx.png)
 
 ## Total Chlorophyll
 
 Regional and monthly total chlorophyll comparison.
 
-![](multimodel_summary_tchl.png)
+![](mm_tchl.png)
 
 ## pCO₂
 
 Regional and monthly pCO₂ comparison.
 
-![](multimodel_summary_pco2.png)
+![](mm_pco2.png)
 
 # Plankton Functional Types
 
 Comparison of phytoplankton and zooplankton biomass across models.
 
-![](multimodel_summary_pfts.png)
+![](mm_pfts.png)
 
 ## PFT Anomalies
 
 PFT biomass anomalies relative to the first-decade mean to highlight temporal changes.
 
-![](multimodel_summary_pfts_normalized.png)
+![](mm_pfts_normalized.png)
 
 ## PPT by PFT
 
 Primary production broken down by phytoplankton functional type.
 
-![](multimodel_summary_ppt_by_pft.png)
+![](mm_ppt_by_pft.png)
 
 ## PPT by PFT Anomalies
 
 Primary production by PFT anomalies relative to the first-decade mean.
 
-![](multimodel_summary_ppt_by_pft_normalized.png)
+![](mm_ppt_by_pft_normalized.png)
 
 # Nutrients
 
 Comparison of nutrient concentrations across models.
 
-![](multimodel_summary_nutrients.png)
+![](mm_nutrients.png)
 
 # Physical Environment
 
 Comparison of physical variables across models.
 
-![](multimodel_summary_physics.png)
+![](mm_physics.png)
 
 # Derived Ecosystem Variables
 
 Comparison of derived ecosystem variables across models.
 
-![](multimodel_summary_derived.png)
+![](mm_derived.png)
 
 ## Normalized Anomalies
 
 Derived variable anomalies relative to the first-decade mean.
 
-![](multimodel_summary_derived_normalized.png)
+![](mm_derived_normalized.png)
 
 ${DERIVED_SECTION}
 
@@ -103,13 +103,13 @@ ${DERIVED_SECTION}
 
 Comparison of dissolved and particulate organic carbon pools across models.
 
-![](multimodel_summary_organic_matter.png)
+![](mm_organic_matter.png)
 
 ## Normalized Anomalies
 
 Organic matter pool anomalies relative to the first-decade mean.
 
-![](multimodel_summary_organic_matter_normalized.png)
+![](mm_organic_matter_normalized.png)
 
 ---
 
