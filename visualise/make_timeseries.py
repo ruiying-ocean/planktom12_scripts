@@ -157,46 +157,34 @@ class FigureCreator:
             "title": "N. Pacific gyres",
             "lat_range": (15.0, 35.0),
             "lon_range": (140.0, -120.0),
-            "obs_key": "reg2",   # 15N-45N
         },
         {
             "title": "N. subpolar Pacific",
             "lat_range": (40.0, 60.0),
             "lon_range": (140.0, -120.0),
-            "obs_key": "reg1",   # 45N-90N
         },
         {
             "title": "North Atlantic",
             "lat_range": (40.0, 65.0),
             "lon_range": (-80.0, 0.0),
-            "obs_key": "reg1",   # 45N-90N
         },
         {
             "title": "Equatorial Pacific",
             "lat_range": (-5.0, 5.0),
             "lon_range": (160.0, -90.0),
-            "obs_key": "reg3",   # 15S-15N
         },
         {
             "title": "Subantarctic",
             "lat_range": (-55.0, -40.0),
             "lon_range": None,
-            "obs_key": "reg5",   # 90S-45S
         },
     ]
 
-    def __init__(self, save_dir, model_name, model_output_dir, config_path=None):
-        """
-        Initialize figure creator with configurable settings.
-
-        Args:
-            save_dir: Directory to save figures
-            model_name: Name of the model run
-            config_path: Path to TOML configuration file (optional)
-        """
+    def __init__(self, save_dir, model_name, model_output_dir, obs_dir=None, config_path=None):
         self.save_dir = pathlib.Path(save_dir)
         self.model_name = model_name
         self.model_output_dir = pathlib.Path(model_output_dir)
+        self.obs_dir = pathlib.Path(obs_dir) if obs_dir else pathlib.Path("~/Observations").expanduser()
 
         # Load configuration using shared utility
         self.config = ConfigLoader.load_config(config_path)
@@ -224,6 +212,60 @@ class FigureCreator:
         if min_0360 <= max_0360:
             return (lon_0360 >= min_0360) & (lon_0360 <= max_0360)
         return (lon_0360 >= min_0360) | (lon_0360 <= max_0360)
+
+    def _load_occci_seasonal_regions(self):
+        """Load OC-CCI chlorophyll climatology and compute regional means for each TCHL_REGION_DEF."""
+        chl_file = self.obs_dir / "OC-CCI/climatology/OC-CCI_climatology_1deg.nc"
+        if not chl_file.exists():
+            print(f"  ⚠ OC-CCI file not found: {chl_file} — no obs overlay")
+            return None
+
+        try:
+            with xr.open_dataset(chl_file, decode_times=False) as ds:
+                if "chlor_a" not in ds:
+                    print(f"  ⚠ 'chlor_a' not found in OC-CCI file — no obs overlay")
+                    return None
+
+                chl = ds["chlor_a"]
+                # Identify lat/lon coordinate names
+                lat_name = next((n for n in ["lat", "latitude", "nav_lat"] if n in ds), None)
+                lon_name = next((n for n in ["lon", "longitude", "nav_lon"] if n in ds), None)
+                if lat_name is None or lon_name is None:
+                    print(f"  ⚠ lat/lon coords not found in OC-CCI file — no obs overlay")
+                    return None
+
+                lat = ds[lat_name]
+                lon = ds[lon_name]
+                weights = np.cos(np.deg2rad(lat))
+
+                # Identify time dimension (monthly)
+                time_dim = next((d for d in ["time", "month"] if d in chl.dims), None)
+
+                obs_series = []
+                for region in self.TCHL_REGION_DEFS:
+                    lat_min, lat_max = region["lat_range"]
+                    lat_mask = (lat >= lat_min) & (lat <= lat_max)
+                    lon_mask = self._build_lon_mask(lon, region["lon_range"])
+                    region_mask = lat_mask & lon_mask
+
+                    if time_dim is not None:
+                        monthly = []
+                        for t in range(chl.sizes[time_dim]):
+                            snap = chl.isel({time_dim: t})
+                            valid_mask = region_mask & np.isfinite(snap)
+                            w = weights.where(valid_mask, 0.0)
+                            mean_val = float(snap.where(valid_mask).weighted(w).mean())
+                            monthly.append(mean_val)
+                        obs_series.append(np.array(monthly))
+                    else:
+                        valid_mask = region_mask & np.isfinite(chl)
+                        w = weights.where(valid_mask, 0.0)
+                        obs_series.append(np.array([float(chl.where(valid_mask).weighted(w).mean())]))
+
+                return obs_series
+        except Exception as e:
+            print(f"  ⚠ Could not load OC-CCI data: {e} — no obs overlay")
+            return None
 
     def _load_tchl_seasonal_regions(self):
         run_dir = self.model_output_dir / self.model_name
@@ -548,29 +590,34 @@ class FigureCreator:
         )
         axes = axes.flatten()
 
-        tchl_obs = ObservationData.TCHL_MONTHLY
+        obs_series = self._load_occci_seasonal_regions()
 
-        for ax, region, series in zip(axes, self.TCHL_REGION_DEFS, region_series):
+        for i, (ax, region, series) in enumerate(zip(axes, self.TCHL_REGION_DEFS, region_series)):
             model_vals = np.asarray(series, dtype=float) * 1e6
             ax.plot(x, model_vals, color=self.colors[1], linewidth=self.styler.linewidth,
                     label=self.model_name)
 
-            obs_key = region.get("obs_key")
-            if obs_key and obs_key in tchl_obs:
-                obs_vals = tchl_obs[obs_key][:n_months]
+            if obs_series is not None:
+                obs_vals = obs_series[i][:n_months]
                 ax.plot(x, obs_vals, color="gray", linewidth=self.styler.linewidth,
-                        linestyle="--", label="Obs.")
+                        linestyle="--", label="OC-CCI")
 
             ax.set_title(region["title"], fontweight='bold', pad=5)
-            ax.set_ylabel("μg Chl/L")
             ax.set_xticks(x)
             ax.set_xticklabels(month_names[:n_months], rotation=45, ha='right')
             ax.grid(True)
-            ax.legend(fontsize=self.styler.font_legend)
 
-        # Only bottom-row axes need x labels
         for ax in axes[len(self.TCHL_REGION_DEFS):]:
             ax.set_visible(False)
+
+        # Shared y-axis label
+        fig.supylabel("μg Chl/L", fontweight='bold')
+
+        # Shared legend from the first plotted axis
+        handles, labels = axes[0].get_legend_handles_labels()
+        if handles:
+            fig.legend(handles, labels, loc='lower right',
+                       fontsize=self.styler.font_legend, framealpha=0.8)
 
         self._save_figure(fig, f"{self.model_name}_ts_tchl_seasonal.png")
 
@@ -588,11 +635,17 @@ def main():
         default='~/scratch/ModelRuns',
         help='Base directory for model outputs (default: %(default)s)'
     )
+    parser.add_argument(
+        '--obs-dir',
+        default='~/Observations',
+        help='Base directory for observational data (default: %(default)s)'
+    )
 
     args = parser.parse_args()
 
     model_name = args.model_id
     model_output_dir = pathlib.Path(args.model_run_dir).expanduser()
+    obs_dir = pathlib.Path(args.obs_dir).expanduser()
 
     print(f"\n🌊 Ocean Model Visualization Tool")
     print(f"📊 Processing model: {model_name}")
@@ -607,7 +660,7 @@ def main():
         loader = ModelDataLoader(model_output_dir, model_name)
         data = loader.load_all_data()
         
-        creator = FigureCreator(save_dir, model_name, model_output_dir)
+        creator = FigureCreator(save_dir, model_name, model_output_dir, obs_dir=obs_dir)
         
         print("\n📈 Creating visualizations...")
         creator.create_global_summary(data)
