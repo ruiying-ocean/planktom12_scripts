@@ -154,19 +154,24 @@ class ModelDataLoader:
 class FigureCreator:
     TCHL_REGION_DEFS = [
         {
-            "title": "N. Pacific gyres",
-            "lat_range": (15.0, 30.0),
-            "lon_range": (-170.0, -145.0),
+            "title": "N. Pacific subtropical",
+            "lat_range": (15.0, 35.0),
+            "lon_range": (160.0, -130.0),
         },
         {
-            "title": "N. subpolar Pacific",
-            "lat_range": (40.0, 60.0),
-            "lon_range": (140.0, -120.0),
+            "title": "N. Pacific subpolar",
+            "lat_range": (50.0, 62.0),
+            "lon_range": (160.0, -140.0),
         },
         {
-            "title": "North Atlantic",
-            "lat_range": (40.0, 65.0),
-            "lon_range": (-80.0, 0.0),
+            "title": "N. Atlantic subtropical",
+            "lat_range": (20.0, 35.0),
+            "lon_range": (-80.0, -20.0),
+        },
+        {
+            "title": "N. Atlantic subpolar",
+            "lat_range": (45.0, 65.0),
+            "lon_range": (-60.0, -10.0),
         },
         {
             "title": "Equatorial Pacific",
@@ -174,8 +179,23 @@ class FigureCreator:
             "lon_range": (160.0, -90.0),
         },
         {
-            "title": "Subantarctic",
-            "lat_range": (-55.0, -40.0),
+            "title": "S. Pacific subtropical",
+            "lat_range": (-35.0, -15.0),
+            "lon_range": (170.0, -100.0),
+        },
+        {
+            "title": "S. Atlantic subtropical",
+            "lat_range": (-30.0, -10.0),
+            "lon_range": (-50.0, 10.0),
+        },
+        {
+            "title": "Sub-Antarctic Zone",
+            "lat_range": (-50.0, -40.0),
+            "lon_range": None,
+        },
+        {
+            "title": "Antarctic Zone",
+            "lat_range": (-65.0, -55.0),
             "lon_range": None,
         },
     ]
