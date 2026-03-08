@@ -663,7 +663,7 @@ def plot_derived_variables(
     diad_ds: xr.Dataset,
     output_path: Path,
     ptrc_ds: xr.Dataset = None,
-    variables: list = ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff', '_rls', '_DCM_depth']
+    variables: list = ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff', '_rls', '_DCM_depth', '_EE']
 ):
     """
     Create multi-panel map of derived ecosystem variables.
@@ -687,18 +687,18 @@ def plot_derived_variables(
             dcm_depth = tchl_shallow.idxmax(dim='deptht')
             diad_ds['_DCM_depth'] = plotter.apply_mask(dcm_depth)
 
-    # Create 2x3 subplot grid to accommodate up to 6 variables
+    # Create 2x4 subplot grid to accommodate up to 8 variables
     fig, axs = plotter.create_subplot_grid(
-        nrows=2, ncols=3,
+        nrows=2, ncols=4,
         projection=ccrs.PlateCarree(),
-        figsize=(15, 6)
+        figsize=(20, 6)
     )
 
     # Flatten axes for easier indexing
     axs_flat = axs.flatten()
 
     for idx, var_name in enumerate(variables):
-        if idx >= 6:  # Only plot first 6 variables (2x3 grid)
+        if idx >= 8:  # Only plot first 8 variables (2x4 grid)
             break
 
         ax = axs_flat[idx]
@@ -706,6 +706,8 @@ def plot_derived_variables(
         # Check which dataset contains the variable
         if var_name in diad_ds:
             ds = diad_ds
+        elif ptrc_ds is not None and var_name in ptrc_ds:
+            ds = ptrc_ds
         else:
             ds = None
 

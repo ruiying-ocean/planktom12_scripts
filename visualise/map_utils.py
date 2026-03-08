@@ -261,6 +261,17 @@ class OceanMapPlotter:
                 if pft in ds:
                     new_name = self._new_varname(pft, 'INT')
                     ds[new_name] = (ds[pft] * volume * 12.01 * 1e3 * 1e-12).sum(dim='deptht')  ## Tg C
+
+            # Predator-Prey Encounter Efficiency (Xue et al. 2022)
+            # EE(x,y) = PHY(x,y) * ZOO(x,y) / (PHY_mean * ZOO_mean)
+            # > 1: predator-prey co-occurrence hotspot; < 1: spatial mismatch
+            if '_PHYINT' in ds and '_ZOOINT' in ds:
+                phy = ds['_PHYINT']
+                zoo = ds['_ZOOINT']
+                phy_mean = float(phy.mean())
+                zoo_mean = float(zoo.mean())
+                if phy_mean > 0 and zoo_mean > 0:
+                    ds['_EE'] = (phy * zoo) / (phy_mean * zoo_mean)
             return ds
 
         elif suffix == 'diad':
@@ -698,6 +709,14 @@ ECOSYSTEM_VARS = {
         'vmin': 0,
         'depth_index': None,
         'cmap': 'viridis'
+    },
+    '_EE': {
+        'long_name': 'Encounter Efficiency',
+        'units': 'dimensionless',
+        'vmax': 4,
+        'vmin': 0,
+        'depth_index': None,
+        'cmap': 'RdYlBu_r'
     }
 }
 
