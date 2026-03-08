@@ -686,7 +686,7 @@ ECOSYSTEM_VARS = {
     '_DCM_depth': {
         'long_name': 'DCM Depth',
         'units': 'm',
-        'vmax': 300,
+        'vmax': 200,
         'vmin': 0,
         'depth_index': None,
         'cmap': 'viridis'
