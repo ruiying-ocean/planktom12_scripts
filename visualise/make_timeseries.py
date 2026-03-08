@@ -224,6 +224,7 @@ class FigureCreator:
         run_dir = self.model_output_dir / self.model_name
         diad_files = sorted(run_dir.glob("ORCA2_1m_*_diad_T.nc"))
         if not diad_files:
+            print(f"  ⚠ No ORCA2_1m_*_diad_T.nc files found in {run_dir} — skipping tchl seasonal plot")
             return None, None
 
         latest_file = max(
@@ -232,11 +233,13 @@ class FigureCreator:
         )
         nc_file = latest_file
         if not nc_file.exists():
+            print(f"  ⚠ File not found: {nc_file} — skipping tchl seasonal plot")
             return None, None
 
         try:
             with xr.open_dataset(nc_file, decode_times=False) as ds:
                 if "TChl" not in ds:
+                    print(f"  ⚠ 'TChl' variable not found in {nc_file.name} — skipping tchl seasonal plot")
                     return None, None
 
                 tchl = ds["TChl"]
@@ -265,7 +268,8 @@ class FigureCreator:
 
                 month_names = list(calendar.month_abbr)[1:len(region_series[0]) + 1]
                 return month_names, region_series
-        except Exception:
+        except Exception as e:
+            print(f"  ⚠ Could not load tchl seasonal data: {e} — skipping tchl seasonal plot")
             return None, None
 
     def _get_global_year_limits(self, data):
