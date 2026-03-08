@@ -262,18 +262,17 @@ class OceanMapPlotter:
                     new_name = self._new_varname(pft, 'INT')
                     ds[new_name] = (ds[pft] * volume * 12.01 * 1e3 * 1e-12).sum(dim='deptht')  ## Tg C
 
-            # Predator-Prey Encounter Efficiency (Xue et al. 2022)
-            # EE(x,y,t) = PHY(x,y,t) * ZOO(x,y,t) / (PHY_mean(t) * ZOO_mean(t))
-            # Normalised by global spatial mean at each time step so each month
-            # is independently scaled. > 1: co-occurrence hotspot; < 1: mismatch.
-            if '_PHYINT' in ds and '_ZOOINT' in ds:
-                phy = ds['_PHYINT']
-                zoo = ds['_ZOOINT']
-                spatial_dims = [d for d in ['x', 'y'] if d in phy.dims]
-                phy_mean = phy.mean(dim=spatial_dims)
-                zoo_mean = zoo.mean(dim=spatial_dims)
-                denom = phy_mean * zoo_mean
-                ds['_EE'] = xr.where(denom > 0, (phy * zoo) / denom, np.nan)
+            # Predator-Prey Encounter Efficiency (Xue et al. 2022, Eq. 9)
+            # EE(x,y,t) = ∑ᵢ(PHY_i × ZOO_i) / (∑ᵢ PHY_i × ∑ᵢ ZOO_i)
+            # where i is the vertical grid box. EE ∈ [0,1]: 1 = full vertical
+            # co-location, 0 = complete separation. Weighted by layer thickness
+            # (volume² in numerator, volume in each denominator term).
+            if '_PHY' in ds and '_ZOO' in ds:
+                phy = ds['_PHY']
+                zoo = ds['_ZOO']
+                numer = (phy * zoo * volume ** 2).sum(dim='deptht')
+                denom = (phy * volume).sum(dim='deptht') * (zoo * volume).sum(dim='deptht')
+                ds['_EE'] = xr.where(denom > 0, numer / denom, np.nan)
             return ds
 
         elif suffix == 'diad':
