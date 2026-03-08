@@ -683,6 +683,14 @@ ECOSYSTEM_VARS = {
         'depth_index': 17,  # ~300m depth (same as O2)
         'cmap': 'RdBu_r'  # Diverging colormap since AOU can be negative
     },
+    '_DCM_depth': {
+        'long_name': 'DCM Depth',
+        'units': 'm',
+        'vmax': 300,
+        'vmin': 0,
+        'depth_index': None,
+        'cmap': 'viridis_r'
+    },
     '_rls': {
         'long_name': 'Remineralization Length Scale',
         'units': 'm',

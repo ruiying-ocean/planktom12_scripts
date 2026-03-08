@@ -663,7 +663,7 @@ def plot_derived_variables(
     diad_ds: xr.Dataset,
     output_path: Path,
     ptrc_ds: xr.Dataset = None,
-    variables: list = ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff', '_rls']
+    variables: list = ['_SPINT', '_RESIDUALINT', '_eratio', '_Teff', '_rls', '_DCM_depth']
 ):
     """
     Create multi-panel map of derived ecosystem variables.
@@ -675,6 +675,19 @@ def plot_derived_variables(
         ptrc_ds: Dataset with tracer variables (optional)
         variables: List of variables to plot
     """
+    # Pre-compute DCM depth from _TChl if requested and available
+    diad_ds = diad_ds.copy()
+    if '_DCM_depth' in variables and '_TChl' in diad_ds:
+        tchl = diad_ds['_TChl']
+        if 'deptht' in tchl.dims:
+            if 'time_counter' in tchl.dims:
+                tchl = tchl.mean(dim='time_counter')
+            tchl = tchl.squeeze()
+            tchl_shallow = tchl.where(tchl['deptht'] <= 300.0, drop=True)
+            dcm_depth = tchl_shallow.idxmax(dim='deptht')
+            dcm_depth = dcm_depth.where(tchl_shallow.mean(dim='deptht') >= 0.1)
+            diad_ds['_DCM_depth'] = plotter.apply_mask(dcm_depth)
+
     # Create 2x3 subplot grid to accommodate up to 6 variables
     fig, axs = plotter.create_subplot_grid(
         nrows=2, ncols=3,
