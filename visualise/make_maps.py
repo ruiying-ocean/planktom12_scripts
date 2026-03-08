@@ -687,18 +687,18 @@ def plot_derived_variables(
             dcm_depth = tchl_shallow.idxmax(dim='deptht')
             diad_ds['_DCM_depth'] = plotter.apply_mask(dcm_depth)
 
-    # Create 2x4 subplot grid to accommodate up to 8 variables
+    # Create 3x3 subplot grid to accommodate up to 9 variables
     fig, axs = plotter.create_subplot_grid(
-        nrows=2, ncols=4,
+        nrows=3, ncols=3,
         projection=ccrs.PlateCarree(),
-        figsize=(20, 6)
+        figsize=(15, 9)
     )
 
     # Flatten axes for easier indexing
     axs_flat = axs.flatten()
 
     for idx, var_name in enumerate(variables):
-        if idx >= 8:  # Only plot first 8 variables (2x4 grid)
+        if idx >= 9:  # Only plot first 9 variables (3x3 grid)
             break
 
         ax = axs_flat[idx]
