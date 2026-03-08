@@ -689,7 +689,7 @@ ECOSYSTEM_VARS = {
         'vmax': 300,
         'vmin': 0,
         'depth_index': None,
-        'cmap': 'viridis_r'
+        'cmap': 'viridis'
     },
     '_rls': {
         'long_name': 'Remineralization Length Scale',

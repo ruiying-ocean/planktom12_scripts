@@ -685,7 +685,7 @@ def plot_derived_variables(
             tchl = tchl.squeeze()
             tchl_shallow = tchl.where(tchl['deptht'] <= 300.0, drop=True)
             dcm_depth = tchl_shallow.idxmax(dim='deptht')
-            dcm_depth = dcm_depth.where(tchl_shallow.mean(dim='deptht') >= 0.1)
+            dcm_depth = dcm_depth.where(tchl_shallow.mean(dim='deptht') >= 0.02)
             diad_ds['_DCM_depth'] = plotter.apply_mask(dcm_depth)
 
     # Create 2x3 subplot grid to accommodate up to 6 variables
