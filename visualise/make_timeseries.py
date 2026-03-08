@@ -608,7 +608,7 @@ class FigureCreator:
 
             ax.set_title(region["title"], fontweight='bold', pad=5)
             ax.set_xticks(x)
-            ax.set_xticklabels(month_names[:n_months], rotation=45, ha='right')
+            ax.set_xticklabels([m[0] for m in month_names[:n_months]], rotation=0)
             ax.grid(True)
 
         for ax in axes[len(self.TCHL_REGION_DEFS):]:
