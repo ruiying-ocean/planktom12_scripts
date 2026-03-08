@@ -27,27 +27,39 @@ ${SETUPDATA_SUMMARY}
 
 ## Global Ecosystem Metrics
 
-![](${identifier}_summary_global.${img_format})
+![](${identifier}_ts_global.${img_format})
 
 ## Plankton Functional Types
 
-![](${identifier}_summary_pfts.${img_format})
+![](${identifier}_ts_pfts.${img_format})
 
 ## Nutrient Cycles
 
-![](${identifier}_summary_nutrients.${img_format})
+![](${identifier}_ts_nutrients.${img_format})
 
 ## Physical Environment
 
-![](${identifier}_summary_physics.${img_format})
+![](${identifier}_ts_physics.${img_format})
 
 ## Derived Ecosystem Variables
 
-![](${identifier}_summary_derived.${img_format})
+![](${identifier}_ts_derived.${img_format})
 
 ## Primary Production by PFT
 
-![](${identifier}_summary_ppt_by_pft.${img_format})
+![](${identifier}_ts_ppt_by_pft.${img_format})
+
+## Trophic & Food Web
+
+![](${identifier}_ts_trophic.${img_format})
+
+## Benthic
+
+![](${identifier}_ts_benthic.${img_format})
+
+## Organic Carbon
+
+![](${identifier}_ts_organic_carbon.${img_format})
 
 ---
 
