@@ -1009,39 +1009,13 @@ class TChlPlotter(RegionalPlotter):
     """Generates TChl summary plots"""
 
     def generate(self):
-        """
-        Generates and saves the TChl summary plot with a balanced, nested grid layout.
-        """
-        fig = plt.figure(figsize=(3.5 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT))
-
-        # Use a nested GridSpec for complete control over column layouts.
-        gs_main = gridspec.GridSpec(1, 2, figure=fig, wspace=0.25, width_ratios=[1, 1])
-        gs_left = gs_main[0].subgridspec(2, 1, hspace=0.15)
-        gs_right = gs_main[1].subgridspec(5, 1, hspace=0.1)
-
-        axes = []
-        axes.append(fig.add_subplot(gs_left[0]))
-        axes.append(fig.add_subplot(gs_left[1]))
-
-        right_column_axes = []
-        for i in range(5):
-            if i == 0:
-                ax = fig.add_subplot(gs_right[i])
-            else:
-                ax = fig.add_subplot(gs_right[i], sharex=right_column_axes[0])
-            right_column_axes.append(ax)
-        axes.extend(right_column_axes)
-
-        for ax in right_column_axes[:-1]:
-            ax.tick_params(
-                axis="x", which="both", bottom=False, top=False, labelbottom=False
-            )
-
-        setup_axes(axes)
-
-        self.plot_all_models(fig, axes, self._plot_model)
-        self._add_observational_data(axes)
-
+        fig, ax = plt.subplots(
+            1, 1, figsize=(2 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT),
+            constrained_layout=USE_CONSTRAINED_LAYOUT
+        )
+        setup_axes([ax])
+        self.plot_all_models(fig, [ax], self._plot_model)
+        ax.axhline(ObservationData.get_global()["TChl"]["value"], **LINE_STYLE)
         self.add_legend(fig)
         self.save_figure(fig, "mm_tchl.png")
 
@@ -1065,57 +1039,8 @@ class TChlPlotter(RegionalPlotter):
             axes[0].set_title(
                 "Average TChl (Global) [ug Chl/L]", fontsize=TITLE_FONTSIZE
             )
-
-        ave_monthly = DataLoader.load_analyser_data(model, "ave", "monthly")
-        if ave_monthly is None:
-            return
-
-        monthly_idx = model.get_monthly_index(len(ave_monthly))
-        month_names = self._get_month_names(ave_monthly)
-
-        regional_cols = ["TChl", "TChl.1", "TChl.2", "TChl.3", "TChl.4", "TChl.5"]
-        labels = [model.label] + [None] * 5
-        titles = ["Global", "45N-90N", "15N-45N", "15S-15N", "45S-15S", "90S-45S"]
-
-        for i, (col, label, title) in enumerate(zip(regional_cols, labels, titles)):
-            ax = axes[i + 1]
-            data = DataLoader.safe_load_column(
-                ave_monthly, col, (monthly_idx, monthly_idx + 12), validate_length=False
-            )
-            self._plot_regional_data(ax, month_names, data, color, label)
-            ax.text(
-                0.8,
-                0.9,
-                f"{title}",
-                fontsize=TITLE_FONTSIZE - 2,
-                transform=ax.transAxes,
-            )
-
-    def _add_observational_data(self, axes):
-        month_names = list(calendar.month_abbr)[1:]
-        regions = ["global", "reg1", "reg2", "reg3", "reg4", "reg5"]
-        titles = ["Global", "45N-90N", "15N-45N", "15S-15N", "45S-15S", "90S-45S"]
-
-        for i, (region, title) in enumerate(zip(regions, titles)):
-            ax = axes[i + 1]
-            data = ObservationData.TCHL_MONTHLY[region]
-            normalized = data - data[0]
-            label = "data-products" if i == 0 else None
-            ax.plot(
-                month_names,
-                normalized,
-                color="k",
-                linestyle="dashed",
-                label=label,
-                linewidth=LINE_WIDTH,
-            )
-            ax.text(
-                0.8,
-                0.9,
-                f"{title}",
-                fontsize=TITLE_FONTSIZE - 2,
-                transform=ax.transAxes,
-            )
+            axes[0].set_ylabel("μg Chl/L")
+            axes[0].set_xlabel("Year", fontweight='bold')
 
 
 class NutrientPlotter(PlotGenerator):
@@ -1270,51 +1195,12 @@ class PCO2Plotter(RegionalPlotter):
     """Generates pCO2 summary plots"""
 
     def generate(self):
-        """
-        Generates and saves the pCO2 summary plot with a balanced, nested grid layout.
-        """
-        fig = plt.figure(figsize=(3.5 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT))
-
-        # --- MODIFICATION START ---
-        # Use a nested GridSpec for complete control over column layouts.
-
-        # 1. Create a main 1x2 grid to define the left and right columns.
-        gs_main = gridspec.GridSpec(1, 2, figure=fig, wspace=0.25, width_ratios=[1, 1])
-
-        # 2. Create a nested grid for the left column (2 rows, 1 column).
-        gs_left = gs_main[0].subgridspec(2, 1, hspace=0.15)
-
-        # 3. Create a nested grid for the right column (5 rows, 1 column).
-        gs_right = gs_main[1].subgridspec(5, 1, hspace=0.1)
-
-        # 4. Create the axes and add them to a list in the correct order.
-        axes = []
-        # Add left column plots
-        axes.append(fig.add_subplot(gs_left[0]))  # axes[0]: Top-left
-        axes.append(fig.add_subplot(gs_left[1]))  # axes[1]: Bottom-left
-
-        # Add right column plots, sharing the x-axis
-        right_column_axes = []
-        for i in range(5):
-            if i == 0:
-                ax = fig.add_subplot(gs_right[i])
-            else:
-                ax = fig.add_subplot(gs_right[i], sharex=right_column_axes[0])
-            right_column_axes.append(ax)
-        axes.extend(right_column_axes)  # Add to the main list (axes[2] through axes[6])
-
-        # 5. Hide x-axis labels on the upper plots of the right column.
-        for ax in right_column_axes[:-1]:
-            ax.tick_params(
-                axis="x", which="both", bottom=False, top=False, labelbottom=False
-            )
-
-        setup_axes(axes)
-        # --- MODIFICATION END ---
-
-        self.plot_all_models(fig, axes, self._plot_model)
-        self._add_observational_data(axes)
-
+        fig, ax = plt.subplots(
+            1, 1, figsize=(2 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT),
+            constrained_layout=USE_CONSTRAINED_LAYOUT
+        )
+        setup_axes([ax])
+        self.plot_all_models(fig, [ax], self._plot_model)
         self.add_legend(fig)
         self.save_figure(fig, "mm_pco2.png")
 
@@ -1338,50 +1224,8 @@ class PCO2Plotter(RegionalPlotter):
             axes[0].set_title(
                 "Avg Surface pCO2 (Global) [ppm]", fontsize=TITLE_FONTSIZE
             )
-
-        ave_monthly = DataLoader.load_analyser_data(model, "ave", "monthly")
-        if ave_monthly is None:
-            return
-
-        monthly_idx = model.get_monthly_index(len(ave_monthly))
-        month_names = self._get_month_names(ave_monthly)
-
-        regional_cols = ["pCO2", "pCO2.1", "pCO2.2", "pCO2.3", "pCO2.4", "pCO2.5"]
-        for i, col in enumerate(regional_cols):
-            label = model.label if i == 0 else None
-            data = DataLoader.safe_load_column(
-                ave_monthly, col, (monthly_idx, monthly_idx + 12), validate_length=False
-            )
-            # The axes list is now structured with axes[1] as the first regional plot (Global).
-            self._plot_regional_data(axes[i + 1], month_names, data, color, label)
-
-    def _add_observational_data(self, axes):
-        month_names = list(calendar.month_abbr)[1:]
-        regions = ["global", "reg1", "reg2", "reg3", "reg4", "reg5"]
-        titles = ["Global", "45N-90N", "15N-45N", "15S-15N", "45S-15S", "90S-45S"]
-
-        for i, (region, title) in enumerate(zip(regions, titles)):
-            # The axes list is now structured with axes[1] as the first regional plot.
-            ax = axes[i + 1]
-            data = ObservationData.PCO2_MONTHLY[region]
-            normalized = data - data[0]
-            label = "data-products" if i == 0 else None
-            ax.plot(
-                month_names,
-                normalized,
-                color="k",
-                linestyle="dashed",
-                label=label,
-                linewidth=LINE_WIDTH,
-            )
-            # Use ax.text to prevent titles from overlapping in the new layout
-            ax.text(
-                0.8,
-                0.9,
-                f"{title}",
-                fontsize=TITLE_FONTSIZE - 2,
-                transform=ax.transAxes,
-            )
+            axes[0].set_ylabel("ppm")
+            axes[0].set_xlabel("Year", fontweight='bold')
 
 
 class PhysicsPlotter(PlotGenerator):
