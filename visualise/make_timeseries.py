@@ -263,7 +263,7 @@ class FigureCreator:
                     lat_mask = (lat >= lat_min) & (lat <= lat_max)
                     lon_mask = self._build_lon_mask(lon, region["lon_range"])
                     region_mask = lat_mask & lon_mask & np.isfinite(tchl.isel(time_counter=0))
-                    weighted_mean = tchl.where(region_mask).weighted(weights.where(region_mask)).mean(dim=spatial_dims)
+                    weighted_mean = tchl.where(region_mask).weighted(weights.where(region_mask, 0.0)).mean(dim=spatial_dims)
                     region_series.append(weighted_mean.to_numpy().astype(float))
 
                 month_names = list(calendar.month_abbr)[1:len(region_series[0]) + 1]
