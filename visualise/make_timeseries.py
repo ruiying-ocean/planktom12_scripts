@@ -623,7 +623,7 @@ class FigureCreator:
             fig.legend(handles, labels, loc='lower right',
                        fontsize=self.styler.font_legend, framealpha=0.8)
 
-        self._save_figure(fig, f"{self.model_name}_ts_tchl_seasonal.png")
+        self._save_figure(fig, f"{self.model_name}_ts_tchl_monthly.png")
 
 def main():
     parser = argparse.ArgumentParser(
