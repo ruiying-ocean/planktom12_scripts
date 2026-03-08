@@ -287,18 +287,6 @@ class OceanMapPlotter:
             if '_NPPINT' in ds and '_SPINT' in ds and '_EXPINT' in ds:
                 ds['_RESIDUALINT'] = ds['_NPPINT'] - ds['_SPINT'] - ds['_EXPINT']  ## Tg C/yr
 
-            # Trophic Amplification Index (Xue et al. 2022)
-            # TA = CV(ZOO_prod) / CV(PHY_prod) where CV = std/mean over time
-            # TA > 1: zooplankton seasonality exceeds phytoplankton (amplification)
-            # TA < 1: attenuation
-            if '_NPPINT' in ds and '_SPINT' in ds:
-                time_dims = [d for d in ds['_NPPINT'].dims if 'time' in d.lower()]
-                if time_dims:
-                    time_dim = time_dims[0]
-                    npp_cv = ds['_NPPINT'].std(dim=time_dim) / ds['_NPPINT'].mean(dim=time_dim)
-                    sp_cv = ds['_SPINT'].std(dim=time_dim) / ds['_SPINT'].mean(dim=time_dim)
-                    ds['_TA'] = xr.where(npp_cv > 0, sp_cv / npp_cv, np.nan)
-
             return ds
 
         return ds
@@ -712,14 +700,6 @@ ECOSYSTEM_VARS = {
         'vmin': 0,
         'depth_index': None,
         'cmap': 'viridis'
-    },
-    '_TA': {
-        'long_name': 'Trophic Amplification',
-        'units': 'dimensionless',
-        'vmax': 2,
-        'vmin': 0,
-        'depth_index': None,
-        'cmap': 'RdYlBu_r'
     },
 }
 
