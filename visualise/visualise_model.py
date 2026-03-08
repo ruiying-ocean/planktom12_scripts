@@ -27,8 +27,7 @@ from make_maps import (
     plot_nutrient_comparison,
     plot_carbon_chemistry,
     plot_derived_variables,
-    plot_amoc_streamfunction,
-    plot_dcm_depth
+    plot_amoc_streamfunction
 )
 from make_transects import plot_basin_transects, plot_pft_transects
 from make_transects_physics import plot_physics_sections
@@ -149,7 +148,7 @@ def main():
         print_header("Step 2: Generating Spatial Maps")
 
         # 2.1 Ecosystem diagnostics with satellite chlorophyll
-        print_step(1, 7, "Ecosystem diagnostics (TChl, EXP, PPINT)")
+        print_step(1, 6, "Ecosystem diagnostics (TChl, EXP, PPINT)")
         obs_dir = Path(args.obs_dir)
         chl_obs_file = obs_dir / 'OC-CCI/climatology/OC-CCI_climatology_1deg.nc'
 
@@ -161,7 +160,7 @@ def main():
         )
 
         # 2.2 Phytoplankton maps
-        print_step(2, 7, "Phytoplankton functional types")
+        print_step(2, 6, "Phytoplankton functional types")
         plot_pft_maps(
             plotter=plotter,
             ptrc_ds=ptrc_ds,
@@ -171,7 +170,7 @@ def main():
         )
 
         # 2.3 Zooplankton maps
-        print_step(3, 7, "Zooplankton functional types")
+        print_step(3, 6, "Zooplankton functional types")
         plot_pft_maps(
             plotter=plotter,
             ptrc_ds=ptrc_ds,
@@ -181,7 +180,7 @@ def main():
         )
 
         # 2.4 Nutrient maps
-        print_step(4, 7, "Nutrient distributions")
+        print_step(4, 6, "Nutrient distributions")
         nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
 
         if not args.skip_observations:
@@ -232,7 +231,7 @@ def main():
             # Could call a simplified nutrient plotting function here if needed
 
         # 2.5 Derived variables maps
-        print_step(5, 7, "Derived ecosystem variables (SP, Residual, e-ratio, Teff)")
+        print_step(5, 6, "Derived ecosystem variables (SP, Residual, e-ratio, Teff)")
         plot_derived_variables(
             plotter=plotter,
             diad_ds=diad_ds,
@@ -241,7 +240,7 @@ def main():
         )
 
         # 2.6 Carbon chemistry maps
-        print_step(6, 7, "Carbon chemistry (ALK, DIC)")
+        print_step(6, 6, "Carbon chemistry (ALK, DIC)")
         carbon_vars = ['_ALK', '_DIC']
 
         if not args.skip_observations:
@@ -265,14 +264,6 @@ def main():
                 output_path=output_dir / f"{args.run_name}_{args.year}_carbon_chemistry.png",
                 variables=carbon_vars
             )
-
-        # 2.7 DCM depth map
-        print_step(7, 7, "Deep Chlorophyll Maximum depth")
-        plot_dcm_depth(
-            plotter=plotter,
-            diad_ds=diad_ds,
-            output_path=output_dir / f"{args.run_name}_{args.year}_dcm_depth.png"
-        )
 
         print_success("Spatial maps complete\n")
 
