@@ -262,17 +262,7 @@ class OceanMapPlotter:
                     new_name = self._new_varname(pft, 'INT')
                     ds[new_name] = (ds[pft] * volume * 12.01 * 1e3 * 1e-12).sum(dim='deptht')  ## Tg C
 
-            # Predator-Prey Encounter Efficiency (Xue et al. 2022, Eq. 9)
-            # EE(x,y,t) = ∑ᵢ(PHY_i × ZOO_i) / (∑ᵢ PHY_i × ∑ᵢ ZOO_i)
-            # where i is the vertical grid box. EE ∈ [0,1]: 1 = full vertical
-            # co-location, 0 = complete separation. Weighted by layer thickness
-            # (volume² in numerator, volume in each denominator term).
-            if '_PHY' in ds and '_ZOO' in ds:
-                phy = ds['_PHY']
-                zoo = ds['_ZOO']
-                numer = (phy * zoo * volume ** 2).sum(dim='deptht')
-                denom = (phy * volume).sum(dim='deptht') * (zoo * volume).sum(dim='deptht')
-                ds['_EE'] = xr.where(denom > 0, numer / denom, np.nan)
+
             return ds
 
         elif suffix == 'diad':
@@ -711,14 +701,6 @@ ECOSYSTEM_VARS = {
         'depth_index': None,
         'cmap': 'viridis'
     },
-    '_EE': {
-        'long_name': 'Encounter Efficiency',
-        'units': 'dimensionless',
-        'vmax': 1,
-        'vmin': 0,
-        'depth_index': None,
-        'cmap': 'RdYlBu_r'
-    }
 }
 
 # Nutrients
