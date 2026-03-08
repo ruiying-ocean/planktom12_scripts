@@ -82,6 +82,15 @@ class ModelDataLoader:
             level_data["ratio_TL3"] = (volume_data["GRAMES"] + volume_data["GRAPTE"]) / volume_data["PPT"]
         if all(c in volume_data for c in ["GRAGEL", "GRACRU"]) and "PPT" in volume_data:
             level_data["FCE"] = (volume_data["GRAGEL"] + volume_data["GRACRU"]) / volume_data["PPT"]
+        # Food web network indices (Finn 1980)
+        # TST (Total System Throughput) = NPP + all grazing + export
+        # FCI (Finn Cycling Index) = microbial loop flow (GRAPRO) / TST
+        #   — PRO eating BAC (fed by phytoplankton-derived DOC) is the main cycling pathway
+        #   — higher FCI = more carbon recycled through microbial loop vs. exported up the food chain
+        if all(c in volume_data for c in ["PPT", "SP"]) and "EXP" in level_data:
+            level_data["TST"] = volume_data["PPT"] + volume_data["SP"] + level_data["EXP"]
+            if "GRAPRO" in volume_data:
+                level_data["FCI"] = volume_data["GRAPRO"] / level_data["TST"]
         data.update(level_data)
 
         average_df = self._read_analyser_file("ave")

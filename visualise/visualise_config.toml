@@ -226,6 +226,8 @@ ALK_DIC = {title = "ALK − DIC", unit = "μmol/L", color_index = 6}
 ratio_TL2 = {title = "Microzooplankton/NPP (TL2)", unit = "Dimensionless", color_index = 7}
 ratio_TL3 = {title = "Middle Predators/NPP (TL3)", unit = "Dimensionless", color_index = 8}
 FCE = {title = "Food Chain Efficiency (FCE)", unit = "Dimensionless", color_index = 9}
+TST = {title = "Total System Throughput", unit = "PgC/yr", color_index = 0}
+FCI = {title = "Finn Cycling Index", unit = "Dimensionless", color_index = 1}
 
 [plot_info.benthic]
 bPO4 = {title = "Deep Phosphate", unit = "μmol/L", color_index = 0}
