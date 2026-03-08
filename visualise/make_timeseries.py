@@ -222,18 +222,15 @@ class FigureCreator:
 
     def _load_tchl_seasonal_regions(self):
         run_dir = self.model_output_dir / self.model_name
-        annual_path = run_dir / "analyser.sur.annual.csv"
-        if not annual_path.exists():
-            annual_path = run_dir / "breakdown.sur.annual.csv"
-        if not annual_path.exists():
+        diad_files = sorted(run_dir.glob("ORCA2_1m_*_diad_T.nc"))
+        if not diad_files:
             return None, None
 
-        try:
-            latest_year = int(DataFileLoader.read_analyser_file(self.model_output_dir, self.model_name, "sur", "annual")["year"].dropna().iloc[-1])
-        except Exception:
-            return None, None
-
-        nc_file = run_dir / f"ORCA2_1m_{latest_year}0101_{latest_year}1231_diad_T.nc"
+        latest_file = max(
+            diad_files,
+            key=lambda p: p.name.split("_")[2] if len(p.name.split("_")) > 2 else ""
+        )
+        nc_file = latest_file
         if not nc_file.exists():
             return None, None
 
