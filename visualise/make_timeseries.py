@@ -601,47 +601,84 @@ class FigureCreator:
 
         n_months = len(region_series[0])
         x = np.arange(n_months)
+        month_labels = [m[:3] for m in month_names[:n_months]]
 
         n_regions = len(self.TCHL_REGION_DEFS)
         ncols = 3
         nrows = (n_regions + ncols - 1) // ncols
+        model_color = "#0f766e"
+        obs_color = "#475569"
 
         fig, axes = plt.subplots(
             nrows, ncols,
-            figsize=(ncols * self.config['layout']['subplot_width'], nrows * self.config['layout']['subplot_height']),
+            figsize=(
+                ncols * (self.config['layout']['subplot_width'] + 0.35),
+                nrows * (self.config['layout']['subplot_height'] + 0.3),
+            ),
             squeeze=False, sharex=True,
             constrained_layout=self.config['layout']['use_constrained_layout']
         )
+        fig.patch.set_facecolor("#f8fafc")
         axes = axes.flatten()
 
         obs_series = self._load_occci_seasonal_regions()
 
         for i, (ax, region, series) in enumerate(zip(axes, self.TCHL_REGION_DEFS, region_series)):
             model_vals = np.asarray(series, dtype=float) * 1e6
-            ax.plot(x, model_vals, color=self.colors[1], linewidth=self.styler.linewidth,
-                    label=self.model_name)
+            ax.set_facecolor("#ffffff")
+            ax.plot(
+                x,
+                model_vals,
+                color=model_color,
+                linewidth=self.styler.linewidth * 2.2,
+                solid_capstyle="round",
+                zorder=3,
+            )
+            ax.fill_between(x, model_vals, color=model_color, alpha=0.12, zorder=2)
 
             if obs_series is not None:
                 obs_vals = obs_series[i][:n_months]
-                ax.plot(x, obs_vals, color="gray", linewidth=self.styler.linewidth,
-                        linestyle="--", label="OC-CCI")
+                ax.plot(
+                    x,
+                    obs_vals,
+                    color=obs_color,
+                    linewidth=self.styler.linewidth * 1.7,
+                    linestyle=(0, (4, 2)),
+                    dash_capstyle="round",
+                    zorder=4,
+                )
 
-            ax.set_title(region["title"], fontweight='bold', pad=5)
+                finite_vals = np.concatenate([
+                    model_vals[np.isfinite(model_vals)],
+                    obs_vals[np.isfinite(obs_vals)],
+                ])
+            else:
+                finite_vals = model_vals[np.isfinite(model_vals)]
+
+            if finite_vals.size:
+                ymin = finite_vals.min()
+                ymax = finite_vals.max()
+                pad = max((ymax - ymin) * 0.12, ymax * 0.08, 0.01)
+                ax.set_ylim(max(0, ymin - pad * 0.4), ymax + pad)
+
+            ax.set_title(region["title"], loc="left", fontweight="bold", pad=6, color="#0f172a")
             ax.set_xticks(x)
-            ax.set_xticklabels([m[0] for m in month_names[:n_months]], rotation=0)
-            ax.grid(True)
+            ax.set_xticklabels(month_labels, rotation=0)
+            ax.grid(axis="y", alpha=0.35, linewidth=0.6)
+            ax.grid(axis="x", visible=False)
+            ax.tick_params(axis="both", colors="#334155", length=0)
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+            ax.spines["left"].set_color("#cbd5e1")
+            ax.spines["bottom"].set_color("#cbd5e1")
 
         for ax in axes[len(self.TCHL_REGION_DEFS):]:
             ax.set_visible(False)
 
         # Shared y-axis label
-        fig.supylabel("μg Chl/L", fontweight='bold')
-
-        # Shared legend from the first plotted axis
-        handles, labels = axes[0].get_legend_handles_labels()
-        if handles:
-            fig.legend(handles, labels, loc='lower right',
-                       fontsize=self.styler.font_legend, framealpha=0.8)
+        fig.suptitle("Monthly Surface Chlorophyll by Region", x=0.06, ha="left", fontweight="bold")
+        fig.supxlabel("Month", y=0.03, fontweight="bold")
+        fig.supylabel("μg Chl/L", x=0.02, fontweight="bold")
 
         self._save_figure(fig, f"{self.model_name}_ts_tchl_monthly.png")
 
