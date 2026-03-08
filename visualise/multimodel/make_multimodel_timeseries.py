@@ -248,6 +248,39 @@ class DataLoader:
         except Exception:
             return None
 
+    @staticmethod
+    def compute_trophic_amplification(sp, ppt, baseline_years=10, min_signal=1e-6):
+        """
+        Compute trophic amplification from annual CSV time series.
+
+        Uses the ratio of log-changes relative to the first-decade mean:
+            TA(t) = log(SP(t) / SP0) / log(PPT(t) / PPT0)
+        """
+        if sp is None or ppt is None:
+            return None
+
+        min_len = min(len(sp), len(ppt))
+        if min_len == 0:
+            return None
+
+        sp = np.asarray(sp[:min_len], dtype=float)
+        ppt = np.asarray(ppt[:min_len], dtype=float)
+
+        baseline_len = min(baseline_years, min_len)
+        sp0 = np.nanmean(sp[:baseline_len])
+        ppt0 = np.nanmean(ppt[:baseline_len])
+
+        if not np.isfinite(sp0) or not np.isfinite(ppt0) or sp0 <= 0 or ppt0 <= 0:
+            return None
+
+        with np.errstate(divide="ignore", invalid="ignore"):
+            sp_change = np.log(sp / sp0)
+            ppt_change = np.log(ppt / ppt0)
+            ta = np.where(np.abs(ppt_change) > min_signal, sp_change / ppt_change, np.nan)
+
+        ta[~np.isfinite(ta)] = np.nan
+        return ta
+
 
 class PlotGenerator:
     """Base class for generating plots"""
@@ -1446,7 +1479,7 @@ class DerivedSummaryPlotter(PlotGenerator):
             axes[6].axhline(derived_obs["ALK_DIC"], **LINE_STYLE)
 
         # Hide unused subplots
-        for idx in range(7, len(axes)):
+        for idx in range(8, len(axes)):
             axes[idx].set_visible(False)
 
         self.add_legend(fig)
@@ -1505,6 +1538,14 @@ class DerivedSummaryPlotter(PlotGenerator):
                 axes[5].set_title("SP/NPP", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[5].set_ylabel("Dimensionless")
 
+                ta = DataLoader.compute_trophic_amplification(sp[:min_len], ppt[:min_len])
+                plot_year, plot_ta = DataLoader.align_year_and_values(year[:min_len], ta)
+                if plot_year is not None:
+                    axes[7].plot(plot_year, plot_ta, color=color, linewidth=LINE_WIDTH)
+                    axes[7].set_title("Trophic Amplification", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                    axes[7].set_ylabel("Dimensionless")
+                    axes[7].set_xlabel("Year", fontweight='bold')
+
         if exp is not None and ppt is not None:
             min_len = min(len(year), len(exp), len(ppt))
             eratio = exp[:min_len] / ppt[:min_len]
@@ -1555,7 +1596,7 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
         self.plot_all_models(fig, axes, self._plot_model)
 
         # Hide unused subplots
-        for idx in range(7, len(axes)):
+        for idx in range(8, len(axes)):
             axes[idx].set_visible(False)
 
         self.add_legend(fig)
@@ -1615,6 +1656,16 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
                 axes[5].set_title("SP/NPP anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[5].set_ylabel("Dimensionless")
                 axes[5].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+
+                ta = DataLoader.compute_trophic_amplification(sp[:min_len], ppt[:min_len])
+                plot_year, plot_ta = DataLoader.align_year_and_values(year[:min_len], ta)
+                if plot_year is not None:
+                    ta_norm = GlobalSummaryNormalizedPlotter._normalize_series(plot_ta)
+                    axes[7].plot(plot_year, ta_norm, color=color, linewidth=LINE_WIDTH)
+                    axes[7].set_title("Trophic Amplification anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                    axes[7].set_ylabel("Dimensionless")
+                    axes[7].set_xlabel("Year", fontweight='bold')
+                    axes[7].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
         if exp is not None and ppt is not None:
             min_len = min(len(year), len(exp), len(ppt))

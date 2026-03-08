@@ -32,6 +32,44 @@ class ModelDataLoader:
     def _extract_arrays(self, df, columns, skip_rows=0):
         """Extract columns as numpy arrays using shared utility."""
         return DataFileLoader.extract_columns(df, columns, skip_rows)
+
+    @staticmethod
+    def _compute_trophic_amplification(sp, ppt, baseline_years=10, min_signal=1e-6):
+        """
+        Compute trophic amplification from annual CSV time series.
+
+        TA is defined here as the ratio of log-changes in secondary production
+        and primary production relative to the first-decade mean:
+            TA(t) = log(SP(t) / SP0) / log(PPT(t) / PPT0)
+
+        This avoids the old seasonal CV-based map metric and instead measures
+        how strongly higher-trophic production responds to long-term changes
+        in NPP. Values > 1 indicate amplification and values < 1 attenuation.
+        """
+        if sp is None or ppt is None:
+            return None
+
+        min_len = min(len(sp), len(ppt))
+        if min_len == 0:
+            return None
+
+        sp = np.asarray(sp[:min_len], dtype=float)
+        ppt = np.asarray(ppt[:min_len], dtype=float)
+
+        baseline_len = min(baseline_years, min_len)
+        sp0 = np.nanmean(sp[:baseline_len])
+        ppt0 = np.nanmean(ppt[:baseline_len])
+
+        if not np.isfinite(sp0) or not np.isfinite(ppt0) or sp0 <= 0 or ppt0 <= 0:
+            return None
+
+        with np.errstate(divide="ignore", invalid="ignore"):
+            sp_change = np.log(sp / sp0)
+            ppt_change = np.log(ppt / ppt0)
+            ta = np.where(np.abs(ppt_change) > min_signal, sp_change / ppt_change, np.nan)
+
+        ta[~np.isfinite(ta)] = np.nan
+        return ta
         
     def load_all_data(self):
         data = {}
@@ -71,6 +109,7 @@ class ModelDataLoader:
             level_data["recycle"] = volume_data["PPT"] - level_data["EXP"] - volume_data["SP"]  # NPP - EXP100 - SP
         if "SP" in volume_data and "PPT" in volume_data:
             level_data["spratio"] = volume_data["SP"] / volume_data["PPT"]  # SP/NPP
+            level_data["TA"] = self._compute_trophic_amplification(volume_data["SP"], volume_data["PPT"])
         # Trophic coupling indices following Xue et al. (2022)
         # Ingestion ratio at each trophic level relative to NPP
         # TL2: microzooplankton (PRO)

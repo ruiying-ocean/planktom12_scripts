@@ -55,7 +55,7 @@ rows = 2
 cols = 2
 
 [layout.trophic_summary]
-rows = 2
+rows = 3
 cols = 3
 
 [layout.organic_carbon_summary]
@@ -229,6 +229,7 @@ ALK_DIC = {title = "ALK − DIC", unit = "μmol/L", color_index = 6}
 SP = {title = "Secondary Production", unit = "PgC/yr", color_index = 0}
 recycle = {title = "Residual Production", unit = "PgC/yr", color_index = 1}
 spratio = {title = "SP/NPP", unit = "Dimensionless", color_index = 5}
+TA = {title = "Trophic Amplification", unit = "Dimensionless", color_index = 6}
 ratio_TL2 = {title = "TL2/NPP", unit = "Dimensionless", color_index = 7}
 ratio_TL3 = {title = "TL3/NPP", unit = "Dimensionless", color_index = 8}
 FCE = {title = "TL4/NPP", unit = "Dimensionless", color_index = 9}
