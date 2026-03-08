@@ -82,15 +82,6 @@ class ModelDataLoader:
             level_data["ratio_TL3"] = (volume_data["GRAMES"] + volume_data["GRAPTE"]) / volume_data["PPT"]
         if all(c in volume_data for c in ["GRAGEL", "GRACRU"]) and "PPT" in volume_data:
             level_data["FCE"] = (volume_data["GRAGEL"] + volume_data["GRACRU"]) / volume_data["PPT"]
-        # Food web network indices (Finn 1980)
-        # TST (Total System Throughput) = NPP + all grazing + export
-        # FCI (Finn Cycling Index) = microbial loop flow (GRAPRO) / TST
-        #   — PRO eating BAC (fed by phytoplankton-derived DOC) is the main cycling pathway
-        #   — higher FCI = more carbon recycled through microbial loop vs. exported up the food chain
-        if all(c in volume_data for c in ["PPT", "SP"]) and "EXP" in level_data:
-            level_data["TST"] = volume_data["PPT"] + volume_data["SP"] + level_data["EXP"]
-            if "GRAPRO" in volume_data:
-                level_data["FCI"] = volume_data["GRAPRO"] / level_data["TST"]
         data.update(level_data)
 
         average_df = self._read_analyser_file("ave")
@@ -131,23 +122,6 @@ class ModelDataLoader:
         oc_cols = ["POC", "DOC", "GOC", "HOC"]
         oc_data = self._extract_arrays(int_df, oc_cols)
         data.update(oc_data)
-
-        # Carbon cycle turnover rates (yr⁻¹) — computed after all pools and fluxes are merged
-        # PHY turnover: phytoplankton growth rate proxy (increases with warming)
-        # ZOO turnover: zooplankton grazing pressure
-        # BAC turnover: bacterial loss rate to grazing
-        # POC turnover: efficiency of POC export (decreases if remineralisation outpaces export)
-        # TOC turnover: overall organic carbon cycling speed
-        if "PPT" in data and "PHY" in data:
-            data["PHY_turnover"] = data["PPT"] / data["PHY"]
-        if "SP" in data and "ZOO" in data:
-            data["ZOO_turnover"] = data["SP"] / data["ZOO"]
-        if "GRAPRO" in data and "BAC" in data:
-            data["BAC_turnover"] = data["GRAPRO"] / data["BAC"]
-        if "EXP" in data and "POC" in data:
-            data["POC_turnover"] = data["EXP"] / data["POC"]
-        if "PPT" in data and all(c in data for c in ["DOC", "POC", "GOC", "HOC"]):
-            data["TOC_turnover"] = data["PPT"] / (data["DOC"] + data["POC"] + data["GOC"] + data["HOC"])
 
         print("✓ Data loading completed successfully")
         return data
