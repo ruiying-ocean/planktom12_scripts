@@ -131,7 +131,24 @@ class ModelDataLoader:
         oc_cols = ["POC", "DOC", "GOC", "HOC"]
         oc_data = self._extract_arrays(int_df, oc_cols)
         data.update(oc_data)
-        
+
+        # Carbon cycle turnover rates (yr⁻¹) — computed after all pools and fluxes are merged
+        # PHY turnover: phytoplankton growth rate proxy (increases with warming)
+        # ZOO turnover: zooplankton grazing pressure
+        # BAC turnover: bacterial loss rate to grazing
+        # POC turnover: efficiency of POC export (decreases if remineralisation outpaces export)
+        # TOC turnover: overall organic carbon cycling speed
+        if "PPT" in data and "PHY" in data:
+            data["PHY_turnover"] = data["PPT"] / data["PHY"]
+        if "SP" in data and "ZOO" in data:
+            data["ZOO_turnover"] = data["SP"] / data["ZOO"]
+        if "GRAPRO" in data and "BAC" in data:
+            data["BAC_turnover"] = data["GRAPRO"] / data["BAC"]
+        if "EXP" in data and "POC" in data:
+            data["POC_turnover"] = data["EXP"] / data["POC"]
+        if "PPT" in data and all(c in data for c in ["DOC", "POC", "GOC", "HOC"]):
+            data["TOC_turnover"] = data["PPT"] / (data["DOC"] + data["POC"] + data["GOC"] + data["HOC"])
+
         print("✓ Data loading completed successfully")
         return data
 
@@ -278,6 +295,11 @@ class FigureCreator:
             data, self.config['plot_info']['ppt_by_pft'],
             None, 'ppt_by_pft_summary', 'summary_ppt_by_pft')
 
+    def create_trophic_summary(self, data):
+        self._create_summary_from_config(
+            data, self.config['plot_info']['trophic'],
+            None, 'trophic_summary', 'summary_trophic')
+
 def main():
     parser = argparse.ArgumentParser(
         description='Create annual summary visualizations for ocean model output',
@@ -319,6 +341,7 @@ def main():
         creator.create_nutrient_summary(data)
         creator.create_physics_summary(data)
         creator.create_derived_summary(data)
+        creator.create_trophic_summary(data)
         creator.create_benthic_summary(data)
         creator.create_organic_carbon_summary(data)
         creator.create_ppt_by_pft_summary(data)
