@@ -157,26 +157,31 @@ class FigureCreator:
             "title": "N. Pacific gyres",
             "lat_range": (15.0, 35.0),
             "lon_range": (140.0, -120.0),
+            "obs_key": "reg2",   # 15N-45N
         },
         {
             "title": "N. subpolar Pacific",
             "lat_range": (40.0, 60.0),
             "lon_range": (140.0, -120.0),
+            "obs_key": "reg1",   # 45N-90N
         },
         {
             "title": "North Atlantic",
             "lat_range": (40.0, 65.0),
             "lon_range": (-80.0, 0.0),
+            "obs_key": "reg1",   # 45N-90N
         },
         {
             "title": "Equatorial Pacific",
             "lat_range": (-5.0, 5.0),
             "lon_range": (160.0, -90.0),
+            "obs_key": "reg3",   # 15S-15N
         },
         {
             "title": "Subantarctic",
             "lat_range": (-55.0, -40.0),
             "lon_range": None,
+            "obs_key": "reg5",   # 90S-45S
         },
     ]
 
@@ -532,21 +537,38 @@ class FigureCreator:
         if month_names is None or region_series is None:
             return
 
+        n_months = len(region_series[0])
+        x = np.arange(n_months)
+
         fig, axes = plt.subplots(
             3, 2,
             figsize=(2 * self.config['layout']['subplot_width'], 3 * self.config['layout']['subplot_height']),
-            squeeze=False,
+            squeeze=False, sharex=True,
             constrained_layout=self.config['layout']['use_constrained_layout']
         )
         axes = axes.flatten()
 
+        tchl_obs = ObservationData.TCHL_MONTHLY
+
         for ax, region, series in zip(axes, self.TCHL_REGION_DEFS, region_series):
-            ax.plot(month_names, series, color=self.colors[1], linewidth=self.styler.linewidth)
+            model_vals = np.asarray(series, dtype=float) * 1e6
+            ax.plot(x, model_vals, color=self.colors[1], linewidth=self.styler.linewidth,
+                    label=self.model_name)
+
+            obs_key = region.get("obs_key")
+            if obs_key and obs_key in tchl_obs:
+                obs_vals = tchl_obs[obs_key][:n_months]
+                ax.plot(x, obs_vals, color="gray", linewidth=self.styler.linewidth,
+                        linestyle="--", label="Obs.")
+
             ax.set_title(region["title"], fontweight='bold', pad=5)
             ax.set_ylabel("μg Chl/L")
-            ax.set_xlabel("Month", fontweight='bold')
+            ax.set_xticks(x)
+            ax.set_xticklabels(month_names[:n_months], rotation=45, ha='right')
             ax.grid(True)
+            ax.legend(fontsize=self.styler.font_legend)
 
+        # Only bottom-row axes need x labels
         for ax in axes[len(self.TCHL_REGION_DEFS):]:
             ax.set_visible(False)
 
