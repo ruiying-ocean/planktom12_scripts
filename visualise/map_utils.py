@@ -714,7 +714,7 @@ ECOSYSTEM_VARS = {
     '_EE': {
         'long_name': 'Encounter Efficiency',
         'units': 'dimensionless',
-        'vmax': 4,
+        'vmax': 1,
         'vmin': 0,
         'depth_index': None,
         'cmap': 'RdYlBu_r'
