@@ -230,6 +230,7 @@ SP = {title = "Secondary Production", unit = "PgC/yr", color_index = 0}
 recycle = {title = "Residual Production", unit = "PgC/yr", color_index = 1}
 spratio = {title = "SP/NPP", unit = "Dimensionless", color_index = 5}
 TA = {title = "Trophic Amplification", unit = "Dimensionless", color_index = 6}
+BA = {title = "Biomass Amplification", unit = "Dimensionless", color_index = 7}
 ratio_TL2 = {title = "TL2/NPP", unit = "Dimensionless", color_index = 7}
 ratio_TL3 = {title = "TL3/NPP", unit = "Dimensionless", color_index = 8}
 FCE = {title = "TL4/NPP", unit = "Dimensionless", color_index = 9}

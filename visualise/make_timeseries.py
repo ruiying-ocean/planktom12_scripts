@@ -379,7 +379,53 @@ class FigureCreator:
 
         ta_ax.grid(True)
 
-        for idx in range(7, len(axes)):
+        ba_ax = axes[7]
+        ba_info = plot_info['BA']
+        ba_color = self.colors[ba_info['color_index'] % len(self.colors)]
+        zoo = data.get("ZOO")
+        phy = data.get("PHY")
+        if zoo is not None and phy is not None:
+            x = ModelDataLoader._compute_relative_change(phy)
+            y = ModelDataLoader._compute_relative_change(zoo)
+            if x is not None and y is not None:
+                min_len = min(len(x), len(y))
+                x = x[:min_len]
+                y = y[:min_len]
+                valid = np.isfinite(x) & np.isfinite(y)
+                if np.count_nonzero(valid) >= 2:
+                    x_valid = x[valid]
+                    y_valid = y[valid]
+                    slope, intercept = np.polyfit(x_valid, y_valid, 1)
+
+                    ba_ax.scatter(x_valid, y_valid, color=ba_color, s=18, alpha=0.8)
+                    x_line = np.linspace(np.nanmin(x_valid), np.nanmax(x_valid), 100)
+                    ba_ax.plot(x_line, slope * x_line + intercept, color=ba_color, linewidth=1.2)
+                    ba_ax.axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+                    ba_ax.axvline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+                    ba_ax.set_title(ba_info['title'], fontweight='bold', pad=5)
+                    ba_ax.set_xlabel("Relative change in PHY", fontweight='bold')
+                    ba_ax.set_ylabel("Relative change in ZOO")
+                    ba_ax.text(
+                        0.05, 0.95, f"slope = {slope:.2f}",
+                        transform=ba_ax.transAxes, va='top', ha='left', fontsize=8,
+                        bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)
+                    )
+                else:
+                    ba_ax.text(0.5, 0.5, 'Biomass Amplification\nnot available',
+                               ha='center', va='center', transform=ba_ax.transAxes,
+                               fontsize=9, color='gray')
+            else:
+                ba_ax.text(0.5, 0.5, 'Biomass Amplification\nnot available',
+                           ha='center', va='center', transform=ba_ax.transAxes,
+                           fontsize=9, color='gray')
+        else:
+            ba_ax.text(0.5, 0.5, 'Biomass Amplification\nnot available',
+                       ha='center', va='center', transform=ba_ax.transAxes,
+                       fontsize=9, color='gray')
+
+        ba_ax.grid(True)
+
+        for idx in range(8, len(axes)):
             axes[idx].set_visible(False)
 
         self._save_figure(fig, f"{self.model_name}_ts_trophic.png")

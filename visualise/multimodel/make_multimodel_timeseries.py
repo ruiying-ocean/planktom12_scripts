@@ -1454,6 +1454,7 @@ class DerivedSummaryPlotter(PlotGenerator):
 
     def generate(self):
         self.ta_slopes = []
+        self.ba_slopes = []
         fig, axes = plt.subplots(
             3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=False,
             constrained_layout=USE_CONSTRAINED_LAYOUT
@@ -1477,8 +1478,16 @@ class DerivedSummaryPlotter(PlotGenerator):
                 bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)
             )
 
+        if self.ba_slopes:
+            slope_text = "\n".join(f"{name}: {slope:.2f}" for name, slope in self.ba_slopes)
+            axes[8].text(
+                0.05, 0.95, slope_text, transform=axes[8].transAxes,
+                va='top', ha='left', fontsize=7,
+                bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)
+            )
+
         # Hide unused subplots
-        for idx in range(8, len(axes)):
+        for idx in range(9, len(axes)):
             axes[idx].set_visible(False)
 
         self.add_legend(fig)
@@ -1487,6 +1496,7 @@ class DerivedSummaryPlotter(PlotGenerator):
     def _plot_model(self, model, axes, color):
         vol_data = DataLoader.load_analyser_data(model, "vol", "annual")
         lev_data = DataLoader.load_analyser_data(model, "lev", "annual")
+        int_data = DataLoader.load_analyser_data(model, "int", "annual")
 
         if vol_data is None or lev_data is None:
             return
@@ -1569,6 +1579,33 @@ class DerivedSummaryPlotter(PlotGenerator):
             axes[3].set_title("Transfer Efficiency", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
             axes[3].set_ylabel("Dimensionless")
 
+        if int_data is not None:
+            phy_cols = ["COC", "DIA", "FIX", "MIX", "PHA", "PIC"]
+            zoo_cols = ["BAC", "GEL", "CRU", "MES", "PRO", "PTE"]
+            phy_parts = [DataLoader.safe_load_column(int_data, col, indices) for col in phy_cols]
+            zoo_parts = [DataLoader.safe_load_column(int_data, col, indices) for col in zoo_cols]
+            if all(part is not None for part in phy_parts + zoo_parts):
+                phy = sum(phy_parts)
+                zoo = sum(zoo_parts)
+                min_len = min(len(phy), len(zoo))
+                x = DataLoader.compute_relative_change(phy[:min_len])
+                y = DataLoader.compute_relative_change(zoo[:min_len])
+                if x is not None and y is not None:
+                    valid = np.isfinite(x) & np.isfinite(y)
+                    if np.count_nonzero(valid) >= 2:
+                        x_valid = x[valid]
+                        y_valid = y[valid]
+                        slope, intercept = np.polyfit(x_valid, y_valid, 1)
+                        axes[8].scatter(x_valid, y_valid, color=color, s=16, alpha=0.75, label=model.label)
+                        x_line = np.linspace(np.nanmin(x_valid), np.nanmax(x_valid), 100)
+                        axes[8].plot(x_line, slope * x_line + intercept, color=color, linewidth=1.0)
+                        axes[8].set_title("Biomass Amplification", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                        axes[8].set_xlabel("Relative change in PHY", fontweight='bold')
+                        axes[8].set_ylabel("Relative change in ZOO")
+                        axes[8].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+                        axes[8].axvline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+                        self.ba_slopes.append((model.name, slope))
+
         # RLS and ALK-DIC from average file
         ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
         if ave_data is not None:
@@ -1595,6 +1632,7 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
 
     def generate(self):
         self.ta_slopes = []
+        self.ba_slopes = []
         fig, axes = plt.subplots(
             3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=False,
             constrained_layout=USE_CONSTRAINED_LAYOUT
@@ -1613,8 +1651,16 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
                 bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)
             )
 
+        if self.ba_slopes:
+            slope_text = "\n".join(f"{name}: {slope:.2f}" for name, slope in self.ba_slopes)
+            axes[8].text(
+                0.05, 0.95, slope_text, transform=axes[8].transAxes,
+                va='top', ha='left', fontsize=7,
+                bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)
+            )
+
         # Hide unused subplots
-        for idx in range(8, len(axes)):
+        for idx in range(9, len(axes)):
             axes[idx].set_visible(False)
 
         self.add_legend(fig)
@@ -1623,6 +1669,7 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
     def _plot_model(self, model, axes, color):
         vol_data = DataLoader.load_analyser_data(model, "vol", "annual")
         lev_data = DataLoader.load_analyser_data(model, "lev", "annual")
+        int_data = DataLoader.load_analyser_data(model, "int", "annual")
 
         if vol_data is None or lev_data is None:
             return
@@ -1710,6 +1757,33 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
             axes[3].set_title("Transfer Efficiency anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
             axes[3].set_ylabel("Dimensionless")
             axes[3].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+
+        if int_data is not None:
+            phy_cols = ["COC", "DIA", "FIX", "MIX", "PHA", "PIC"]
+            zoo_cols = ["BAC", "GEL", "CRU", "MES", "PRO", "PTE"]
+            phy_parts = [DataLoader.safe_load_column(int_data, col, indices) for col in phy_cols]
+            zoo_parts = [DataLoader.safe_load_column(int_data, col, indices) for col in zoo_cols]
+            if all(part is not None for part in phy_parts + zoo_parts):
+                phy = sum(phy_parts)
+                zoo = sum(zoo_parts)
+                min_len = min(len(phy), len(zoo))
+                x = DataLoader.compute_relative_change(phy[:min_len])
+                y = DataLoader.compute_relative_change(zoo[:min_len])
+                if x is not None and y is not None:
+                    valid = np.isfinite(x) & np.isfinite(y)
+                    if np.count_nonzero(valid) >= 2:
+                        x_valid = x[valid]
+                        y_valid = y[valid]
+                        slope, intercept = np.polyfit(x_valid, y_valid, 1)
+                        axes[8].scatter(x_valid, y_valid, color=color, s=16, alpha=0.75, label=model.label)
+                        x_line = np.linspace(np.nanmin(x_valid), np.nanmax(x_valid), 100)
+                        axes[8].plot(x_line, slope * x_line + intercept, color=color, linewidth=1.0)
+                        axes[8].set_title("Biomass Amplification", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                        axes[8].set_xlabel("Relative change in PHY", fontweight='bold')
+                        axes[8].set_ylabel("Relative change in ZOO")
+                        axes[8].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+                        axes[8].axvline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+                        self.ba_slopes.append((model.name, slope))
 
         # RLS and ALK-DIC from average file
         ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
