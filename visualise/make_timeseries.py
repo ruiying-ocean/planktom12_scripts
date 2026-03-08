@@ -677,8 +677,6 @@ class FigureCreator:
 
         # Shared y-axis label
         fig.suptitle("Monthly Surface Chlorophyll by Region", x=0.06, ha="left", fontweight="bold")
-        fig.supxlabel("Month", y=0.03, fontweight="bold")
-        fig.supylabel("μg Chl/L", x=0.02, fontweight="bold")
 
         self._save_figure(fig, f"{self.model_name}_ts_tchl_monthly.png")
 
