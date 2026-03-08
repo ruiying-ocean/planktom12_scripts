@@ -582,9 +582,13 @@ class FigureCreator:
         n_months = len(region_series[0])
         x = np.arange(n_months)
 
+        n_regions = len(self.TCHL_REGION_DEFS)
+        ncols = 3
+        nrows = (n_regions + ncols - 1) // ncols
+
         fig, axes = plt.subplots(
-            3, 2,
-            figsize=(2 * self.config['layout']['subplot_width'], 3 * self.config['layout']['subplot_height']),
+            nrows, ncols,
+            figsize=(ncols * self.config['layout']['subplot_width'], nrows * self.config['layout']['subplot_height']),
             squeeze=False, sharex=True,
             constrained_layout=self.config['layout']['use_constrained_layout']
         )
