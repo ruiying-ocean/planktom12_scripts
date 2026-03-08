@@ -34,42 +34,27 @@ class ModelDataLoader:
         return DataFileLoader.extract_columns(df, columns, skip_rows)
 
     @staticmethod
-    def _compute_trophic_amplification(sp, ppt, baseline_years=10, min_signal=1e-6):
+    def _compute_relative_change(values, baseline_years=10):
         """
-        Compute trophic amplification from annual CSV time series.
-
-        TA is defined here as the ratio of log-changes in secondary production
-        and primary production relative to the first-decade mean:
-            TA(t) = log(SP(t) / SP0) / log(PPT(t) / PPT0)
-
-        This avoids the old seasonal CV-based map metric and instead measures
-        how strongly higher-trophic production responds to long-term changes
-        in NPP. Values > 1 indicate amplification and values < 1 attenuation.
+        Compute relative change against the first-decade mean baseline.
         """
-        if sp is None or ppt is None:
+        if values is None:
             return None
 
-        min_len = min(len(sp), len(ppt))
-        if min_len == 0:
+        values = np.asarray(values, dtype=float)
+        if len(values) == 0:
             return None
 
-        sp = np.asarray(sp[:min_len], dtype=float)
-        ppt = np.asarray(ppt[:min_len], dtype=float)
-
-        baseline_len = min(baseline_years, min_len)
-        sp0 = np.nanmean(sp[:baseline_len])
-        ppt0 = np.nanmean(ppt[:baseline_len])
-
-        if not np.isfinite(sp0) or not np.isfinite(ppt0) or sp0 <= 0 or ppt0 <= 0:
+        baseline_len = min(baseline_years, len(values))
+        baseline = np.nanmean(values[:baseline_len])
+        if not np.isfinite(baseline) or baseline == 0:
             return None
 
         with np.errstate(divide="ignore", invalid="ignore"):
-            sp_change = np.log(sp / sp0)
-            ppt_change = np.log(ppt / ppt0)
-            ta = np.where(np.abs(ppt_change) > min_signal, sp_change / ppt_change, np.nan)
+            relative_change = (values - baseline) / baseline
 
-        ta[~np.isfinite(ta)] = np.nan
-        return ta
+        relative_change[~np.isfinite(relative_change)] = np.nan
+        return relative_change
         
     def load_all_data(self):
         data = {}
@@ -109,7 +94,6 @@ class ModelDataLoader:
             level_data["recycle"] = volume_data["PPT"] - level_data["EXP"] - volume_data["SP"]  # NPP - EXP100 - SP
         if "SP" in volume_data and "PPT" in volume_data:
             level_data["spratio"] = volume_data["SP"] / volume_data["PPT"]  # SP/NPP
-            level_data["TA"] = self._compute_trophic_amplification(volume_data["SP"], volume_data["PPT"])
         # Trophic coupling indices following Xue et al. (2022)
         # Ingestion ratio at each trophic level relative to NPP
         # TL2: microzooplankton (PRO)
@@ -309,9 +293,96 @@ class FigureCreator:
             None, 'ppt_by_pft_summary', 'ts_ppt_by_pft')
 
     def create_trophic_summary(self, data):
-        self._create_summary_from_config(
-            data, self.config['plot_info']['trophic'],
-            None, 'trophic_summary', 'ts_trophic')
+        layout = self.config['layout']['trophic_summary']
+        subplot_width = self.config['layout']['subplot_width']
+        subplot_height = self.config['layout']['subplot_height']
+        plot_info = self.config['plot_info']['trophic']
+
+        fig, axes = plt.subplots(
+            layout['rows'], layout['cols'],
+            figsize=(layout['cols'] * subplot_width, layout['rows'] * subplot_height),
+            squeeze=False,
+            constrained_layout=self.config['layout']['use_constrained_layout']
+        )
+        axes = axes.flatten()
+
+        year_limits = self._get_global_year_limits(data)
+        line_vars = ["SP", "recycle", "spratio", "ratio_TL2", "ratio_TL3", "FCE"]
+
+        for i, var_name in enumerate(line_vars):
+            var_info = plot_info[var_name]
+            color = self.colors[var_info['color_index'] % len(self.colors)]
+            title = var_info['title']
+            unit = var_info.get('unit', '')
+            is_bottom_row = i >= (layout['rows'] - 1) * layout['cols']
+
+            if var_name in data and data[var_name] is not None and len(data[var_name]) > 0:
+                year = data["year"]
+                values = data[var_name]
+                n = min(len(year), len(values))
+                self._setup_axis(
+                    axes[i], year[:n], values[:n], color, title, unit,
+                    None, None, year_limits, add_xlabel=is_bottom_row
+                )
+            else:
+                axes[i].text(0.5, 0.5, f'{title}\nnot available',
+                             ha='center', va='center', transform=axes[i].transAxes,
+                             fontsize=9, color='gray')
+                axes[i].set_title(title, fontweight='bold', pad=5)
+                if is_bottom_row:
+                    axes[i].set_xlabel("Year", fontweight='bold')
+
+        ta_ax = axes[6]
+        ta_info = plot_info['TA']
+        ta_color = self.colors[ta_info['color_index'] % len(self.colors)]
+        sp = data.get("SP")
+        ppt = data.get("PPT")
+        if sp is not None and ppt is not None:
+            x = ModelDataLoader._compute_relative_change(ppt)
+            y = ModelDataLoader._compute_relative_change(sp)
+            if x is not None and y is not None:
+                min_len = min(len(x), len(y))
+                x = x[:min_len]
+                y = y[:min_len]
+                valid = np.isfinite(x) & np.isfinite(y)
+                if np.count_nonzero(valid) >= 2:
+                    x_valid = x[valid]
+                    y_valid = y[valid]
+                    slope, intercept = np.polyfit(x_valid, y_valid, 1)
+
+                    ta_ax.scatter(x_valid, y_valid, color=ta_color, s=18, alpha=0.8)
+
+                    x_line = np.linspace(np.nanmin(x_valid), np.nanmax(x_valid), 100)
+                    ta_ax.plot(x_line, slope * x_line + intercept, color=ta_color, linewidth=1.2)
+                    ta_ax.axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+                    ta_ax.axvline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+                    ta_ax.set_title(ta_info['title'], fontweight='bold', pad=5)
+                    ta_ax.set_xlabel("Relative change in NPP", fontweight='bold')
+                    ta_ax.set_ylabel("Relative change in SP")
+                    ta_ax.text(
+                        0.05, 0.95, f"slope = {slope:.2f}",
+                        transform=ta_ax.transAxes, va='top', ha='left', fontsize=8,
+                        bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)
+                    )
+                else:
+                    ta_ax.text(0.5, 0.5, 'Trophic Amplification\nnot available',
+                               ha='center', va='center', transform=ta_ax.transAxes,
+                               fontsize=9, color='gray')
+            else:
+                ta_ax.text(0.5, 0.5, 'Trophic Amplification\nnot available',
+                           ha='center', va='center', transform=ta_ax.transAxes,
+                           fontsize=9, color='gray')
+        else:
+            ta_ax.text(0.5, 0.5, 'Trophic Amplification\nnot available',
+                       ha='center', va='center', transform=ta_ax.transAxes,
+                       fontsize=9, color='gray')
+
+        ta_ax.grid(True)
+
+        for idx in range(7, len(axes)):
+            axes[idx].set_visible(False)
+
+        self._save_figure(fig, f"{self.model_name}_ts_trophic.png")
 
 def main():
     parser = argparse.ArgumentParser(

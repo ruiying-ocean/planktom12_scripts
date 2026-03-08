@@ -249,37 +249,27 @@ class DataLoader:
             return None
 
     @staticmethod
-    def compute_trophic_amplification(sp, ppt, baseline_years=10, min_signal=1e-6):
+    def compute_relative_change(values, baseline_years=10):
         """
-        Compute trophic amplification from annual CSV time series.
-
-        Uses the ratio of log-changes relative to the first-decade mean:
-            TA(t) = log(SP(t) / SP0) / log(PPT(t) / PPT0)
+        Compute relative change against the first-decade mean baseline.
         """
-        if sp is None or ppt is None:
+        if values is None:
             return None
 
-        min_len = min(len(sp), len(ppt))
-        if min_len == 0:
+        values = np.asarray(values, dtype=float)
+        if len(values) == 0:
             return None
 
-        sp = np.asarray(sp[:min_len], dtype=float)
-        ppt = np.asarray(ppt[:min_len], dtype=float)
-
-        baseline_len = min(baseline_years, min_len)
-        sp0 = np.nanmean(sp[:baseline_len])
-        ppt0 = np.nanmean(ppt[:baseline_len])
-
-        if not np.isfinite(sp0) or not np.isfinite(ppt0) or sp0 <= 0 or ppt0 <= 0:
+        baseline_len = min(baseline_years, len(values))
+        baseline = np.nanmean(values[:baseline_len])
+        if not np.isfinite(baseline) or baseline == 0:
             return None
 
         with np.errstate(divide="ignore", invalid="ignore"):
-            sp_change = np.log(sp / sp0)
-            ppt_change = np.log(ppt / ppt0)
-            ta = np.where(np.abs(ppt_change) > min_signal, sp_change / ppt_change, np.nan)
+            relative_change = (values - baseline) / baseline
 
-        ta[~np.isfinite(ta)] = np.nan
-        return ta
+        relative_change[~np.isfinite(relative_change)] = np.nan
+        return relative_change
 
 
 class PlotGenerator:
@@ -1463,8 +1453,9 @@ class DerivedSummaryPlotter(PlotGenerator):
     """Generates derived ecosystem variable summary plots"""
 
     def generate(self):
+        self.ta_slopes = []
         fig, axes = plt.subplots(
-            3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=True,
+            3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=False,
             constrained_layout=USE_CONSTRAINED_LAYOUT
         )
         axes = axes.flatten()
@@ -1477,6 +1468,14 @@ class DerivedSummaryPlotter(PlotGenerator):
         derived_obs = ObservationData.get_derived()
         if "ALK_DIC" in derived_obs:
             axes[6].axhline(derived_obs["ALK_DIC"], **LINE_STYLE)
+
+        if self.ta_slopes:
+            slope_text = "\n".join(f"{name}: {slope:.2f}" for name, slope in self.ta_slopes)
+            axes[7].text(
+                0.05, 0.95, slope_text, transform=axes[7].transAxes,
+                va='top', ha='left', fontsize=7,
+                bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)
+            )
 
         # Hide unused subplots
         for idx in range(8, len(axes)):
@@ -1538,13 +1537,23 @@ class DerivedSummaryPlotter(PlotGenerator):
                 axes[5].set_title("SP/NPP", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
                 axes[5].set_ylabel("Dimensionless")
 
-                ta = DataLoader.compute_trophic_amplification(sp[:min_len], ppt[:min_len])
-                plot_year, plot_ta = DataLoader.align_year_and_values(year[:min_len], ta)
-                if plot_year is not None:
-                    axes[7].plot(plot_year, plot_ta, color=color, linewidth=LINE_WIDTH)
-                    axes[7].set_title("Trophic Amplification", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-                    axes[7].set_ylabel("Dimensionless")
-                    axes[7].set_xlabel("Year", fontweight='bold')
+                x = DataLoader.compute_relative_change(ppt[:min_len])
+                y = DataLoader.compute_relative_change(sp[:min_len])
+                if x is not None and y is not None:
+                    valid = np.isfinite(x) & np.isfinite(y)
+                    if np.count_nonzero(valid) >= 2:
+                        x_valid = x[valid]
+                        y_valid = y[valid]
+                        slope, intercept = np.polyfit(x_valid, y_valid, 1)
+                        axes[7].scatter(x_valid, y_valid, color=color, s=16, alpha=0.75, label=model.label)
+                        x_line = np.linspace(np.nanmin(x_valid), np.nanmax(x_valid), 100)
+                        axes[7].plot(x_line, slope * x_line + intercept, color=color, linewidth=1.0)
+                        axes[7].set_title("Trophic Amplification", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                        axes[7].set_xlabel("Relative change in NPP", fontweight='bold')
+                        axes[7].set_ylabel("Relative change in SP")
+                        axes[7].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+                        axes[7].axvline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+                        self.ta_slopes.append((model.name, slope))
 
         if exp is not None and ppt is not None:
             min_len = min(len(year), len(exp), len(ppt))
@@ -1585,8 +1594,9 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
     """Generates normalized/anomaly plots for derived ecosystem variables"""
 
     def generate(self):
+        self.ta_slopes = []
         fig, axes = plt.subplots(
-            3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=True,
+            3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=False,
             constrained_layout=USE_CONSTRAINED_LAYOUT
         )
         axes = axes.flatten()
@@ -1594,6 +1604,14 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
         setup_axes(axes[:7])
 
         self.plot_all_models(fig, axes, self._plot_model)
+
+        if self.ta_slopes:
+            slope_text = "\n".join(f"{name}: {slope:.2f}" for name, slope in self.ta_slopes)
+            axes[7].text(
+                0.05, 0.95, slope_text, transform=axes[7].transAxes,
+                va='top', ha='left', fontsize=7,
+                bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)
+            )
 
         # Hide unused subplots
         for idx in range(8, len(axes)):
@@ -1657,15 +1675,23 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
                 axes[5].set_ylabel("Dimensionless")
                 axes[5].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
-                ta = DataLoader.compute_trophic_amplification(sp[:min_len], ppt[:min_len])
-                plot_year, plot_ta = DataLoader.align_year_and_values(year[:min_len], ta)
-                if plot_year is not None:
-                    ta_norm = GlobalSummaryNormalizedPlotter._normalize_series(plot_ta)
-                    axes[7].plot(plot_year, ta_norm, color=color, linewidth=LINE_WIDTH)
-                    axes[7].set_title("Trophic Amplification anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-                    axes[7].set_ylabel("Dimensionless")
-                    axes[7].set_xlabel("Year", fontweight='bold')
-                    axes[7].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+                x = DataLoader.compute_relative_change(ppt[:min_len])
+                y = DataLoader.compute_relative_change(sp[:min_len])
+                if x is not None and y is not None:
+                    valid = np.isfinite(x) & np.isfinite(y)
+                    if np.count_nonzero(valid) >= 2:
+                        x_valid = x[valid]
+                        y_valid = y[valid]
+                        slope, intercept = np.polyfit(x_valid, y_valid, 1)
+                        axes[7].scatter(x_valid, y_valid, color=color, s=16, alpha=0.75, label=model.label)
+                        x_line = np.linspace(np.nanmin(x_valid), np.nanmax(x_valid), 100)
+                        axes[7].plot(x_line, slope * x_line + intercept, color=color, linewidth=1.0)
+                        axes[7].set_title("Trophic Amplification", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                        axes[7].set_xlabel("Relative change in NPP", fontweight='bold')
+                        axes[7].set_ylabel("Relative change in SP")
+                        axes[7].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+                        axes[7].axvline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
+                        self.ta_slopes.append((model.name, slope))
 
         if exp is not None and ppt is not None:
             min_len = min(len(year), len(exp), len(ppt))
