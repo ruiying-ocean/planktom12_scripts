@@ -913,7 +913,7 @@ class TChlPlotter(PlotGenerator):
         {"title": "Equatorial Pacific",       "lat_range": (-5.0, 5.0),   "lon_range": (160.0, -90.0)},
         {"title": "S. Pacific subtropical",   "lat_range": (-35.0, -15.0),"lon_range": (170.0, -100.0)},
         {"title": "S. Atlantic subtropical",  "lat_range": (-30.0, -10.0),"lon_range": (-50.0, 10.0)},
-        {"title": "Sub-Antarctic Zone",       "lat_range": (-50.0, -40.0),"lon_range": None},
+        {"title": "Sub-Antarctic Zone (Indian)", "lat_range": (-50.0, -40.0),"lon_range": (20.0, 120.0)},
         {"title": "Antarctic Zone",           "lat_range": (-65.0, -55.0),"lon_range": None},
     ]
 

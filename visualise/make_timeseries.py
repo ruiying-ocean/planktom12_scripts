@@ -189,9 +189,9 @@ class FigureCreator:
             "lon_range": (-50.0, 10.0),
         },
         {
-            "title": "Sub-Antarctic Zone",
+            "title": "Sub-Antarctic Zone (Indian)",
             "lat_range": (-50.0, -40.0),
-            "lon_range": None,
+            "lon_range": (20.0, 120.0),
         },
         {
             "title": "Antarctic Zone",
