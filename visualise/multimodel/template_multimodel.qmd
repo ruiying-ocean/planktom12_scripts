@@ -31,12 +31,6 @@ Normalized anomalies for key global metrics (Cflx, TChl, PPT, EXP/EXP1000, CaCOâ
 
 # Regional and Monthly Patterns
 
-## Carbon Flux
-
-Regional and monthly carbon flux comparison.
-
-![](mm_cflx.png)
-
 ## Total Chlorophyll
 
 Regional and monthly total chlorophyll comparison.

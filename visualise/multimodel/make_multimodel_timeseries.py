@@ -610,109 +610,6 @@ class RegionalPlotter(PlotGenerator):
             )
 
 
-class CflxPlotter(RegionalPlotter):
-    """Generates Cflx summary plots"""
-
-    def generate(self):
-        """
-        Generates and saves the Cflx summary plot with a balanced, nested grid layout.
-        """
-        fig = plt.figure(figsize=(3.5 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT))
-
-        # --- MODIFICATION START ---
-        # Use a nested GridSpec for complete control over column layouts.
-
-        # 1. Create a main 1x2 grid to define the left and right columns.
-        gs_main = gridspec.GridSpec(1, 2, figure=fig, wspace=0.25, width_ratios=[1, 1])
-
-        # 2. Create a nested grid for the left column (2 rows, 1 column).
-        gs_left = gs_main[0].subgridspec(2, 1, hspace=0.15)
-
-        # 3. Create a nested grid for the right column (5 rows, 1 column).
-        gs_right = gs_main[1].subgridspec(5, 1, hspace=0.1)
-
-        # 4. Create the axes and add them to a list in the correct order.
-        axes = []
-        # Add left column plots
-        axes.append(fig.add_subplot(gs_left[0]))  # axes[0]: Top-left
-        axes.append(fig.add_subplot(gs_left[1]))  # axes[1]: Bottom-left
-
-        # Add right column plots, sharing the x-axis
-        right_column_axes = []
-        for i in range(5):
-            if i == 0:
-                ax = fig.add_subplot(gs_right[i])
-            else:
-                ax = fig.add_subplot(gs_right[i], sharex=right_column_axes[0])
-            right_column_axes.append(ax)
-        axes.extend(right_column_axes)  # Add to the main list (axes[2] through axes[6])
-
-        # 5. Hide x-axis labels on the upper plots of the right column.
-        for ax in right_column_axes[:-1]:
-            ax.tick_params(
-                axis="x", which="both", bottom=False, top=False, labelbottom=False
-            )
-
-        setup_axes(axes)
-        # --- MODIFICATION END ---
-
-        self.plot_all_models(fig, axes, self._plot_model)
-
-        self.add_legend(fig)
-        self.save_figure(fig, "mm_cflx.png")
-
-    def _plot_model(self, model, axes, color):
-        sur_annual = DataLoader.load_analyser_data(model, "sur", "annual")
-        if sur_annual is None:
-            return
-
-        actual_years = DataLoader.get_actual_years(sur_annual)
-        indices = model.get_year_range_indices(actual_years)
-        if indices[0] is None:
-            return
-
-        year = DataLoader.safe_load_column(sur_annual, "year", indices)
-        cflx_annual = DataLoader.safe_load_column(sur_annual, "Cflx", indices)
-
-        if year is not None and cflx_annual is not None:
-            axes[0].plot(
-                year, cflx_annual, color=color, linewidth=LINE_WIDTH
-            )
-            axes[0].set_title(
-                "Surface Cflx (Global) [PgC/yr]", fontsize=TITLE_FONTSIZE
-            )
-
-        sur_monthly = DataLoader.load_analyser_data(model, "sur", "monthly")
-        if sur_monthly is None:
-            return
-
-        monthly_idx = model.get_monthly_index(len(sur_monthly))
-        month_names = self._get_month_names(sur_monthly)
-
-        regional_cols = ["Cflx", "Cflx.1", "Cflx.2", "Cflx.3", "Cflx.4", "Cflx.5"]
-        labels = [model.label] + [None] * 5
-        # Use shorter titles for the regional plots
-        titles = ["Global", "45N-90N", "15N-45N", "15S-15N", "45S-15S", "90S-45S"]
-
-        for i, (col, label, title) in enumerate(zip(regional_cols, labels, titles)):
-            # The axes list is now structured with axes[1] as the first regional plot.
-            ax = axes[i + 1]
-            data = DataLoader.safe_load_column(
-                sur_monthly, col, (monthly_idx, monthly_idx + 12), validate_length=False
-            )
-            if data is not None and len(data) == 12:
-                self._plot_regional_data(ax, month_names, data, color, label)
-
-            # Use ax.text to place titles to avoid overlapping.
-            ax.text(
-                0.8,
-                0.9,
-                f"{title}",
-                fontsize=TITLE_FONTSIZE - 2,
-                transform=ax.transAxes,
-            )
-
-
 class PFTPlotter(PlotGenerator):
     """Generates PFT summary plots"""
 
@@ -1005,42 +902,148 @@ class PPTByPFTNormalizedPlotter(PlotGenerator):
                 axes[i].set_xlabel("Year", fontweight="bold")
 
 
-class TChlPlotter(RegionalPlotter):
-    """Generates TChl summary plots"""
+class TChlPlotter(PlotGenerator):
+    """Generates TChl seasonal summary plots by region, consistent with single-model output"""
 
-    def generate(self):
-        fig, ax = plt.subplots(
-            1, 1, figsize=(2 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT),
-            constrained_layout=USE_CONSTRAINED_LAYOUT
-        )
-        setup_axes([ax])
-        self.plot_all_models(fig, [ax], self._plot_model)
-        ax.axhline(ObservationData.get_global()["TChl"]["value"], **LINE_STYLE)
-        self.add_legend(fig)
-        self.save_figure(fig, "mm_tchl.png")
+    TCHL_REGION_DEFS = [
+        {"title": "N. Pacific subtropical",  "lat_range": (15.0, 35.0),  "lon_range": (160.0, -130.0)},
+        {"title": "N. Pacific subpolar",      "lat_range": (50.0, 62.0),  "lon_range": (160.0, -140.0)},
+        {"title": "N. Atlantic subtropical",  "lat_range": (20.0, 35.0),  "lon_range": (-80.0, -20.0)},
+        {"title": "N. Atlantic subpolar",     "lat_range": (45.0, 65.0),  "lon_range": (-60.0, -10.0)},
+        {"title": "Equatorial Pacific",       "lat_range": (-5.0, 5.0),   "lon_range": (160.0, -90.0)},
+        {"title": "S. Pacific subtropical",   "lat_range": (-35.0, -15.0),"lon_range": (170.0, -100.0)},
+        {"title": "S. Atlantic subtropical",  "lat_range": (-30.0, -10.0),"lon_range": (-50.0, 10.0)},
+        {"title": "Sub-Antarctic Zone",       "lat_range": (-50.0, -40.0),"lon_range": None},
+        {"title": "Antarctic Zone",           "lat_range": (-65.0, -55.0),"lon_range": None},
+    ]
+
+    @staticmethod
+    def _build_lon_mask(lon, lon_range):
+        import xarray as xr
+        if lon_range is None:
+            return xr.ones_like(lon, dtype=bool)
+        lon_min, lon_max = lon_range
+        lon_0360 = xr.where(lon < 0, lon + 360, lon)
+        min_0360 = lon_min if lon_min >= 0 else lon_min + 360
+        max_0360 = lon_max if lon_max >= 0 else lon_max + 360
+        if min_0360 <= max_0360:
+            return (lon_0360 >= min_0360) & (lon_0360 <= max_0360)
+        return (lon_0360 >= min_0360) | (lon_0360 <= max_0360)
+
+    @classmethod
+    def _load_occci_regional(cls):
+        import xarray as xr, os
+        chl_file = pathlib.Path(os.path.expanduser("~/Observations")) / "OC-CCI/climatology/OC-CCI_climatology_1deg.nc"
+        if not chl_file.exists():
+            print_warning(f"OC-CCI file not found: {chl_file} — no obs overlay")
+            return None
+        try:
+            with xr.open_dataset(chl_file, decode_times=False) as ds:
+                if "chlor_a" not in ds:
+                    return None
+                chl = ds["chlor_a"]
+                lat_name = next((n for n in ["lat", "latitude", "nav_lat"] if n in ds), None)
+                lon_name = next((n for n in ["lon", "longitude", "nav_lon"] if n in ds), None)
+                if lat_name is None or lon_name is None:
+                    return None
+                lat, lon = ds[lat_name], ds[lon_name]
+                weights = np.cos(np.deg2rad(lat))
+                time_dim = next((d for d in ["time", "month"] if d in chl.dims), None)
+                obs_series = []
+                for region in cls.TCHL_REGION_DEFS:
+                    lat_min, lat_max = region["lat_range"]
+                    lat_mask = (lat >= lat_min) & (lat <= lat_max)
+                    lon_mask = cls._build_lon_mask(lon, region["lon_range"])
+                    region_mask = lat_mask & lon_mask
+                    if time_dim is not None:
+                        monthly = []
+                        for t in range(chl.sizes[time_dim]):
+                            snap = chl.isel({time_dim: t})
+                            valid_mask = region_mask & np.isfinite(snap)
+                            w = weights.where(valid_mask, 0.0)
+                            monthly.append(float(snap.where(valid_mask).weighted(w).mean()))
+                        obs_series.append(np.array(monthly))
+                    else:
+                        obs_series.append(None)
+                return obs_series
+        except Exception as e:
+            print_warning(f"Could not load OC-CCI data: {e}")
+            return None
 
     def _plot_model(self, model, axes, color):
-        ave_annual = DataLoader.load_analyser_data(model, "ave", "annual")
-        if ave_annual is None:
+        import xarray as xr
+        run_dir = pathlib.Path(model.model_dir) / model.name
+        diad_files = sorted(run_dir.glob("ORCA2_1m_*_diad_T.nc"))
+        if not diad_files:
+            print_warning(f"No ORCA2_1m_*_diad_T.nc found in {run_dir}")
             return
+        nc_file = max(diad_files, key=lambda p: p.name.split("_")[2] if len(p.name.split("_")) > 2 else "")
+        try:
+            with xr.open_dataset(nc_file, decode_times=False) as ds:
+                if "TChl" not in ds:
+                    print_warning(f"TChl not found in {nc_file.name}")
+                    return
+                tchl = ds["TChl"]
+                depth_dim = next((d for d in ["deptht", "nav_lev", "z"] if d in tchl.dims), None)
+                if depth_dim is not None:
+                    tchl = tchl.isel({depth_dim: 0})
+                lat_name = "nav_lat" if "nav_lat" in ds else "lat"
+                lon_name = "nav_lon" if "nav_lon" in ds else "lon"
+                if lat_name not in ds or lon_name not in ds:
+                    return
+                lat, lon = ds[lat_name], ds[lon_name]
+                spatial_dims = lat.dims
+                weights = xr.where(np.isfinite(lat), np.cos(np.deg2rad(lat)), 0.0)
+                x = np.arange(12)
+                month_names = [calendar.month_abbr[m] for m in range(1, 13)]
+                for i, region in enumerate(self.TCHL_REGION_DEFS):
+                    if i >= len(axes):
+                        break
+                    lat_min, lat_max = region["lat_range"]
+                    lat_mask = (lat >= lat_min) & (lat <= lat_max)
+                    lon_mask = self._build_lon_mask(lon, region["lon_range"])
+                    region_mask = lat_mask & lon_mask & np.isfinite(tchl.isel(time_counter=0))
+                    series = tchl.where(region_mask).weighted(weights.where(region_mask, 0.0)).mean(dim=spatial_dims)
+                    vals = series.to_numpy().astype(float) * 1e6
+                    if len(vals) == 12:
+                        label = model.label if i == 0 else None
+                        axes[i].plot(x, vals, color=color, linewidth=LINE_WIDTH, label=label)
+                        axes[i].set_title(region["title"], fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
+                        axes[i].set_xticks(x)
+                        axes[i].set_xticklabels(month_names, rotation=45, ha='right')
+                        axes[i].set_ylabel("μg Chl/L")
+        except Exception as e:
+            print_warning(f"Could not load TChl from {nc_file.name}: {e}")
 
-        actual_years = DataLoader.get_actual_years(ave_annual)
-        indices = model.get_year_range_indices(actual_years)
-        if indices[0] is None:
+    def _add_obs_overlay(self, axes, obs_series):
+        if obs_series is None:
             return
+        x = np.arange(12)
+        for i, obs in enumerate(obs_series):
+            if i >= len(axes) or obs is None or len(obs) != 12:
+                continue
+            label = "OC-CCI" if i == 0 else None
+            axes[i].plot(x, obs, label=label, **LINE_STYLE)
 
-        year = DataLoader.safe_load_column(ave_annual, "year", indices)
-        tchl_annual = DataLoader.safe_load_column(ave_annual, "TChl", indices)
-
-        if year is not None and tchl_annual is not None:
-            axes[0].plot(
-                year, tchl_annual, color=color, linewidth=LINE_WIDTH
-            )
-            axes[0].set_title(
-                "Average TChl (Global) [ug Chl/L]", fontsize=TITLE_FONTSIZE
-            )
-            axes[0].set_ylabel("μg Chl/L")
-            axes[0].set_xlabel("Year", fontweight='bold')
+    def generate(self):
+        n_regions = len(self.TCHL_REGION_DEFS)
+        ncols = 3
+        nrows = (n_regions + ncols - 1) // ncols
+        fig, axes = plt.subplots(
+            nrows, ncols,
+            figsize=(ncols * SUBPLOT_WIDTH, nrows * SUBPLOT_HEIGHT),
+            squeeze=False, sharex=True,
+            constrained_layout=USE_CONSTRAINED_LAYOUT,
+        )
+        flat_axes = axes.flatten()
+        setup_axes(flat_axes)
+        obs_series = self._load_occci_regional()
+        self.plot_all_models(fig, flat_axes, self._plot_model)
+        self._add_obs_overlay(flat_axes, obs_series)
+        for ax in flat_axes[n_regions:]:
+            ax.set_visible(False)
+        self.add_legend(fig)
+        self.save_figure(fig, "mm_tchl.png")
 
 
 class NutrientPlotter(PlotGenerator):
@@ -1778,7 +1781,6 @@ class MultiModelPlotter:
         plotters = [
             GlobalSummaryPlotter(self.models, self.save_dir),
             GlobalSummaryNormalizedPlotter(self.models, self.save_dir),
-            CflxPlotter(self.models, self.save_dir),
             TChlPlotter(self.models, self.save_dir),
             PFTPlotter(self.models, self.save_dir),
             PFTNormalizedPlotter(self.models, self.save_dir),
