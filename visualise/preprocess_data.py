@@ -287,12 +287,18 @@ def load_observations(
         if spco2_file.exists():
             print(f"Loading Landschützer spco2 data from {spco2_file}")
             spco2_ds = xr.open_dataset(spco2_file, decode_times=False)
+            FILL = 1e19  # file fill value is 1e20; mask anything above 1e19
             if 'spco2_clim' in spco2_ds:
                 # Annual mean, units: µatm (same as model pCO2)
-                obs_datasets['pCO2'] = spco2_ds['spco2_clim'].mean('time')
+                obs_datasets['pCO2'] = (
+                    spco2_ds['spco2_clim'].where(spco2_ds['spco2_clim'] < FILL).mean('time')
+                )
             if 'fgco2_clim' in spco2_ds:
                 # Annual mean, convert molC/m²/yr → µmol/m²/s to match model Cflx
-                obs_datasets['Cflx'] = spco2_ds['fgco2_clim'].mean('time') * 1e6 / (365.25 * 86400)
+                obs_datasets['Cflx'] = (
+                    spco2_ds['fgco2_clim'].where(spco2_ds['fgco2_clim'] < FILL).mean('time')
+                    * 1e6 / (365.25 * 86400)
+                )
         else:
             print(f"Warning: spco2 file not found at {spco2_file}")
 
