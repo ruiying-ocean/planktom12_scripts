@@ -830,9 +830,10 @@ def plot_surface_carbon(
         if 'time_counter' in model_data.dims:
             model_data = model_data.mean(dim='time_counter')
         model_data = model_data.squeeze()
-        # Cflx is mol/m²/s in model output; convert to mol/m²/yr
+        # Cflx is mol/m²/s in model output (positive = uptake by ocean);
+        # flip sign to match Landschützer convention (positive = outgassing)
         if model_var == 'Cflx':
-            model_data = model_data * (3600. * 24. * 365.)
+            model_data = model_data * -(3600. * 24. * 365.)
         model_data = plotter.apply_mask(model_data)
 
         vmin, vmax = var['vmin'], var['vmax']
