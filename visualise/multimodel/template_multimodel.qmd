@@ -125,21 +125,21 @@ ${MODEL_MAPS}
 
 ### Atlantic (35°W) - Nutrients
 
-![](multimodel_transect_atlantic_nutrients.png)
+![](mm_transect_atlantic_nutrients.png)
 
 ### Pacific (170°W) - Nutrients
 
-![](multimodel_transect_pacific_nutrients.png)
+![](mm_transect_pacific_nutrients.png)
 
 ## PFTs
 
 ### Atlantic (35°W) - PFTs
 
-![](multimodel_transect_atlantic_pfts.png)
+![](mm_transect_atlantic_pfts.png)
 
 ### Pacific (170°W) - PFTs
 
-![](multimodel_transect_pacific_pfts.png)
+![](mm_transect_pacific_pfts.png)
 
 ---
 

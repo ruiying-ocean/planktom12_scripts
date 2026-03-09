@@ -343,7 +343,7 @@ def plot_multimodel_maps(models, output_dir, config):
                     ax.set_title('Anomaly (B - A)', fontsize=14, fontweight='bold')
 
         # Save figure
-        output_file = output_dir / f"multimodel_spatial_{group_name}.{fmt}"
+        output_file = output_dir / f"mm_spatial_{group_name}.{fmt}"
         fig.savefig(output_file, dpi=dpi)
         print_success(f"Created {output_file}")
         plt.close(fig)
