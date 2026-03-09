@@ -216,7 +216,8 @@ def load_and_preprocess_diad(
 def load_observations(
     obs_dir: Path,
     nutrients: List[str] = ['_NO3', '_PO4', '_Si', '_Fer'],
-    carbon_chemistry: List[str] = None
+    carbon_chemistry: List[str] = None,
+    surface_carbon: bool = False
 ) -> dict:
     """
     Load observational datasets for nutrients and carbon chemistry.
@@ -279,6 +280,21 @@ def load_observations(
                 obs_datasets['_DIC'] = glodap_ds['dic']
         else:
             print(f"Warning: GLODAP file not found at {glodap_file}")
+
+    # Try to load Landschützer MPI-SOM-FFN surface pCO2 and flux
+    if surface_carbon:
+        spco2_file = obs_dir / 'spco2_orca_bil.nc'
+        if spco2_file.exists():
+            print(f"Loading Landschützer spco2 data from {spco2_file}")
+            spco2_ds = xr.open_dataset(spco2_file, decode_times=False)
+            if 'spco2_clim' in spco2_ds:
+                # Annual mean, units: µatm (same as model pCO2)
+                obs_datasets['pCO2'] = spco2_ds['spco2_clim'].mean('time')
+            if 'fgco2_clim' in spco2_ds:
+                # Annual mean, convert molC/m²/yr → µmol/m²/s to match model Cflx
+                obs_datasets['Cflx'] = spco2_ds['fgco2_clim'].mean('time') * 1e6 / (365.25 * 86400)
+        else:
+            print(f"Warning: spco2 file not found at {spco2_file}")
 
     return obs_datasets
 

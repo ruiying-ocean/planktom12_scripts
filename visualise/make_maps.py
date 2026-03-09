@@ -764,6 +764,119 @@ def plot_derived_variables(
     print(f"Saved: {output_path}")
 
 
+def plot_surface_carbon(
+    plotter: OceanMapPlotter,
+    diad_ds: xr.Dataset,
+    obs_datasets: dict,
+    output_path: Path,
+):
+    """
+    Create model vs observations comparison for surface pCO2 and air-sea CO2 flux.
+
+    Two rows (pCO2, Cflx) × three columns (Model | Observations | Difference).
+
+    Observational data from Landschützer MPI-SOM-FFN v2023 climatology.
+    - obs pCO2 in µatm, model pCO2 in µatm → direct comparison
+    - obs fgco2 converted from molC/m²/yr to µmol/m²/s to match model Cflx
+
+    Args:
+        plotter: OceanMapPlotter instance
+        diad_ds: Dataset with diad_T variables (pCO2, Cflx)
+        obs_datasets: Dict with keys 'pCO2' (µatm) and 'Cflx' (µmol/m²/s)
+        output_path: Where to save the figure
+    """
+    from difference_utils import calculate_difference, get_symmetric_colorbar_limits
+
+    variables = [
+        {
+            'model_var': 'pCO2',
+            'obs_key': 'pCO2',
+            'title': 'Surface pCO₂',
+            'units': 'µatm',
+            'cmap': 'RdYlBu_r',
+            'vmin': 280,
+            'vmax': 450,
+        },
+        {
+            'model_var': 'Cflx',
+            'obs_key': 'Cflx',
+            'title': 'Air-Sea CO₂ Flux',
+            'units': 'µmol m⁻² s⁻¹',
+            'cmap': 'RdYlBu_r',
+            'vmin': -0.2,
+            'vmax': 0.4,
+        },
+    ]
+
+    fig, axs = plotter.create_subplot_grid(
+        nrows=len(variables), ncols=3,
+        projection=ccrs.PlateCarree(),
+        figsize=(15, 5 * len(variables))
+    )
+
+    for i, var in enumerate(variables):
+        ax_model = axs[i, 0]
+        ax_obs   = axs[i, 1]
+        ax_diff  = axs[i, 2]
+
+        model_var = var['model_var']
+        if model_var not in diad_ds:
+            for ax in (ax_model, ax_obs, ax_diff):
+                ax.text(0.5, 0.5, f'{model_var}\nnot found in model',
+                        ha='center', va='center', transform=ax.transAxes)
+            continue
+
+        model_data = diad_ds[model_var]
+        if 'time_counter' in model_data.dims:
+            model_data = model_data.mean(dim='time_counter')
+        model_data = model_data.squeeze()
+        model_data = plotter.apply_mask(model_data)
+
+        vmin, vmax = var['vmin'], var['vmax']
+
+        # Model
+        im = plotter.plot_variable(ax=ax_model, data=model_data,
+                                   cmap=var['cmap'], vmin=vmin, vmax=vmax)
+        ax_model.set_title(f"{var['title']} - Model", fontsize=12)
+        cbar = fig.colorbar(im, ax=ax_model, orientation='horizontal', pad=0.05, shrink=0.8)
+        cbar.set_label(var['units'], fontsize=10)
+
+        # Observations
+        obs_data = obs_datasets.get(var['obs_key'])
+        if obs_data is not None:
+            obs_data = obs_data.squeeze()
+            plotter.plot_variable(ax=ax_obs, data=obs_data,
+                                  cmap=var['cmap'], vmin=vmin, vmax=vmax)
+            ax_obs.set_title(f"{var['title']} - Landschützer 2023", fontsize=12)
+            cbar_obs = fig.colorbar(im, ax=ax_obs, orientation='horizontal', pad=0.05, shrink=0.8)
+            cbar_obs.set_label(var['units'], fontsize=10)
+
+            # Difference
+            diff = calculate_difference(model_data, obs_data)
+            if 'nav_lon' in model_data.coords and 'nav_lat' in model_data.coords:
+                diff = diff.assign_coords({
+                    'nav_lon': model_data.coords['nav_lon'],
+                    'nav_lat': model_data.coords['nav_lat'],
+                })
+            diff = plotter.apply_mask(diff)
+            vmin_d, vmax_d = get_symmetric_colorbar_limits(diff)
+            im_diff = plotter.plot_variable(ax=ax_diff, data=diff,
+                                            cmap='RdBu_r', vmin=vmin_d, vmax=vmax_d)
+            ax_diff.set_title('Difference (Model − Obs)', fontsize=12)
+            cbar_diff = fig.colorbar(im_diff, ax=ax_diff, orientation='horizontal', pad=0.05, shrink=0.8)
+            cbar_diff.set_label(f'Δ {var["units"]}', fontsize=10)
+        else:
+            ax_obs.text(0.5, 0.5, 'No observations', ha='center', va='center',
+                        transform=ax_obs.transAxes)
+            ax_diff.text(0.5, 0.5, 'Cannot compute\ndifference', ha='center', va='center',
+                         transform=ax_diff.transAxes)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    print(f"Saved: {output_path}")
+
+
 def main():
     """Main entry point for map generation."""
     parser = argparse.ArgumentParser(
@@ -1016,9 +1129,19 @@ def main():
         variables=carbon_vars
     )
 
-    # 7. Physical sections (T/S zonal-mean, Atlantic & Pacific vs WOA18)
+    # 7. Surface carbon cycle (pCO2, Cflx vs Landschützer MPI-SOM-FFN)
+    print("7. Surface carbon cycle (pCO2 and air-sea flux vs Landschützer)...")
+    spco2_obs = load_observations(obs_dir, nutrients=[], surface_carbon=True)
+    plot_surface_carbon(
+        plotter=plotter,
+        diad_ds=diad_ds,
+        obs_datasets=spco2_obs,
+        output_path=output_dir / f"{args.run_name}_{args.year}_surface_carbon.png"
+    )
+
+    # 8. Physical sections (T/S zonal-mean, Atlantic & Pacific vs WOA18)
     if not args.skip_physics_sections and compute_aou:  # grid_T must exist
-        print("7. Physical sections (T/S Atlantic & Pacific)...")
+        print("8. Physical sections (T/S Atlantic & Pacific)...")
         plot_physics_sections(
             grid_t_file=grid_t_file,
             obs_dir=args.obs_dir,
