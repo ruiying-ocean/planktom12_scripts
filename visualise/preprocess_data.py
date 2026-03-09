@@ -294,10 +294,9 @@ def load_observations(
                     spco2_ds['spco2_clim'].where(spco2_ds['spco2_clim'] < FILL).mean('time')
                 )
             if 'fgco2_clim' in spco2_ds:
-                # Annual mean, convert molC/m²/yr → µmol/m²/s to match model Cflx
+                # Annual mean, units: mol/m²/yr (no conversion needed)
                 obs_datasets['Cflx'] = (
                     spco2_ds['fgco2_clim'].where(spco2_ds['fgco2_clim'] < FILL).mean('time')
-                    * 1e6 / (365.25 * 86400)
                 )
         else:
             print(f"Warning: spco2 file not found at {spco2_file}")

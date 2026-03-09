@@ -801,10 +801,10 @@ def plot_surface_carbon(
             'model_var': 'Cflx',
             'obs_key': 'Cflx',
             'title': 'Air-Sea CO₂ Flux',
-            'units': 'µmol m⁻² s⁻¹',
+            'units': 'mol m⁻² yr⁻¹',
             'cmap': 'RdYlBu_r',
-            'vmin': -0.2,
-            'vmax': 0.4,
+            'vmin': -5,
+            'vmax': 5,
         },
     ]
 
@@ -830,6 +830,9 @@ def plot_surface_carbon(
         if 'time_counter' in model_data.dims:
             model_data = model_data.mean(dim='time_counter')
         model_data = model_data.squeeze()
+        # Cflx is mol/m²/s in model output; convert to mol/m²/yr
+        if model_var == 'Cflx':
+            model_data = model_data * (3600. * 24. * 365.)
         model_data = plotter.apply_mask(model_data)
 
         vmin, vmax = var['vmin'], var['vmax']
