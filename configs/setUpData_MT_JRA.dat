@@ -77,7 +77,7 @@ compilerKey:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_Pla
 # Restart files (files from which the model is started, can be generic)
 
 # Passive tracers
-restart_trc.nc:/gpfs/home/vhf24tbu/Observations/input_data/restart_19471231_trc_RY_HOC_HuangFe.nc
+restart_trc.nc:/gpfs/home/vhf24tbu/input_data/model_restart/restart_19471231_trc_RY_HOC_HuangFe.nc
 
 # Ice
 restart_ice_in.nc:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/restart_ice_v3.6.nc

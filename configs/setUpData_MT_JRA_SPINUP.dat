@@ -77,13 +77,13 @@ compilerKey:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_Pla
 # Restart files (files from which the model is started, can be generic)
 
 # Passive tracers
-restart_trc.nc:/gpfs/home/vhf24tbu/Observations/input_data/restart_19471231_trc_RY_HOC_HuangFe.nc
+restart_trc.nc:/gpfs/home/vhf24tbu/input_data/model_restart/restart_19471231_trc_RY_HOC_HuangFe.nc
 
 # Ice
-restart_ice_in.nc:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/restart_ice_v3.6.nc
+restart_ice_in.nc:/gpfs/home/vhf24tbu/input_data/model_restart/jra_spinup_restart/restart_ice_in.nc
 
 # Restart for the physics parameters
-restart.nc:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/restart_19191231_opa_PT.nc
+restart.nc:/gpfs/home/vhf24tbu/input_data/model_restart/jra_spinup_restart/restart.nc
 
 # Evaporation and precipitation balancing file (this needs to be for previous year, if using restarts)
 EMPaveFile:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/EMPave_1749.dat
