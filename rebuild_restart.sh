@@ -16,8 +16,8 @@
 #
 # Examples:
 #   rebuild_restart.sh ~/scratch/ModelRuns/TOM12_RY_JRA3 17500101
-#   rebuild_restart.sh ~/scratch/ModelRuns/TOM12_RY_JRA3 17500101 ~/Observations/input_data/new_restart
-#   rebuild_restart.sh ~/scratch/ModelRuns/TOM12_RY_JRA3 17500101 ~/Observations/input_data/new_restart 01921725 48
+#   rebuild_restart.sh ~/scratch/ModelRuns/TOM12_RY_JRA3 17500101 ~/input_data/model_restart/era_spinup_restart
+#   rebuild_restart.sh ~/scratch/ModelRuns/TOM12_RY_JRA3 17500101 ~/input_data/model_restart/era_spinup_restart 01921725 48
 
 set -e
 
@@ -71,6 +71,7 @@ from datetime import datetime, timedelta
 d = datetime.strptime('${NEW_DATE}', '%Y%m%d') - timedelta(days=1)
 print(d.strftime('%Y%m%d'))
 ")
+RESTART_YEAR="${RESTART_DATE:0:4}"
 
 echo "============================================================"
 echo "Rebuild NEMO restarts"
@@ -146,10 +147,27 @@ ln -fs ORCA2_${TIMESTEP}_restart.nc restart.nc
 ln -fs ORCA2_${TIMESTEP}_restart_ice.nc restart_ice_in.nc
 ln -fs ORCA2_${TIMESTEP}_restart_trc.nc restart_trc.nc
 
+# -----------------------------------------------------------------------------
+# 4. Copy EMP file
+# -----------------------------------------------------------------------------
+echo ""
+echo "Copying EMP file..."
+
+EMP_SOURCE="${RUN_DIR}/EMPave_${RESTART_YEAR}.dat"
+EMP_TARGET="${OUTPUT_DIR}/EMPave_${RESTART_YEAR}.dat"
+
+if [ ! -f "${EMP_SOURCE}" ]; then
+    echo "Error: EMP file not found: ${EMP_SOURCE}"
+    exit 1
+else
+    cp "${EMP_SOURCE}" "${EMP_TARGET}"
+fi
+
 echo ""
 echo "============================================================"
 echo "Done. Created in ${OUTPUT_DIR}:"
 echo "  restart.nc        -> ORCA2_${TIMESTEP}_restart.nc"
 echo "  restart_ice_in.nc -> ORCA2_${TIMESTEP}_restart_ice.nc"
 echo "  restart_trc.nc    -> ORCA2_${TIMESTEP}_restart_trc.nc"
+echo "  EMPave_${RESTART_YEAR}.dat"
 echo "============================================================"
