@@ -87,7 +87,7 @@ restart.nc:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/
 
 # Evaporation and precipitation balancing file (this needs to be for previous year, if using restarts)
 #EMPaveFile:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/EMPave_1947.dat
-EMPaveFile:/gpfs/home/vhf24tbu/scratch/ModelRuns/TOM12_RY_SPJ2/EMPave_1940.dat
+EMPaveFile:/gpfs/home/vhf24tbu/scratch/ModelRuns/TOM12_RY_SJ01/EMPave_1940.dat
 
 # A file, a 2D integer used to increase the horizontal eddy viscosity along western boundary in the equatorial strip 20S-20N
 ahmcoef.nc:/gpfs/data/greenocean/software/resources/ModelResources/EddyViscCoeff/ahmcoef.nc
