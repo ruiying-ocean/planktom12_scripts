@@ -27,7 +27,21 @@ ${SETUPDATA_SUMMARY}
 
 ## Global Ecosystem Metrics
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](${identifier}_ts_global.${img_format})
+
+## Anomaly
+
+![](${identifier}_ts_global_anom.${img_format})
+
+## Anomaly %
+
+![](${identifier}_ts_global_anompct.${img_format})
+
+:::
 
 ## Seasonal Chlorophyll by Region
 
@@ -35,23 +49,93 @@ ${SETUPDATA_SUMMARY}
 
 ## Plankton Functional Types
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](${identifier}_ts_pfts.${img_format})
+
+## Anomaly
+
+![](${identifier}_ts_pfts_anom.${img_format})
+
+## Anomaly %
+
+![](${identifier}_ts_pfts_anompct.${img_format})
+
+:::
 
 ## Nutrient Cycles
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](${identifier}_ts_nutrients.${img_format})
+
+## Anomaly
+
+![](${identifier}_ts_nutrients_anom.${img_format})
+
+## Anomaly %
+
+![](${identifier}_ts_nutrients_anompct.${img_format})
+
+:::
 
 ## Physical Environment
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](${identifier}_ts_physics.${img_format})
+
+## Anomaly
+
+![](${identifier}_ts_physics_anom.${img_format})
+
+## Anomaly %
+
+![](${identifier}_ts_physics_anompct.${img_format})
+
+:::
 
 ## Derived Ecosystem Variables
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](${identifier}_ts_derived.${img_format})
+
+## Anomaly
+
+![](${identifier}_ts_derived_anom.${img_format})
+
+## Anomaly %
+
+![](${identifier}_ts_derived_anompct.${img_format})
+
+:::
 
 ## Primary Production by PFT
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](${identifier}_ts_ppt_by_pft.${img_format})
+
+## Anomaly
+
+![](${identifier}_ts_ppt_by_pft_anom.${img_format})
+
+## Anomaly %
+
+![](${identifier}_ts_ppt_by_pft_anompct.${img_format})
+
+:::
 
 ## Trophic & Food Web
 
@@ -59,11 +143,39 @@ ${SETUPDATA_SUMMARY}
 
 ## Benthic
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](${identifier}_ts_benthic.${img_format})
+
+## Anomaly
+
+![](${identifier}_ts_benthic_anom.${img_format})
+
+## Anomaly %
+
+![](${identifier}_ts_benthic_anompct.${img_format})
+
+:::
 
 ## Organic Carbon
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](${identifier}_ts_organic_carbon.${img_format})
+
+## Anomaly
+
+![](${identifier}_ts_organic_carbon_anom.${img_format})
+
+## Anomaly %
+
+![](${identifier}_ts_organic_carbon_anompct.${img_format})
+
+:::
 
 ---
 

@@ -352,7 +352,7 @@ class FigureCreator:
         path = self.saver.save(fig, filename_base)
         print(f"✓ Saved: {path}")
 
-    def _create_summary_from_config(self, data, plot_info, obs_source, layout_key, filename_suffix):
+    def _create_summary_from_config(self, data, plot_info, obs_source, layout_key, filename_suffix, mode='normal'):
         """Config-driven summary plot: reads plot_info dict, looks up observations, creates subplots.
 
         Args:
@@ -361,16 +361,23 @@ class FigureCreator:
             obs_source: Observation dict (from ObservationData), or None if no observations
             layout_key: Key into self.config['layout'], e.g. 'global_summary'
             filename_suffix: Suffix for output filename, e.g. 'summary_global'
+            mode: One of 'normal', 'anomaly', 'anompct'
         """
         year_limits = self._get_global_year_limits(data)
         layout = self.config['layout'][layout_key]
         subplot_width = self.config['layout']['subplot_width']
         subplot_height = self.config['layout']['subplot_height']
 
+        # Determine filename and suppress observations for anomaly modes
+        mode_suffix = {'normal': '', 'anomaly': '_anom', 'anompct': '_anompct'}[mode]
+        save_suffix = filename_suffix + mode_suffix
+        if mode != 'normal':
+            obs_source = None
+
         plot_configs = []
         for var_name, var_info in plot_info.items():
             title = var_info['title']
-            unit = var_info.get('unit', '')
+            unit = '%' if mode == 'anompct' else var_info.get('unit', '')
             color = self.colors[var_info['color_index'] % len(self.colors)]
             obs_range, obs_line = None, None
             if obs_source is not None:
@@ -400,7 +407,20 @@ class FigureCreator:
                 year = data["year"]
                 y = data[var_name]
                 n = min(len(year), len(y))
-                self._setup_axis(axes[i], year[:n], y[:n], color, title, unit,
+                y_plot = np.asarray(y[:n], dtype=float)
+
+                if mode != 'normal':
+                    baseline_len = min(10, len(y_plot))
+                    baseline = np.nanmean(y_plot[:baseline_len])
+                    if np.isfinite(baseline) and baseline != 0:
+                        if mode == 'anomaly':
+                            y_plot = y_plot - baseline
+                        elif mode == 'anompct':
+                            y_plot = (y_plot - baseline) / np.abs(baseline) * 100
+                    obs_range = None
+                    obs_line = None
+
+                self._setup_axis(axes[i], year[:n], y_plot, color, title, unit,
                                obs_range, obs_line, year_limits, add_xlabel=is_bottom_row)
             else:
                 axes[i].text(0.5, 0.5, f'{title}\nnot available',
@@ -412,47 +432,52 @@ class FigureCreator:
         for idx in range(len(plot_configs), len(axes)):
             axes[idx].set_visible(False)
 
-        self._save_figure(fig, f"{self.model_name}_{filename_suffix}.png")
+        self._save_figure(fig, f"{self.model_name}_{save_suffix}.png")
+
+    def _create_all_modes(self, data, plot_info, obs_source, layout_key, filename_suffix):
+        """Create normal, anomaly, and anomaly-% versions of a summary plot."""
+        for mode in ('normal', 'anomaly', 'anompct'):
+            self._create_summary_from_config(data, plot_info, obs_source, layout_key, filename_suffix, mode)
 
     def create_global_summary(self, data):
-        self._create_summary_from_config(
+        self._create_all_modes(
             data, self.config['plot_info']['ecosystem'],
             ObservationData.get_global(), 'global_summary', 'ts_global')
 
     def create_pft_summary(self, data):
         plot_info = dict(self.config['plot_info']['pfts']['phytoplankton'])
         plot_info.update(self.config['plot_info']['pfts']['zooplankton'])
-        self._create_summary_from_config(
+        self._create_all_modes(
             data, plot_info,
             ObservationData.get_pft(), 'pft_summary', 'ts_pfts')
 
     def create_nutrient_summary(self, data):
-        self._create_summary_from_config(
+        self._create_all_modes(
             data, self.config['plot_info']['nutrients'],
             ObservationData.get_nutrients(), 'nutrient_summary', 'ts_nutrients')
 
     def create_physics_summary(self, data):
-        self._create_summary_from_config(
+        self._create_all_modes(
             data, self.config['plot_info']['physics'],
             ObservationData.get_physics(), 'physics_summary', 'ts_physics')
 
     def create_derived_summary(self, data):
-        self._create_summary_from_config(
+        self._create_all_modes(
             data, self.config['plot_info']['derived'],
             ObservationData.get_derived(), 'derived_summary', 'ts_derived')
 
     def create_benthic_summary(self, data):
-        self._create_summary_from_config(
+        self._create_all_modes(
             data, self.config['plot_info']['benthic'],
             ObservationData.get_benthic(), 'benthic_summary', 'ts_benthic')
 
     def create_organic_carbon_summary(self, data):
-        self._create_summary_from_config(
+        self._create_all_modes(
             data, self.config['plot_info']['organic_carbon'],
             ObservationData.get_organic_carbon(), 'organic_carbon_summary', 'ts_organic_carbon')
 
     def create_ppt_by_pft_summary(self, data):
-        self._create_summary_from_config(
+        self._create_all_modes(
             data, self.config['plot_info']['ppt_by_pft'],
             None, 'ppt_by_pft_summary', 'ts_ppt_by_pft')
 
