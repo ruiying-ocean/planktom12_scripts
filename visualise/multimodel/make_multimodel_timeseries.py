@@ -1502,7 +1502,7 @@ class DerivedSummaryPlotter(PlotGenerator):
 
         if int_data is not None:
             phy_cols = ["COC", "DIA", "FIX", "MIX", "PHA", "PIC"]
-            zoo_cols = ["BAC", "GEL", "CRU", "MES", "PRO", "PTE"]
+            zoo_cols = ["GEL", "CRU", "MES", "PRO", "PTE"]
             phy_parts = [DataLoader.safe_load_column(int_data, col, indices) for col in phy_cols]
             zoo_parts = [DataLoader.safe_load_column(int_data, col, indices) for col in zoo_cols]
             if all(part is not None for part in phy_parts + zoo_parts):
@@ -1686,7 +1686,7 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
 
         if int_data is not None:
             phy_cols = ["COC", "DIA", "FIX", "MIX", "PHA", "PIC"]
-            zoo_cols = ["BAC", "GEL", "CRU", "MES", "PRO", "PTE"]
+            zoo_cols = ["GEL", "CRU", "MES", "PRO", "PTE"]
             phy_parts = [DataLoader.safe_load_column(int_data, col, indices) for col in phy_cols]
             zoo_parts = [DataLoader.safe_load_column(int_data, col, indices) for col in zoo_cols]
             if all(part is not None for part in phy_parts + zoo_parts):

@@ -139,7 +139,7 @@ class ModelDataLoader:
         int_cols = ["BAC", "COC", "DIA", "FIX", "GEL", "CRU", "MES", "MIX", "PHA", "PIC", "PRO", "PTE"]
         int_data = self._extract_arrays(int_df, int_cols)
         int_data["PHY"] = sum(int_data[col] for col in ["COC", "DIA", "FIX", "MIX", "PHA", "PIC"])
-        int_data["ZOO"] = sum(int_data[col] for col in ["BAC", "GEL", "CRU", "MES", "PRO", "PTE"])
+        int_data["ZOO"] = sum(int_data[col] for col in ["GEL", "CRU", "MES", "PRO", "PTE"])
         int_data["TOT"] = int_data["PHY"] + int_data["ZOO"]
         data.update(int_data)
 
@@ -584,9 +584,10 @@ class FigureCreator:
                 if np.count_nonzero(valid) >= 2:
                     x_valid = x[valid]
                     y_valid = y[valid]
+                    years_valid = data["year"][valid]
                     slope, intercept = np.polyfit(x_valid, y_valid, 1)
 
-                    ba_ax.scatter(x_valid, y_valid, color=ba_color, s=18, alpha=0.8)
+                    ba_ax.scatter(x_valid, y_valid, c=years_valid, cmap="viridis", s=18, alpha=0.8)
                     x_line = np.linspace(np.nanmin(x_valid), np.nanmax(x_valid), 100)
                     ba_ax.plot(x_line, slope * x_line + intercept, color=ba_color, linewidth=1.2)
                     ba_ax.axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
