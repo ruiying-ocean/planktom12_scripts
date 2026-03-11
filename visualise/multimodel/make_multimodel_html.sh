@@ -68,37 +68,37 @@ except:
 fi
 
 # Add ecosystem maps
-if [ -f "multimodel_spatial_ecosystem.${img_format}" ]; then
+if [ -f "mm_spatial_ecosystem.${img_format}" ]; then
     model_maps_section="${model_maps_section}## Ecosystem Variables\n\n"
-    model_maps_section="${model_maps_section}![](multimodel_spatial_ecosystem.${img_format})\n\n"
+    model_maps_section="${model_maps_section}![](mm_spatial_ecosystem.${img_format})\n\n"
     model_maps_section="${model_maps_section}---\n\n"
 fi
 
 # Add phytoplankton maps
-if [ -f "multimodel_spatial_phytoplankton.${img_format}" ]; then
+if [ -f "mm_spatial_phytoplankton.${img_format}" ]; then
     model_maps_section="${model_maps_section}## Phytoplankton\n\n"
-    model_maps_section="${model_maps_section}![](multimodel_spatial_phytoplankton.${img_format})\n\n"
+    model_maps_section="${model_maps_section}![](mm_spatial_phytoplankton.${img_format})\n\n"
     model_maps_section="${model_maps_section}---\n\n"
 fi
 
 # Add zooplankton maps
-if [ -f "multimodel_spatial_zooplankton.${img_format}" ]; then
+if [ -f "mm_spatial_zooplankton.${img_format}" ]; then
     model_maps_section="${model_maps_section}## Zooplankton\n\n"
-    model_maps_section="${model_maps_section}![](multimodel_spatial_zooplankton.${img_format})\n\n"
+    model_maps_section="${model_maps_section}![](mm_spatial_zooplankton.${img_format})\n\n"
     model_maps_section="${model_maps_section}---\n\n"
 fi
 
 # Add nutrient maps
-if [ -f "multimodel_spatial_nutrients.${img_format}" ]; then
+if [ -f "mm_spatial_nutrients.${img_format}" ]; then
     model_maps_section="${model_maps_section}## Nutrients\n\n"
-    model_maps_section="${model_maps_section}![](multimodel_spatial_nutrients.${img_format})\n\n"
+    model_maps_section="${model_maps_section}![](mm_spatial_nutrients.${img_format})\n\n"
     model_maps_section="${model_maps_section}---\n\n"
 fi
 
 # Add derived variable maps
-if [ -f "multimodel_spatial_derived.${img_format}" ]; then
+if [ -f "mm_spatial_derived.${img_format}" ]; then
     model_maps_section="${model_maps_section}## Derived Ecosystem Variables\n\n"
-    model_maps_section="${model_maps_section}![](multimodel_spatial_derived.${img_format})\n\n"
+    model_maps_section="${model_maps_section}![](mm_spatial_derived.${img_format})\n\n"
     model_maps_section="${model_maps_section}---\n\n"
 fi
 
