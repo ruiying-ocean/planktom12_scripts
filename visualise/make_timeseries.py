@@ -537,9 +537,10 @@ class FigureCreator:
                 if np.count_nonzero(valid) >= 2:
                     x_valid = x[valid]
                     y_valid = y[valid]
+                    years_valid = data["year"][valid]
                     slope, intercept = np.polyfit(x_valid, y_valid, 1)
 
-                    ta_ax.scatter(x_valid, y_valid, color=ta_color, s=18, alpha=0.8)
+                    ta_ax.scatter(x_valid, y_valid, c=years_valid, cmap="viridis", s=18, alpha=0.8)
 
                     x_line = np.linspace(np.nanmin(x_valid), np.nanmax(x_valid), 100)
                     ta_ax.plot(x_line, slope * x_line + intercept, color=ta_color, linewidth=1.2)
