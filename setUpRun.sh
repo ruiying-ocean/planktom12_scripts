@@ -170,9 +170,13 @@ while IFS= read -r line || [ -n "$line" ]; do
 
 		# Copy the executable over, good to keep these.
 		if [[ $name == "opa"*$Model ]]; then
-			cp $val $name
-			ln -s $name opa
-			ok "Executable: $name"
+			if [ -f $name ]; then
+				skip "$name exists"
+			else
+				cp $val $name
+				ok "Executable: $name"
+			fi
+			ln -fs $name opa
 		fi
 	fi
 done < $dataFileFullPath
