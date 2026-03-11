@@ -278,6 +278,7 @@ class PlotGenerator:
     def __init__(self, models: List[ModelConfig], save_dir: str):
         self.models = models
         self.save_dir = save_dir
+        self._norm_mode = None  # None, 'anomaly', or 'anompct'
         pathlib.Path(save_dir).mkdir(parents=True, exist_ok=True)
         # Font family is already set by PLOT_STYLER.apply_style() at module level
 
@@ -344,6 +345,20 @@ class PlotGenerator:
         fig.savefig(filepath, dpi=dpi, bbox_inches="tight")
         print_success(f"Created {filename}")
         plt.close(fig)
+
+    def _apply_norm(self, values: np.ndarray) -> np.ndarray:
+        """Apply normalization based on current _norm_mode."""
+        if self._norm_mode == 'anomaly':
+            return GlobalSummaryNormalizedPlotter._normalize_series(values)
+        elif self._norm_mode == 'anompct':
+            return GlobalSummaryNormalizedPlotter._normalize_pct_series(values)
+        return values
+
+    def _norm_ylabel(self, original: str) -> str:
+        """Return ylabel adjusted for current norm mode."""
+        if self._norm_mode == 'anompct':
+            return '%'
+        return original
 
     def plot_all_models(self, fig, axes, plot_func):
         successful_plots = 0
@@ -481,18 +496,23 @@ class GlobalSummaryNormalizedPlotter(PlotGenerator):
     """Generates normalized global summary plots using first 10 years as baseline"""
 
     def generate(self):
-        fig, axes = plt.subplots(
-            3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=True,
-            constrained_layout=USE_CONSTRAINED_LAYOUT
-        )
-        axes = axes.flatten()
+        for mode, filename in [
+            ('anomaly', 'mm_global_normalized.png'),
+            ('anompct', 'mm_global_anompct.png'),
+        ]:
+            self._norm_mode = mode
+            fig, axes = plt.subplots(
+                3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=True,
+                constrained_layout=USE_CONSTRAINED_LAYOUT
+            )
+            axes = axes.flatten()
 
-        setup_axes(axes)
+            setup_axes(axes)
 
-        self.plot_all_models(fig, axes, self._plot_model)
+            self.plot_all_models(fig, axes, self._plot_model)
 
-        self.add_legend(fig)
-        self.save_figure(fig, "mm_global_normalized.png")
+            self.add_legend(fig)
+            self.save_figure(fig, filename)
 
     @staticmethod
     def _normalize_series(values: np.ndarray) -> np.ndarray:
@@ -502,6 +522,17 @@ class GlobalSummaryNormalizedPlotter(PlotGenerator):
         baseline_years = min(10, len(values))
         baseline = np.mean(values[:baseline_years])
         return values - baseline
+
+    @staticmethod
+    def _normalize_pct_series(values: np.ndarray) -> np.ndarray:
+        """Return percent anomalies relative to the mean of the first decade."""
+        if len(values) == 0:
+            return values
+        baseline_years = min(10, len(values))
+        baseline = np.nanmean(values[:baseline_years])
+        if not np.isfinite(baseline) or baseline == 0:
+            return np.full(len(values), np.nan, dtype=float)
+        return (values - baseline) / abs(baseline) * 100
 
     def _plot_model(self, model, axes, color):
         sur_data = DataLoader.load_analyser_data(model, "sur", "annual")
@@ -557,7 +588,7 @@ class GlobalSummaryNormalizedPlotter(PlotGenerator):
             if plot_year is None:
                 continue
 
-            normalized_values = self._normalize_series(plot_values)
+            normalized_values = self._apply_norm(plot_values)
             label = model.label if add_label else None
             ax.plot(
                 plot_year,
@@ -567,7 +598,7 @@ class GlobalSummaryNormalizedPlotter(PlotGenerator):
                 linewidth=LINE_WIDTH,
             )
             ax.set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-            ax.set_ylabel(ylabel)
+            ax.set_ylabel(self._norm_ylabel(ylabel))
             # Add xlabel only to bottom row (indices 6, 7, 8 in 3x3 grid)
             if idx >= 6:
                 ax.set_xlabel("Year", fontweight='bold')
@@ -716,21 +747,26 @@ class PFTNormalizedPlotter(PlotGenerator):
     """Generates normalized/anomaly plots for PFT biomass"""
 
     def generate(self):
-        fig, axes = plt.subplots(
-            4,
-            3,
-            figsize=(3 * SUBPLOT_WIDTH, 4 * SUBPLOT_HEIGHT),
-            sharex=True,
-            constrained_layout=USE_CONSTRAINED_LAYOUT,
-        )
-        flat_axes = axes.flatten()
+        for mode, filename in [
+            ('anomaly', 'mm_pfts_normalized.png'),
+            ('anompct', 'mm_pfts_anompct.png'),
+        ]:
+            self._norm_mode = mode
+            fig, axes = plt.subplots(
+                4,
+                3,
+                figsize=(3 * SUBPLOT_WIDTH, 4 * SUBPLOT_HEIGHT),
+                sharex=True,
+                constrained_layout=USE_CONSTRAINED_LAYOUT,
+            )
+            flat_axes = axes.flatten()
 
-        setup_axes(flat_axes)
+            setup_axes(flat_axes)
 
-        self.plot_all_models(fig, flat_axes, self._plot_model)
+            self.plot_all_models(fig, flat_axes, self._plot_model)
 
-        self.add_legend(fig)
-        self.save_figure(fig, "mm_pfts_normalized.png")
+            self.add_legend(fig)
+            self.save_figure(fig, filename)
 
     def _plot_model(self, model, axes, color):
         int_data = DataLoader.load_analyser_data(model, "int", "annual")
@@ -770,11 +806,11 @@ class PFTNormalizedPlotter(PlotGenerator):
             if plot_year is None:
                 continue
 
-            normalized = GlobalSummaryNormalizedPlotter._normalize_series(plot_values)
+            normalized = self._apply_norm(plot_values)
             label = model.label if i == 10 else None
             axes[i].plot(plot_year, normalized, color=color, label=label, linewidth=LINE_WIDTH)
             axes[i].set_title(title, fontsize=TITLE_FONTSIZE, fontweight="bold", pad=5)
-            axes[i].set_ylabel("PgC anomaly")
+            axes[i].set_ylabel(self._norm_ylabel("PgC anomaly"))
             axes[i].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
             if i >= 9:
                 axes[i].set_xlabel("Year", fontweight="bold")
@@ -847,21 +883,26 @@ class PPTByPFTNormalizedPlotter(PlotGenerator):
     """Generates normalized/anomaly plots for PPT by phytoplankton PFT"""
 
     def generate(self):
-        fig, axes = plt.subplots(
-            2,
-            3,
-            figsize=(3 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT),
-            sharex=True,
-            constrained_layout=USE_CONSTRAINED_LAYOUT,
-        )
-        flat_axes = axes.flatten()
+        for mode, filename in [
+            ('anomaly', 'mm_ppt_by_pft_normalized.png'),
+            ('anompct', 'mm_ppt_by_pft_anompct.png'),
+        ]:
+            self._norm_mode = mode
+            fig, axes = plt.subplots(
+                2,
+                3,
+                figsize=(3 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT),
+                sharex=True,
+                constrained_layout=USE_CONSTRAINED_LAYOUT,
+            )
+            flat_axes = axes.flatten()
 
-        setup_axes(flat_axes)
+            setup_axes(flat_axes)
 
-        self.plot_all_models(fig, flat_axes, self._plot_model)
+            self.plot_all_models(fig, flat_axes, self._plot_model)
 
-        self.add_legend(fig)
-        self.save_figure(fig, "mm_ppt_by_pft_normalized.png")
+            self.add_legend(fig)
+            self.save_figure(fig, filename)
 
     def _plot_model(self, model, axes, color):
         vol_data = DataLoader.load_analyser_data(model, "vol", "annual")
@@ -892,11 +933,11 @@ class PPTByPFTNormalizedPlotter(PlotGenerator):
             if plot_year is None:
                 continue
 
-            normalized = GlobalSummaryNormalizedPlotter._normalize_series(plot_values)
+            normalized = self._apply_norm(plot_values)
             label = model.label if i == 4 else None
             axes[i].plot(plot_year, normalized, color=color, label=label, linewidth=LINE_WIDTH)
             axes[i].set_title(title, fontsize=TITLE_FONTSIZE, fontweight="bold", pad=5)
-            axes[i].set_ylabel("PgC/yr anomaly")
+            axes[i].set_ylabel(self._norm_ylabel("PgC/yr anomaly"))
             axes[i].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
             if i >= 3:
                 axes[i].set_xlabel("Year", fontweight="bold")
@@ -1050,20 +1091,27 @@ class NutrientPlotter(PlotGenerator):
     """Generates nutrient summary plots"""
 
     def generate(self):
-        # Use 3x3 grid for 8 nutrients (matching single-model)
-        fig, axes = plt.subplots(
-            3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=True,
-            constrained_layout=USE_CONSTRAINED_LAYOUT
-        )
-        flat_axes = axes.flatten()
+        for mode, filename, include_obs in [
+            (None, 'mm_nutrients.png', True),
+            ('anomaly', 'mm_nutrients_anom.png', False),
+            ('anompct', 'mm_nutrients_anompct.png', False),
+        ]:
+            self._norm_mode = mode
+            # Use 3x3 grid for 8 nutrients (matching single-model)
+            fig, axes = plt.subplots(
+                3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=True,
+                constrained_layout=USE_CONSTRAINED_LAYOUT
+            )
+            flat_axes = axes.flatten()
 
-        setup_axes(flat_axes)
+            setup_axes(flat_axes)
 
-        self.plot_all_models(fig, flat_axes, self._plot_model)
-        self._add_observational_data(flat_axes)
+            self.plot_all_models(fig, flat_axes, self._plot_model)
+            if include_obs:
+                self._add_observational_data(flat_axes)
 
-        self.add_legend(fig)
-        self.save_figure(fig, "mm_nutrients.png")
+            self.add_legend(fig)
+            self.save_figure(fig, filename)
 
     def _plot_model(self, model, axes, color):
         ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
@@ -1095,15 +1143,18 @@ class NutrientPlotter(PlotGenerator):
             plot_year, plot_values = DataLoader.align_year_and_values(year, values)
             if plot_year is not None:
                 label = model.label if add_label else None
+                values_to_plot = plot_values * scale
+                if self._norm_mode is not None:
+                    values_to_plot = self._apply_norm(values_to_plot)
                 ax.plot(
                     plot_year,
-                    plot_values * scale,
+                    values_to_plot,
                     color=color,
                     label=label,
                     linewidth=LINE_WIDTH,
                 )
                 ax.set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-                ax.set_ylabel(ylabel)
+                ax.set_ylabel(self._norm_ylabel(ylabel))
                 # Add xlabel only to bottom row (last 3 in 3x3 grid)
                 if idx >= 5:
                     ax.set_xlabel("Year", fontweight='bold')
@@ -1125,24 +1176,31 @@ class BenthicPlotter(PlotGenerator):
     """Generates deep-ocean (benthic) nutrient summary plots"""
 
     def generate(self):
-        # 3x3 grid for 7 benthic variables
-        fig, axes = plt.subplots(
-            3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=True,
-            constrained_layout=USE_CONSTRAINED_LAYOUT
-        )
-        flat_axes = axes.flatten()
+        for mode, filename, include_obs in [
+            (None, 'mm_benthic.png', True),
+            ('anomaly', 'mm_benthic_anom.png', False),
+            ('anompct', 'mm_benthic_anompct.png', False),
+        ]:
+            self._norm_mode = mode
+            # 3x3 grid for 7 benthic variables
+            fig, axes = plt.subplots(
+                3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=True,
+                constrained_layout=USE_CONSTRAINED_LAYOUT
+            )
+            flat_axes = axes.flatten()
 
-        setup_axes(flat_axes[:8])
+            setup_axes(flat_axes[:8])
 
-        self.plot_all_models(fig, flat_axes, self._plot_model)
-        self._add_observational_data(flat_axes)
+            self.plot_all_models(fig, flat_axes, self._plot_model)
+            if include_obs:
+                self._add_observational_data(flat_axes)
 
-        # Hide unused subplots
-        for idx in range(8, len(flat_axes)):
-            flat_axes[idx].set_visible(False)
+            # Hide unused subplots
+            for idx in range(8, len(flat_axes)):
+                flat_axes[idx].set_visible(False)
 
-        self.add_legend(fig)
-        self.save_figure(fig, "mm_benthic.png")
+            self.add_legend(fig)
+            self.save_figure(fig, filename)
 
     def _plot_model(self, model, axes, color):
         ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
@@ -1174,15 +1232,18 @@ class BenthicPlotter(PlotGenerator):
             plot_year, plot_values = DataLoader.align_year_and_values(year, values)
             if plot_year is not None:
                 label = model.label if add_label else None
+                values_to_plot = plot_values * scale
+                if self._norm_mode is not None:
+                    values_to_plot = self._apply_norm(values_to_plot)
                 ax.plot(
                     plot_year,
-                    plot_values * scale,
+                    values_to_plot,
                     color=color,
                     label=label,
                     linewidth=LINE_WIDTH,
                 )
                 ax.set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-                ax.set_ylabel(ylabel)
+                ax.set_ylabel(self._norm_ylabel(ylabel))
 
     def _add_observational_data(self, axes):
         benthic_obs = ObservationData.get_benthic()
@@ -1198,14 +1259,20 @@ class PCO2Plotter(RegionalPlotter):
     """Generates pCO2 summary plots"""
 
     def generate(self):
-        fig, ax = plt.subplots(
-            1, 1, figsize=(2 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT),
-            constrained_layout=USE_CONSTRAINED_LAYOUT
-        )
-        setup_axes([ax])
-        self.plot_all_models(fig, [ax], self._plot_model)
-        self.add_legend(fig)
-        self.save_figure(fig, "mm_pco2.png")
+        for mode, filename in [
+            (None, 'mm_pco2.png'),
+            ('anomaly', 'mm_pco2_anom.png'),
+            ('anompct', 'mm_pco2_anompct.png'),
+        ]:
+            self._norm_mode = mode
+            fig, ax = plt.subplots(
+                1, 1, figsize=(2 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT),
+                constrained_layout=USE_CONSTRAINED_LAYOUT
+            )
+            setup_axes([ax])
+            self.plot_all_models(fig, [ax], self._plot_model)
+            self.add_legend(fig)
+            self.save_figure(fig, filename)
 
     def _plot_model(self, model, axes, color):
         ave_annual = DataLoader.load_analyser_data(model, "ave", "annual")
@@ -1221,13 +1288,16 @@ class PCO2Plotter(RegionalPlotter):
         pco2_annual = DataLoader.safe_load_column(ave_annual, "pCO2", indices)
 
         if year is not None and pco2_annual is not None:
+            values_to_plot = pco2_annual
+            if self._norm_mode is not None:
+                values_to_plot = self._apply_norm(pco2_annual)
             axes[0].plot(
-                year, pco2_annual, color=color, linewidth=LINE_WIDTH
+                year, values_to_plot, color=color, linewidth=LINE_WIDTH
             )
             axes[0].set_title(
                 "Avg Surface pCO2 (Global) [ppm]", fontsize=TITLE_FONTSIZE
             )
-            axes[0].set_ylabel("ppm")
+            axes[0].set_ylabel(self._norm_ylabel("ppm"))
             axes[0].set_xlabel("Year", fontweight='bold')
 
 
@@ -1235,18 +1305,24 @@ class PhysicsPlotter(PlotGenerator):
     """Generates physics summary plots"""
 
     def generate(self):
-        # Use 1x3 grid to match single-model (3 panels: SST, SSS, MLD)
-        fig, axes = plt.subplots(
-            1, 3, figsize=(3 * SUBPLOT_WIDTH, 1 * SUBPLOT_HEIGHT), sharex=True,
-            constrained_layout=USE_CONSTRAINED_LAYOUT
-        )
+        for mode, filename in [
+            (None, 'mm_physics.png'),
+            ('anomaly', 'mm_physics_anom.png'),
+            ('anompct', 'mm_physics_anompct.png'),
+        ]:
+            self._norm_mode = mode
+            # Use 1x3 grid to match single-model (3 panels: SST, SSS, MLD)
+            fig, axes = plt.subplots(
+                1, 3, figsize=(3 * SUBPLOT_WIDTH, 1 * SUBPLOT_HEIGHT), sharex=True,
+                constrained_layout=USE_CONSTRAINED_LAYOUT
+            )
 
-        setup_axes(axes)
+            setup_axes(axes)
 
-        self.plot_all_models(fig, axes, self._plot_model)
+            self.plot_all_models(fig, axes, self._plot_model)
 
-        self.add_legend(fig)
-        self.save_figure(fig, "mm_physics.png")
+            self.add_legend(fig)
+            self.save_figure(fig, filename)
 
     def _plot_model(self, model, axes, color):
         ave_data = DataLoader.load_analyser_data(model, "ave", "annual")
@@ -1267,27 +1343,30 @@ class PhysicsPlotter(PlotGenerator):
         mld = DataLoader.safe_load_column(ave_data, "mldr10_1", indices)
 
         if sst is not None:
-            axes[0].plot(year, sst, color=color, linewidth=LINE_WIDTH)
+            sst_to_plot = self._apply_norm(sst) if self._norm_mode is not None else sst
+            axes[0].plot(year, sst_to_plot, color=color, linewidth=LINE_WIDTH)
             axes[0].set_title("Sea Surface Temperature", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-            axes[0].set_ylabel("°C")
+            axes[0].set_ylabel(self._norm_ylabel("°C"))
             axes[0].set_xlabel("Year", fontweight='bold')
 
         if sss is not None:
+            sss_to_plot = self._apply_norm(sss) if self._norm_mode is not None else sss
             axes[1].plot(
                 year,
-                sss,
+                sss_to_plot,
                 color=color,
                 label=model.label,
                 linewidth=LINE_WIDTH,
             )
             axes[1].set_title("Sea Surface Salinity", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-            axes[1].set_ylabel("‰")
+            axes[1].set_ylabel(self._norm_ylabel("‰"))
             axes[1].set_xlabel("Year", fontweight='bold')
 
         if mld is not None:
-            axes[2].plot(year, mld, color=color, linewidth=LINE_WIDTH)
+            mld_to_plot = self._apply_norm(mld) if self._norm_mode is not None else mld
+            axes[2].plot(year, mld_to_plot, color=color, linewidth=LINE_WIDTH)
             axes[2].set_title("Mixed Layer Depth", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-            axes[2].set_ylabel("m")
+            axes[2].set_ylabel(self._norm_ylabel("m"))
             axes[2].set_xlabel("Year", fontweight='bold')
 
 
@@ -1473,40 +1552,45 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
     """Generates normalized/anomaly plots for derived ecosystem variables"""
 
     def generate(self):
-        self.ta_slopes = []
-        self.ba_slopes = []
-        fig, axes = plt.subplots(
-            3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=False,
-            constrained_layout=USE_CONSTRAINED_LAYOUT
-        )
-        axes = axes.flatten()
-
-        setup_axes(axes[:7])
-
-        self.plot_all_models(fig, axes, self._plot_model)
-
-        if self.ta_slopes:
-            slope_text = "\n".join(f"{name}: {slope:.2f}" for name, slope in self.ta_slopes)
-            axes[7].text(
-                0.05, 0.95, slope_text, transform=axes[7].transAxes,
-                va='top', ha='left', fontsize=7,
-                bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)
+        for mode, filename in [
+            ('anomaly', 'mm_derived_normalized.png'),
+            ('anompct', 'mm_derived_anompct.png'),
+        ]:
+            self._norm_mode = mode
+            self.ta_slopes = []
+            self.ba_slopes = []
+            fig, axes = plt.subplots(
+                3, 3, figsize=(3 * SUBPLOT_WIDTH, 3 * SUBPLOT_HEIGHT), sharex=False,
+                constrained_layout=USE_CONSTRAINED_LAYOUT
             )
+            axes = axes.flatten()
 
-        if self.ba_slopes:
-            slope_text = "\n".join(f"{name}: {slope:.2f}" for name, slope in self.ba_slopes)
-            axes[8].text(
-                0.05, 0.95, slope_text, transform=axes[8].transAxes,
-                va='top', ha='left', fontsize=7,
-                bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)
-            )
+            setup_axes(axes[:7])
 
-        # Hide unused subplots
-        for idx in range(9, len(axes)):
-            axes[idx].set_visible(False)
+            self.plot_all_models(fig, axes, self._plot_model)
 
-        self.add_legend(fig)
-        self.save_figure(fig, "mm_derived_normalized.png")
+            if self.ta_slopes:
+                slope_text = "\n".join(f"{name}: {slope:.2f}" for name, slope in self.ta_slopes)
+                axes[7].text(
+                    0.05, 0.95, slope_text, transform=axes[7].transAxes,
+                    va='top', ha='left', fontsize=7,
+                    bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)
+                )
+
+            if self.ba_slopes:
+                slope_text = "\n".join(f"{name}: {slope:.2f}" for name, slope in self.ba_slopes)
+                axes[8].text(
+                    0.05, 0.95, slope_text, transform=axes[8].transAxes,
+                    va='top', ha='left', fontsize=7,
+                    bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)
+                )
+
+            # Hide unused subplots
+            for idx in range(9, len(axes)):
+                axes[idx].set_visible(False)
+
+            self.add_legend(fig)
+            self.save_figure(fig, filename)
 
     def _plot_model(self, model, axes, color):
         vol_data = DataLoader.load_analyser_data(model, "vol", "annual")
@@ -1540,28 +1624,28 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
             sp = sum(grazing_data.values())
             plot_year, plot_sp = DataLoader.align_year_and_values(year, sp)
             if plot_year is not None:
-                sp_norm = GlobalSummaryNormalizedPlotter._normalize_series(plot_sp)
+                sp_norm = self._apply_norm(plot_sp)
                 axes[0].plot(plot_year, sp_norm, color=color, label=model.label, linewidth=LINE_WIDTH)
                 axes[0].set_title("Secondary Production anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-                axes[0].set_ylabel("PgC/yr")
+                axes[0].set_ylabel(self._norm_ylabel("PgC/yr"))
                 axes[0].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
             if ppt is not None and exp is not None:
                 min_len = min(len(year), len(ppt), len(exp), len(sp))
                 recycle = ppt[:min_len] - exp[:min_len] - sp[:min_len]
-                recycle_norm = GlobalSummaryNormalizedPlotter._normalize_series(recycle)
+                recycle_norm = self._apply_norm(recycle)
                 axes[1].plot(year[:min_len], recycle_norm, color=color, linewidth=LINE_WIDTH)
                 axes[1].set_title("Residual Production anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-                axes[1].set_ylabel("PgC/yr")
+                axes[1].set_ylabel(self._norm_ylabel("PgC/yr"))
                 axes[1].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
             if ppt is not None:
                 min_len = min(len(year), len(sp), len(ppt))
                 spratio = sp[:min_len] / ppt[:min_len]
-                spratio_norm = GlobalSummaryNormalizedPlotter._normalize_series(spratio)
+                spratio_norm = self._apply_norm(spratio)
                 axes[5].plot(year[:min_len], spratio_norm, color=color, linewidth=LINE_WIDTH)
                 axes[5].set_title("SP/NPP anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-                axes[5].set_ylabel("Dimensionless")
+                axes[5].set_ylabel(self._norm_ylabel("Dimensionless"))
                 axes[5].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
                 x = DataLoader.compute_relative_change(ppt[:min_len])
@@ -1585,19 +1669,19 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
         if exp is not None and ppt is not None:
             min_len = min(len(year), len(exp), len(ppt))
             eratio = exp[:min_len] / ppt[:min_len]
-            eratio_norm = GlobalSummaryNormalizedPlotter._normalize_series(eratio)
+            eratio_norm = self._apply_norm(eratio)
             axes[2].plot(year[:min_len], eratio_norm, color=color, linewidth=LINE_WIDTH)
             axes[2].set_title("Export Ratio anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-            axes[2].set_ylabel("Dimensionless")
+            axes[2].set_ylabel(self._norm_ylabel("Dimensionless"))
             axes[2].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
         if exp1000 is not None and exp is not None:
             min_len = min(len(year), len(exp1000), len(exp))
             teff = exp1000[:min_len] / exp[:min_len]
-            teff_norm = GlobalSummaryNormalizedPlotter._normalize_series(teff)
+            teff_norm = self._apply_norm(teff)
             axes[3].plot(year[:min_len], teff_norm, color=color, linewidth=LINE_WIDTH)
             axes[3].set_title("Transfer Efficiency anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-            axes[3].set_ylabel("Dimensionless")
+            axes[3].set_ylabel(self._norm_ylabel("Dimensionless"))
             axes[3].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
         if int_data is not None:
@@ -1633,10 +1717,10 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
             rls = DataLoader.safe_load_column(ave_data, "RLS", indices)
             plot_year, plot_rls = DataLoader.align_year_and_values(year, rls)
             if plot_year is not None:
-                rls_norm = GlobalSummaryNormalizedPlotter._normalize_series(plot_rls)
+                rls_norm = self._apply_norm(plot_rls)
                 axes[4].plot(plot_year, rls_norm, color=color, linewidth=LINE_WIDTH)
                 axes[4].set_title("RLS anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-                axes[4].set_ylabel("m")
+                axes[4].set_ylabel(self._norm_ylabel("m"))
                 axes[4].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
             alk = DataLoader.safe_load_column(ave_data, "Alkalini", indices)
@@ -1644,10 +1728,10 @@ class DerivedSummaryNormalizedPlotter(PlotGenerator):
             if alk is not None and dic is not None:
                 min_len = min(len(year), len(alk), len(dic))
                 alk_dic = alk[:min_len] - dic[:min_len]
-                alk_dic_norm = GlobalSummaryNormalizedPlotter._normalize_series(alk_dic)
+                alk_dic_norm = self._apply_norm(alk_dic)
                 axes[6].plot(year[:min_len], alk_dic_norm, color=color, linewidth=LINE_WIDTH)
                 axes[6].set_title("ALK \u2212 DIC anomaly", fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-                axes[6].set_ylabel("\u03bcmol/L")
+                axes[6].set_ylabel(self._norm_ylabel("\u03bcmol/L"))
                 axes[6].set_xlabel("Year", fontweight='bold')
                 axes[6].axhline(0, color="gray", linestyle=":", linewidth=0.8, alpha=0.5)
 
@@ -1714,18 +1798,23 @@ class OrganicMatterNormalizedPlotter(PlotGenerator):
     """Generates normalized/anomaly plots for organic matter pools"""
 
     def generate(self):
-        fig, axes = plt.subplots(
-            2, 2, figsize=(2 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
-            constrained_layout=USE_CONSTRAINED_LAYOUT
-        )
-        axes = axes.flatten()
+        for mode, filename in [
+            ('anomaly', 'mm_organic_matter_normalized.png'),
+            ('anompct', 'mm_organic_matter_anompct.png'),
+        ]:
+            self._norm_mode = mode
+            fig, axes = plt.subplots(
+                2, 2, figsize=(2 * SUBPLOT_WIDTH, 2 * SUBPLOT_HEIGHT), sharex=True,
+                constrained_layout=USE_CONSTRAINED_LAYOUT
+            )
+            axes = axes.flatten()
 
-        setup_axes(axes)
+            setup_axes(axes)
 
-        self.plot_all_models(fig, axes, self._plot_model)
+            self.plot_all_models(fig, axes, self._plot_model)
 
-        self.add_legend(fig)
-        self.save_figure(fig, "mm_organic_matter_normalized.png")
+            self.add_legend(fig)
+            self.save_figure(fig, filename)
 
     def _plot_model(self, model, axes, color):
         int_data = DataLoader.load_analyser_data(model, "int", "annual")
@@ -1754,11 +1843,11 @@ class OrganicMatterNormalizedPlotter(PlotGenerator):
             if plot_year is None:
                 continue
 
-            normalized = GlobalSummaryNormalizedPlotter._normalize_series(plot_values)
+            normalized = self._apply_norm(plot_values)
             label = model.label if i == 1 else None
             axes[i].plot(plot_year, normalized, color=color, label=label, linewidth=LINE_WIDTH)
             axes[i].set_title(title, fontsize=TITLE_FONTSIZE, fontweight='bold', pad=5)
-            axes[i].set_ylabel("PgC anomaly")
+            axes[i].set_ylabel(self._norm_ylabel("PgC anomaly"))
             # Add xlabel only to bottom row (indices 2, 3 in 2x2 grid)
             if i >= 2:
                 axes[i].set_xlabel("Year", fontweight='bold')

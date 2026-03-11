@@ -21,13 +21,21 @@ format:
 
 Comparison of global ecosystem metrics across models.
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](mm_global.png)
 
-## Normalized Timeseries
-
-Normalized anomalies for key global metrics (Cflx, TChl, PPT, EXP/EXP1000, CaCO₃ production/export, silica production/export). All variables are normalized by subtracting the mean of the first 10 years (or all available years if less than 10) to highlight changes over time.
+## Anomaly
 
 ![](mm_global_normalized.png)
+
+## Anomaly %
+
+![](mm_global_anompct.png)
+
+:::
 
 # Regional and Monthly Patterns
 
@@ -39,57 +47,121 @@ Regional and monthly total chlorophyll comparison.
 
 ## pCO₂
 
-Regional and monthly pCO₂ comparison.
+::: {.panel-tabset}
+
+## Normal
 
 ![](mm_pco2.png)
+
+## Anomaly
+
+![](mm_pco2_anom.png)
+
+## Anomaly %
+
+![](mm_pco2_anompct.png)
+
+:::
 
 # Plankton Functional Types
 
 Comparison of phytoplankton and zooplankton biomass across models.
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](mm_pfts.png)
 
-## PFT Anomalies
-
-PFT biomass anomalies relative to the first-decade mean to highlight temporal changes.
+## Anomaly
 
 ![](mm_pfts_normalized.png)
+
+## Anomaly %
+
+![](mm_pfts_anompct.png)
+
+:::
 
 ## PPT by PFT
 
 Primary production broken down by phytoplankton functional type.
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](mm_ppt_by_pft.png)
 
-## PPT by PFT Anomalies
-
-Primary production by PFT anomalies relative to the first-decade mean.
+## Anomaly
 
 ![](mm_ppt_by_pft_normalized.png)
+
+## Anomaly %
+
+![](mm_ppt_by_pft_anompct.png)
+
+:::
 
 # Nutrients
 
 Comparison of nutrient concentrations across models.
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](mm_nutrients.png)
+
+## Anomaly
+
+![](mm_nutrients_anom.png)
+
+## Anomaly %
+
+![](mm_nutrients_anompct.png)
+
+:::
 
 # Physical Environment
 
 Comparison of physical variables across models.
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](mm_physics.png)
+
+## Anomaly
+
+![](mm_physics_anom.png)
+
+## Anomaly %
+
+![](mm_physics_anompct.png)
+
+:::
 
 # Derived Ecosystem Variables
 
 Comparison of derived ecosystem variables across models.
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](mm_derived.png)
 
-## Normalized Anomalies
-
-Derived variable anomalies relative to the first-decade mean.
+## Anomaly
 
 ![](mm_derived_normalized.png)
+
+## Anomaly %
+
+![](mm_derived_anompct.png)
+
+:::
 
 ${DERIVED_SECTION}
 
@@ -97,13 +169,39 @@ ${DERIVED_SECTION}
 
 Comparison of dissolved and particulate organic carbon pools across models.
 
+::: {.panel-tabset}
+
+## Normal
+
 ![](mm_organic_matter.png)
 
-## Normalized Anomalies
-
-Organic matter pool anomalies relative to the first-decade mean.
+## Anomaly
 
 ![](mm_organic_matter_normalized.png)
+
+## Anomaly %
+
+![](mm_organic_matter_anompct.png)
+
+:::
+
+# Benthic / Deep Ocean
+
+::: {.panel-tabset}
+
+## Normal
+
+![](mm_benthic.png)
+
+## Anomaly
+
+![](mm_benthic_anom.png)
+
+## Anomaly %
+
+![](mm_benthic_anompct.png)
+
+:::
 
 ---
 
