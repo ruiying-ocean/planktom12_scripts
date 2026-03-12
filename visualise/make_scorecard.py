@@ -15,7 +15,9 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import xarray as xr
+from scipy.spatial import cKDTree
 
 
 # ── Variable definitions ────────────────────────────────────────────────
@@ -190,6 +192,78 @@ def _compare(mod, obs):
     return compute_metrics(mod_f[valid], obs_f[valid])
 
 
+# ── POC flux scoring (point-obs vs 3-D model field) ─────────────────────
+POC_CSV = Path("/gpfs/home/vhf24tbu/Observations/Global_POC_Database_21022025.csv")
+MESH_MASK = Path("/gpfs/data/greenocean/software/resources/breakdown/mesh_mask3_6_low_res.nc")
+# mol/m²/s  →  mg C/m²/day
+EXP_FACTOR = 12.011 * 1000 * 86400
+
+
+def score_poc(diad_ds, mesh_mask_path=MESH_MASK, poc_csv=POC_CSV,
+              depth_max=2000.0):
+    """
+    Compare model EXP (sinking POC flux, mol/m²/s) against the POC database.
+
+    Strategy: for each observation row sample the model at the nearest
+    ORCA2 grid cell, nearest depth level, and matching month, then call
+    compute_metrics on the paired vectors.
+
+    Returns (r2, rmse, bias, mscore) or (nan, nan, nan, nan) on failure.
+    """
+    if "EXP" not in diad_ds:
+        print("Warning: EXP not found in diad_T — skipping POC score",
+              file=sys.stderr)
+        return (np.nan,) * 4
+
+    # ── Load observations ──────────────────────────────────────────────
+    df = pd.read_csv(poc_csv)
+    df = df.dropna(subset=["latitude", "longitude", "depth", "month"])
+    df["poc_val"] = df["poc_converted"].fillna(df["poc"])
+    df = df.dropna(subset=["poc_val"])
+    df = df[(df["poc_val"] > 0) & (df["depth"] <= depth_max)]
+    if df.empty:
+        print("Warning: no valid POC observations after filtering", file=sys.stderr)
+        return (np.nan,) * 4
+
+    # ── ORCA2 grid ─────────────────────────────────────────────────────
+    mesh = xr.open_dataset(str(mesh_mask_path), decode_times=False)
+    grid_lat = mesh["gphit"].values.squeeze()   # (149, 182)
+    grid_lon = mesh["glamt"].values.squeeze()   # (149, 182)
+    mesh.close()
+    ny, nx = grid_lat.shape
+
+    # KDTree on flattened grid points
+    tree = cKDTree(np.column_stack([grid_lat.ravel(), grid_lon.ravel()]))
+
+    # ── Model EXP ─────────────────────────────────────────────────────
+    exp = diad_ds["EXP"]   # (time_counter=12, deptht=31, y, x)
+    depth_dim = "deptht" if "deptht" in exp.dims else "nav_lev"
+    model_depths = diad_ds[depth_dim].values  # (31,)
+
+    exp_np = exp.values * EXP_FACTOR           # → mg C/m²/day, shape (12,31,149,182)
+
+    # ── Point-by-point sampling ────────────────────────────────────────
+    obs_lats   = df["latitude"].values
+    obs_lons   = df["longitude"].values
+    obs_depths = df["depth"].values
+    obs_months = df["month"].values.astype(int)   # 1-based
+    obs_vals   = df["poc_val"].values
+
+    model_vals = np.full(len(df), np.nan)
+    _, idxs = tree.query(np.column_stack([obs_lats, obs_lons]))
+
+    for i, (flat_idx, depth, month) in enumerate(
+        zip(idxs, obs_depths, obs_months)
+    ):
+        iy, ix = divmod(int(flat_idx), nx)
+        iz = int(np.argmin(np.abs(model_depths - depth)))
+        im = int(month) - 1                        # 0-based month index
+        model_vals[i] = exp_np[im, iz, iy, ix]
+
+    valid = np.isfinite(model_vals) & np.isfinite(obs_vals) & (model_vals > 0)
+    return compute_metrics(model_vals[valid], obs_vals[valid])
+
+
 # ── Main ────────────────────────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(
@@ -282,6 +356,14 @@ def main():
                 continue
             r2, rmse, bias, mscore = result
             rows.append((var["name"], r2, rmse, bias, mscore, var["unit"]))
+
+    # ── POC flux vs database ────────────────────────────────────────────
+    if POC_CSV.exists() and MESH_MASK.exists():
+        r2, rmse, bias, mscore = score_poc(diad_ds)
+        rows.append(("POC flux", r2, rmse, bias, mscore, "mg/m²/d"))
+    else:
+        print("Warning: POC CSV or mesh_mask not found — skipping POC score",
+              file=sys.stderr)
 
     ptrc_ds.close()
     diad_ds.close()
