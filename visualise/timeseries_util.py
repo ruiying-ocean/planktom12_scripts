@@ -458,6 +458,9 @@ class FigureSaver:
         # For SVG, don't use DPI (it's vector-based)
         if self.format == 'svg':
             fig.savefig(path, format='svg', bbox_inches='tight', facecolor='white')
+        elif self.format == 'png':
+            fig.savefig(path, dpi=self.dpi, bbox_inches='tight', facecolor='white',
+                        pil_kwargs={'optimize': True, 'compress_level': 9})
         else:
             fig.savefig(path, dpi=self.dpi, bbox_inches='tight', facecolor='white')
 

@@ -180,7 +180,8 @@ def plot_pft_maps(
 
     # Save figure
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=300, bbox_inches='tight')
+    fig.savefig(output_path, dpi=300, bbox_inches='tight',
+                pil_kwargs={'optimize': True, 'compress_level': 9})
     plt.close(fig)
     print(f"Saved: {output_path}")
 
@@ -304,7 +305,8 @@ def plot_ecosystem_diagnostics(
 
     # Save figure
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=300, bbox_inches='tight')
+    fig.savefig(output_path, dpi=300, bbox_inches='tight',
+                pil_kwargs={'optimize': True, 'compress_level': 9})
     plt.close(fig)
     print(f"Saved: {output_path}")
 
@@ -465,7 +467,8 @@ def plot_nutrient_comparison(
 
     # Save figure
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=300, bbox_inches='tight')
+    fig.savefig(output_path, dpi=300, bbox_inches='tight',
+                pil_kwargs={'optimize': True, 'compress_level': 9})
     plt.close(fig)
     print(f"Saved: {output_path}")
 
@@ -630,7 +633,8 @@ def plot_carbon_chemistry(
 
     # Save figure (no tight_layout needed - using constrained_layout from create_subplot_grid)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=300, bbox_inches='tight')
+    fig.savefig(output_path, dpi=300, bbox_inches='tight',
+                pil_kwargs={'optimize': True, 'compress_level': 9})
     plt.close(fig)
     print(f"Saved: {output_path}")
 
@@ -759,7 +763,8 @@ def plot_derived_variables(
 
     # Note: tight_layout() is incompatible with colorbars; bbox_inches='tight' handles layout
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=300, bbox_inches='tight')
+    fig.savefig(output_path, dpi=300, bbox_inches='tight',
+                pil_kwargs={'optimize': True, 'compress_level': 9})
     plt.close(fig)
     print(f"Saved: {output_path}")
 
@@ -876,7 +881,8 @@ def plot_surface_carbon(
                          transform=ax_diff.transAxes)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=300, bbox_inches='tight')
+    fig.savefig(output_path, dpi=300, bbox_inches='tight',
+                pil_kwargs={'optimize': True, 'compress_level': 9})
     plt.close(fig)
     print(f"Saved: {output_path}")
 
@@ -1108,7 +1114,8 @@ def main():
 
         # Save
         output_path = output_dir / f"{args.run_name}_{args.year}_nutrients.png"
-        fig.savefig(output_path, dpi=300, bbox_inches='tight')
+        fig.savefig(output_path, dpi=300, bbox_inches='tight',
+                    pil_kwargs={'optimize': True, 'compress_level': 9})
         plt.close(fig)
         print(f"Saved: {output_path}")
 

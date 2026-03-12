@@ -192,6 +192,7 @@ def plot_amoc_streamfunction(moc_ds: xr.Dataset, output_path: str) -> None:
 
     fig.colorbar(cs, ax=axes.tolist(), pad=0.02, shrink=0.9, label='Sv')
 
-    fig.savefig(output_path, dpi=200, bbox_inches='tight')
+    fig.savefig(output_path, dpi=200, bbox_inches='tight',
+                pil_kwargs={'optimize': True, 'compress_level': 9})
     plt.close(fig)
     print(f"Saved: {output_path}")

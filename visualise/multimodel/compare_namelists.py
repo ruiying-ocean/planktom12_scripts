@@ -325,7 +325,8 @@ def create_matrix_heatmap(matrix1: np.ndarray, matrix2: np.ndarray,
         cbar3.set_label('Absolute difference', fontsize=8)
 
         plt.tight_layout()
-        plt.savefig(output_path, dpi=100, bbox_inches='tight')
+        plt.savefig(output_path, dpi=100, bbox_inches='tight',
+                    pil_kwargs={'optimize': True, 'compress_level': 9})
         plt.close()
 
         return True

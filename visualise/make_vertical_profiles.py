@@ -323,7 +323,8 @@ def plot_vertical_profiles(
             file_name = output_dir / f"{run_name}_{year}_profile_{var}.png"
         else:
             file_name = output_dir / f"{'_'.join(model_ids)}_{var}_vertical_profile.png"
-        fig.savefig(file_name, bbox_inches='tight', dpi=300)
+        fig.savefig(file_name, bbox_inches='tight', dpi=300,
+                    pil_kwargs={'optimize': True, 'compress_level': 9})
         plt.close(fig)
         output_files.append(file_name)
         print(f"    Saved: {file_name.name}")
@@ -457,7 +458,8 @@ Examples:
 
     # Save figure
     file_name = output_dir / f"{'_'.join(args.model_ids)}_{args.var}_vertical_profile.png"
-    fig.savefig(file_name, bbox_inches='tight', dpi=300)
+    fig.savefig(file_name, bbox_inches='tight', dpi=300,
+                pil_kwargs={'optimize': True, 'compress_level': 9})
     print(f"Saved: {file_name}")
 
 

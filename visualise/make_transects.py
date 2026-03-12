@@ -146,7 +146,8 @@ def plot_basin_transects(
 
         # Save
         output_path = output_dir / f"{run_name}_{year}_transect_{basin_name.lower()}.png"
-        fig.savefig(output_path, dpi=300, bbox_inches='tight')
+        fig.savefig(output_path, dpi=300, bbox_inches='tight',
+                    pil_kwargs={'optimize': True, 'compress_level': 9})
         plt.close(fig)
         print(f"Saved: {output_path}")
 
@@ -290,7 +291,8 @@ def plot_pft_transects(
 
         # Save
         output_path = output_dir / f"{run_name}_{year}_transect_{basin_name.lower()}_pfts.png"
-        fig.savefig(output_path, dpi=300, bbox_inches='tight')
+        fig.savefig(output_path, dpi=300, bbox_inches='tight',
+                    pil_kwargs={'optimize': True, 'compress_level': 9})
         plt.close(fig)
         print(f"Saved: {output_path}")
 

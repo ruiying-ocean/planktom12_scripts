@@ -604,7 +604,10 @@ def plot_correlation(results, output_dir, config,
     lat_suffix = f"_lat{lat_min}to{lat_max}" if lat_min != -90 or lat_max != 90 else ""
     output_file = output_dir / f"correlation_{var_x_safe}_{x_mode}_vs_{var_y_safe}_{y_mode}{lat_suffix}.{fmt}"
 
-    fig.savefig(output_file, dpi=dpi, bbox_inches='tight')
+    _save_kw = {"dpi": dpi, "bbox_inches": "tight"}
+    if fmt == "png":
+        _save_kw["pil_kwargs"] = {"optimize": True, "compress_level": 9}
+    fig.savefig(output_file, **_save_kw)
     print_success(f"Saved plot: {output_file}")
     plt.close(fig)
 
@@ -885,7 +888,10 @@ def plot_correlation_map(results, output_dir, config,
     var_x_safe = var_x.replace('_', '').lower()
     var_y_safe = var_y.replace('_', '').lower()
     output_file = output_dir / f"correlation_map_{var_x_safe}_{x_mode}_vs_{var_y_safe}_{y_mode}.{fmt}"
-    fig.savefig(output_file, dpi=dpi, bbox_inches='tight')
+    _save_kw = {"dpi": dpi, "bbox_inches": "tight"}
+    if fmt == "png":
+        _save_kw["pil_kwargs"] = {"optimize": True, "compress_level": 9}
+    fig.savefig(output_file, **_save_kw)
     print_success(f"Saved plot: {output_file}")
     plt.close(fig)
 

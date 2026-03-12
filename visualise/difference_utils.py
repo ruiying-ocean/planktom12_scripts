@@ -314,7 +314,8 @@ def plot_comparison_panel(
     plt.tight_layout()
 
     if output_path:
-        fig.savefig(output_path, dpi=300, bbox_inches='tight')
+        fig.savefig(output_path, dpi=300, bbox_inches='tight',
+                    pil_kwargs={'optimize': True, 'compress_level': 9})
         plt.close(fig)
         print(f"Saved: {output_path}")
     else:

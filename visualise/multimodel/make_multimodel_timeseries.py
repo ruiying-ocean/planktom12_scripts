@@ -342,7 +342,10 @@ class PlotGenerator:
         filename = f"{base_name}.{fmt}"
 
         filepath = f"{self.save_dir}/{filename}"
-        fig.savefig(filepath, dpi=dpi, bbox_inches="tight")
+        save_kwargs = {"dpi": dpi, "bbox_inches": "tight"}
+        if fmt == "png":
+            save_kwargs["pil_kwargs"] = {"optimize": True, "compress_level": 9}
+        fig.savefig(filepath, **save_kwargs)
         print_success(f"Created {filename}")
         plt.close(fig)
 

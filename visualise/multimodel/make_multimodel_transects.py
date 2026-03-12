@@ -301,7 +301,10 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
 
         # Save
         output_file = output_dir / f"mm_transect_{basin_name.lower()}_nutrients.{fmt}"
-        fig.savefig(output_file, dpi=dpi, bbox_inches='tight')
+        _save_kw = {"dpi": dpi, "bbox_inches": "tight"}
+        if fmt == "png":
+            _save_kw["pil_kwargs"] = {"optimize": True, "compress_level": 9}
+        fig.savefig(output_file, **_save_kw)
         print_success(f"Created {output_file}")
         plt.close(fig)
 
@@ -411,7 +414,10 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
 
         # Save
         output_file = output_dir / f"mm_transect_{basin_name.lower()}_pfts.{fmt}"
-        fig.savefig(output_file, dpi=dpi, bbox_inches='tight')
+        _save_kw = {"dpi": dpi, "bbox_inches": "tight"}
+        if fmt == "png":
+            _save_kw["pil_kwargs"] = {"optimize": True, "compress_level": 9}
+        fig.savefig(output_file, **_save_kw)
         print_success(f"Created {output_file}")
         plt.close(fig)
 

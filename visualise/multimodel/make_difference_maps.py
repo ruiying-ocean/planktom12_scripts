@@ -170,7 +170,8 @@ def plot_difference_panel(plotter, differences, var_names, titles, output_path):
         axes[idx].set_visible(False)
 
     plt.tight_layout()
-    fig.savefig(output_path, dpi=300, bbox_inches='tight')
+    fig.savefig(output_path, dpi=300, bbox_inches='tight',
+                pil_kwargs={'optimize': True, 'compress_level': 9})
     print(f"Created difference map: {output_path}")
     plt.close(fig)
 

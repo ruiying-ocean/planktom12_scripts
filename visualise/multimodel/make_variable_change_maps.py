@@ -492,7 +492,10 @@ def plot_change_maps(models, output_dir, config, variable,
     var_safe = variable.replace('_', '').lower()
     depth_suffix = f"_z{depth_index}" if depth_index is not None else ""
     output_file = output_dir / f"{var_safe}{depth_suffix}_change_{hist_start}_{hist_end}_to_{fut_start}_{fut_end}.{fmt}"
-    fig.savefig(output_file, dpi=dpi, bbox_inches='tight')
+    _save_kw = {"dpi": dpi, "bbox_inches": "tight"}
+    if fmt == "png":
+        _save_kw["pil_kwargs"] = {"optimize": True, "compress_level": 9}
+    fig.savefig(output_file, **_save_kw)
     print_success(f"Created {output_file}")
     plt.close(fig)
 

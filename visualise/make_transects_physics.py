@@ -236,7 +236,8 @@ def plot_physics_sections(
         )
 
         out = output_dir / f"{run_name}_{year}_physics_section_{basin_key}.png"
-        fig.savefig(out, dpi=150, bbox_inches='tight')
+        fig.savefig(out, dpi=150, bbox_inches='tight',
+                    pil_kwargs={'optimize': True, 'compress_level': 9})
         plt.close(fig)
         print(f"Saved: {out}")
 

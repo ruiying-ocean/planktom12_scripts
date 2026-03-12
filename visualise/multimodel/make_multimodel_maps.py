@@ -344,7 +344,10 @@ def plot_multimodel_maps(models, output_dir, config):
 
         # Save figure
         output_file = output_dir / f"mm_spatial_{group_name}.{fmt}"
-        fig.savefig(output_file, dpi=dpi)
+        save_kwargs = {"dpi": dpi}
+        if fmt == "png":
+            save_kwargs["pil_kwargs"] = {"optimize": True, "compress_level": 9}
+        fig.savefig(output_file, **save_kwargs)
         print_success(f"Created {output_file}")
         plt.close(fig)
 

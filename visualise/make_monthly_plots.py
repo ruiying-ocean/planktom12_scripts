@@ -112,7 +112,8 @@ def makeSummaryFromBreakdowns(model_id, modBaseDir):
 			ax.grid(linestyle='--', linewidth=0.25)
 
 		plt.tight_layout()
-		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_Cflx.png', dpi=300)
+		fig.savefig(f'{saveDir}/{model_id}_summary_monthly_Cflx.png', dpi=300,
+					pil_kwargs={'optimize': True, 'compress_level': 9})
 		print(f'Created CFLX monthly summary figure for {model_id}')
 
 		print('Skipped ave.monthly-based monthly plots (TChl, pCO2, SST, SSS, MLD).')
