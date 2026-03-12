@@ -287,6 +287,64 @@ class FigureCreator:
             print(f"  ⚠ Could not load OC-CCI data: {e} — no obs overlay")
             return None
 
+    def _load_johnson_so_regions(self):
+        """Load Johnson 2013 SO Chl climatology for SAZ and AZ regions only."""
+        chl_file = self.obs_dir / "Johnson2013/SO_Chl_monthly_climatology.nc"
+        if not chl_file.exists():
+            print(f"  ⚠ Johnson SO Chl file not found: {chl_file} — no Johnson obs overlay")
+            return None
+
+        # Indices of SO regions in TCHL_REGION_DEFS
+        so_region_indices = {
+            i for i, r in enumerate(self.TCHL_REGION_DEFS)
+            if r["lat_range"][1] <= -30.0
+        }
+
+        try:
+            with xr.open_dataset(chl_file, decode_times=False) as ds:
+                var_name = next((v for v in ["chlor_a", "CHL", "chl"] if v in ds), None)
+                if var_name is None:
+                    print(f"  ⚠ No chlorophyll variable found in Johnson file — no Johnson obs overlay")
+                    return None
+
+                chl = ds[var_name]
+                lat_name = next((n for n in ["lat", "latitude", "nav_lat"] if n in ds), None)
+                lon_name = next((n for n in ["lon", "longitude", "nav_lon"] if n in ds), None)
+                if lat_name is None or lon_name is None:
+                    return None
+
+                lat = ds[lat_name]
+                lon = ds[lon_name]
+                weights = np.cos(np.deg2rad(lat))
+                time_dim = next((d for d in ["time", "month"] if d in chl.dims), None)
+
+                obs_series = []
+                for i, region in enumerate(self.TCHL_REGION_DEFS):
+                    if i not in so_region_indices:
+                        obs_series.append(None)
+                        continue
+
+                    lat_min, lat_max = region["lat_range"]
+                    lat_mask = (lat >= lat_min) & (lat <= lat_max)
+                    lon_mask = self._build_lon_mask(lon, region["lon_range"])
+                    region_mask = lat_mask & lon_mask
+
+                    if time_dim is not None:
+                        monthly = []
+                        for t in range(chl.sizes[time_dim]):
+                            snap = chl.isel({time_dim: t})
+                            valid_mask = region_mask & np.isfinite(snap)
+                            w = weights.where(valid_mask, 0.0)
+                            monthly.append(float(snap.where(valid_mask).weighted(w).mean()))
+                        obs_series.append(np.array(monthly))
+                    else:
+                        obs_series.append(None)
+
+                return obs_series
+        except Exception as e:
+            print(f"  ⚠ Could not load Johnson SO Chl data: {e} — no Johnson obs overlay")
+            return None
+
     def _load_tchl_seasonal_regions(self):
         run_dir = self.model_output_dir / self.model_name
         diad_files = sorted(run_dir.glob("ORCA2_1m_*_diad_T.nc"))
@@ -649,6 +707,8 @@ class FigureCreator:
         axes = axes.flatten()
 
         obs_series = self._load_occci_seasonal_regions()
+        johnson_series = self._load_johnson_so_regions()
+        johnson_color = "#b45309"
 
         for i, (ax, region, series) in enumerate(zip(axes, self.TCHL_REGION_DEFS, region_series)):
             model_vals = np.asarray(series, dtype=float) * 1e6
@@ -663,6 +723,8 @@ class FigureCreator:
             )
             ax.fill_between(x, model_vals, color=model_color, alpha=0.12, zorder=2)
 
+            all_finite = [model_vals[np.isfinite(model_vals)]]
+
             if obs_series is not None:
                 obs_vals = obs_series[i][:n_months]
                 ax.plot(
@@ -674,13 +736,23 @@ class FigureCreator:
                     dash_capstyle="round",
                     zorder=4,
                 )
+                all_finite.append(obs_vals[np.isfinite(obs_vals)])
 
-                finite_vals = np.concatenate([
-                    model_vals[np.isfinite(model_vals)],
-                    obs_vals[np.isfinite(obs_vals)],
-                ])
-            else:
-                finite_vals = model_vals[np.isfinite(model_vals)]
+            if johnson_series is not None and johnson_series[i] is not None:
+                johnson_vals = johnson_series[i][:n_months]
+                ax.plot(
+                    x,
+                    johnson_vals,
+                    color=johnson_color,
+                    linewidth=self.styler.linewidth * 1.7,
+                    linestyle=(0, (2, 2)),
+                    dash_capstyle="round",
+                    zorder=4,
+                    label="Johnson 2013",
+                )
+                all_finite.append(johnson_vals[np.isfinite(johnson_vals)])
+
+            finite_vals = np.concatenate(all_finite) if all_finite else np.array([])
 
             if finite_vals.size:
                 ymin = finite_vals.min()
