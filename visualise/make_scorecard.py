@@ -217,7 +217,7 @@ def score_poc(diad_ds, mesh_mask_path=MESH_MASK, poc_csv=POC_CSV,
 
     # ── Load observations ──────────────────────────────────────────────
     df = pd.read_csv(poc_csv)
-    df = df.dropna(subset=["latitude", "longitude", "depth", "month"])
+    df = df.dropna(subset=["latitude", "longitude", "depth"])
     df["poc_val"] = df["poc_converted"].fillna(df["poc"])
     df = df.dropna(subset=["poc_val"])
     df = df[(df["poc_val"] > 0) & (df["depth"] <= depth_max)]
@@ -241,12 +241,13 @@ def score_poc(diad_ds, mesh_mask_path=MESH_MASK, poc_csv=POC_CSV,
     model_depths = diad_ds[depth_dim].values  # (31,)
 
     exp_np = exp.values * EXP_FACTOR           # → mg C/m²/day, shape (12,31,149,182)
+    exp_ann = exp_np.mean(axis=0)              # annual mean, shape (31,149,182)
 
     # ── Point-by-point sampling ────────────────────────────────────────
     obs_lats   = df["latitude"].values
     obs_lons   = df["longitude"].values
     obs_depths = df["depth"].values
-    obs_months = df["month"].values.astype(int)   # 1-based
+    obs_months = df["month"].values             # may contain NaN
     obs_vals   = df["poc_val"].values
 
     model_vals = np.full(len(df), np.nan)
@@ -257,11 +258,15 @@ def score_poc(diad_ds, mesh_mask_path=MESH_MASK, poc_csv=POC_CSV,
     ):
         iy, ix = divmod(int(flat_idx), nx)
         iz = int(np.argmin(np.abs(model_depths - depth)))
-        im = int(month) - 1                        # 0-based month index
-        model_vals[i] = exp_np[im, iz, iy, ix]
+        if np.isnan(month):
+            model_vals[i] = exp_ann[iz, iy, ix]   # no month → annual mean
+        else:
+            im = int(month) - 1                    # 0-based month index
+            model_vals[i] = exp_np[im, iz, iy, ix]
 
-    valid = np.isfinite(model_vals) & np.isfinite(obs_vals) & (model_vals > 0)
-    return compute_metrics(model_vals[valid], obs_vals[valid])
+    valid = (np.isfinite(model_vals) & np.isfinite(obs_vals)
+             & (model_vals > 0) & (obs_vals > 0))
+    return compute_metrics(np.log10(model_vals[valid]), np.log10(obs_vals[valid]))
 
 
 # ── Main ────────────────────────────────────────────────────────────────
@@ -360,7 +365,7 @@ def main():
     # ── POC flux vs database ────────────────────────────────────────────
     if POC_CSV.exists() and MESH_MASK.exists():
         r2, rmse, bias, mscore = score_poc(diad_ds)
-        rows.append(("POC flux", r2, rmse, bias, mscore, "mg/m²/d"))
+        rows.append(("POC flux", r2, rmse, bias, mscore, "log10(mg/m²/d)"))
     else:
         print("Warning: POC CSV or mesh_mask not found — skipping POC score",
               file=sys.stderr)
