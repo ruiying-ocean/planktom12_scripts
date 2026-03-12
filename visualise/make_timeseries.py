@@ -302,7 +302,7 @@ class FigureCreator:
 
         try:
             with xr.open_dataset(chl_file, decode_times=False) as ds:
-                var_name = next((v for v in ["chlor_a", "CHL", "chl"] if v in ds), None)
+                var_name = next((v for v in ["chlorophyll", "chlor_a", "CHL", "chl"] if v in ds), None)
                 if var_name is None:
                     print(f"  ⚠ No chlorophyll variable found in Johnson file — no Johnson obs overlay")
                     return None
