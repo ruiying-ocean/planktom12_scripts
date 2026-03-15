@@ -89,6 +89,39 @@ echo -e "  ${DIM}First year:${RESET}    $FIRST_YEAR_TRANSIENT"
 echo -e "  ${DIM}Forcing:${RESET}       $FORCING ($FORCING_MODE)"
 echo -e "  ${DIM}Timestep:${RESET}      $TIMESTEP"
 
+# Check if restart files exist for the expected timestep
+EXPECTED_RESTART="${SPIN_DIR}/ORCA2_${TIMESTEP}_restart_0000.nc"
+if [ ! -f "$EXPECTED_RESTART" ]; then
+    warn "Restart file not found for timestep $TIMESTEP (year $((FIRST_YEAR_TRANSIENT - 1)))"
+    info "Searching for nearby restart files in $SPIN_DIR ..."
+
+    # Search for any restart files and extract unique timesteps
+    FOUND_STEPS=$(ls "${SPIN_DIR}"/ORCA2_*_restart_0000.nc 2>/dev/null | sed 's/.*ORCA2_\([0-9]*\)_restart.*/\1/' | sort -u)
+    if [ -z "$FOUND_STEPS" ]; then
+        warn "No restart files found in $SPIN_DIR"
+        exit 1
+    fi
+
+    # Show nearby timesteps (within ±1 year of expected)
+    STEP_MINUS1=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT - 1 - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
+    STEP_PLUS1=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT + 1 - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
+
+    echo ""
+    info "Available restart timesteps:"
+    for step in $FOUND_STEPS; do
+        STEP_NUM=$((10#$step))
+        YEAR=$(($STEP_NUM / $STEPS_PER_YEAR + $FIRST_YEAR_SPINUP))
+        MARKER=""
+        if [ "$step" = "$STEP_MINUS1" ] || [ "$step" = "$STEP_PLUS1" ]; then
+            MARKER=" ${YELLOW}← close to expected${RESET}"
+        fi
+        echo -e "    $step  (year $YEAR)${MARKER}"
+    done
+    echo ""
+    info "Expected timestep was $TIMESTEP (year $((FIRST_YEAR_TRANSIENT - 1)))"
+    exit 1
+fi
+
 # Command
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 bash ${SCRIPT_DIR}/setup_restarts.sh $SPIN_DIR $TIMESTEP ${MODEL_RUN_DIR}/${MODEL_ID}
