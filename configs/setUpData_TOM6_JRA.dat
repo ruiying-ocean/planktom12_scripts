@@ -75,7 +75,7 @@ restart_ice_in.nc:/gpfs/data/greenocean/software/resources/ModelResources/Restar
 restart.nc:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/restart_19191231_opa_PT.nc
 
 # Evaporation and precipitation balancing file
-EMPaveFile:/gpfs/home/vhf24tbu/scratch/ModelRuns/TOM12_RY_SPJ2/EMPave_1940.dat
+EMPaveFile:/gpfs/home/vhf24tbu/scratch/ModelRuns/TOM12_RY_SJ01/EMPave_1940.dat
 
 # Horizontal eddy viscosity coefficient
 ahmcoef.nc:/gpfs/data/greenocean/software/resources/ModelResources/EddyViscCoeff/ahmcoef.nc

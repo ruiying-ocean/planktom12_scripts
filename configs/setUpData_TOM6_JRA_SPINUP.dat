@@ -69,13 +69,14 @@ compilerKey:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/c
 restart_trc.nc:/gpfs/home/vhf24tbu/input_data/model_restart/restart_19471231_trc_RY_HOC_HuangFe.nc
 
 # Ice
-restart_ice_in.nc:/gpfs/home/vhf24tbu/input_data/model_restart/jra_spinup_restart/restart_ice_in.nc
+restart_ice_in.nc:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/restart_ice_v3.6.nc
 
 # Restart for the physics parameters
-restart.nc:/gpfs/home/vhf24tbu/input_data/model_restart/jra_spinup_restart/restart.nc
+restart.nc:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/restart_19191231_opa_PT.nc
 
 # Evaporation and precipitation balancing file
-EMPaveFile:/gpfs/home/vhf24tbu/input_data/model_restart/jra_spinup_restart/EMPave_1749.dat
+#EMPaveFile:/gpfs/home/vhf24tbu/input_data/model_restart/jra_spinup_restart/EMPave_1749.dat
+EMPaveFile:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/EMPave_1749.dat
 
 # Horizontal eddy viscosity coefficient
 ahmcoef.nc:/gpfs/data/greenocean/software/resources/ModelResources/EddyViscCoeff/ahmcoef.nc

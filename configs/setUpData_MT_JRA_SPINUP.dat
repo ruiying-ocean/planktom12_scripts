@@ -80,13 +80,14 @@ compilerKey:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_Pla
 restart_trc.nc:/gpfs/home/vhf24tbu/input_data/model_restart/restart_19471231_trc_RY_HOC_HuangFe.nc
 
 # Ice
-restart_ice_in.nc:/gpfs/home/vhf24tbu/input_data/model_restart/jra_spinup_restart/restart_ice_in.nc
+restart_ice_in.nc:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/restart_ice_v3.6.nc
 
 # Restart for the physics parameters
-restart.nc:/gpfs/home/vhf24tbu/input_data/model_restart/jra_spinup_restart/restart.nc
+restart.nc:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/restart_19191231_opa_PT.nc
 
 # Evaporation and precipitation balancing file (this needs to be for previous year, if using restarts)
-EMPaveFile:/gpfs/home/vhf24tbu/input_data/model_restart/jra_spinup_restart/EMPave_1749.dat
+#EMPaveFile:/gpfs/home/vhf24tbu/input_data/model_restart/jra_spinup_restart/EMPave_1749.dat
+EMPaveFile:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/EMPave_1749.dat
 
 # A file, a 2D integer used to increase the horizontal eddy viscosity along western boundary in the equatorial strip 20S-20N
 ahmcoef.nc:/gpfs/data/greenocean/software/resources/ModelResources/EddyViscCoeff/ahmcoef.nc
