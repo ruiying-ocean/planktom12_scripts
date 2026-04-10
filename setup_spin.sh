@@ -143,27 +143,36 @@ rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
 ln -s namelist_ref_other_years ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
 ok "namelist_ref → namelist_ref_other_years"
 
-## copy EMP to new run directory
-EMP_SOURCE="${SPIN_DIR}/EMPave_$((FIRST_YEAR_TRANSIENT - 1)).dat"
-EMP_TARGET="${MODEL_RUN_DIR}/${MODEL_ID}/EMPave_$((FIRST_YEAR_TRANSIENT - 1)).dat"
-EMP_OLD="${MODEL_RUN_DIR}/${MODEL_ID}/EMPave.old"
-
-if [ ! -f "$EMP_SOURCE" ]; then
-    warn "Source EMP file does not exist: $EMP_SOURCE"
-    exit 1
+## copy EMP to new run directory (only needed when nn_fwb=2)
+NN_FWB=$(grep "nn_fwb" ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref_other_years 2>/dev/null | awk -F'=' '{print $2}' | awk '{print $1}')
+if [ -z "$NN_FWB" ]; then
+    NN_FWB=2  # default in NEMO
 fi
 
-if [ -f "$EMP_TARGET" ]; then
-    mv "$EMP_TARGET" "$EMP_OLD"
-fi
+if [ "$NN_FWB" -eq 2 ]; then
+    EMP_SOURCE="${SPIN_DIR}/EMPave_$((FIRST_YEAR_TRANSIENT - 1)).dat"
+    EMP_TARGET="${MODEL_RUN_DIR}/${MODEL_ID}/EMPave_$((FIRST_YEAR_TRANSIENT - 1)).dat"
+    EMP_OLD="${MODEL_RUN_DIR}/${MODEL_ID}/EMPave.old"
 
-cp "$EMP_SOURCE" "$EMP_TARGET"
-if [ $? -ne 0 ]; then
-    warn "Failed to copy EMP file"
-    exit 1
-fi
+    if [ ! -f "$EMP_SOURCE" ]; then
+        warn "Source EMP file does not exist: $EMP_SOURCE"
+        exit 1
+    fi
 
-ok "EMP file copied"
+    if [ -f "$EMP_TARGET" ]; then
+        mv "$EMP_TARGET" "$EMP_OLD"
+    fi
+
+    cp "$EMP_SOURCE" "$EMP_TARGET"
+    if [ $? -ne 0 ]; then
+        warn "Failed to copy EMP file"
+        exit 1
+    fi
+
+    ok "EMP file copied"
+else
+    skip "EMP file not needed (nn_fwb=$NN_FWB)"
+fi
 
 ## copy namelist.trc.sms to make sure both are consistent - skip for spinup runs
 if [ "$FORCING_MODE" == "spinup" ]; then
