@@ -144,7 +144,7 @@ ln -s namelist_ref_other_years ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
 ok "namelist_ref → namelist_ref_other_years"
 
 ## copy EMP to new run directory (only needed when nn_fwb=2)
-NN_FWB=$(grep "nn_fwb" ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref_other_years 2>/dev/null | awk -F'=' '{print $2}' | awk '{print $1}')
+NN_FWB=$(grep -E "^\s*nn_fwb\s*=" ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref_other_years 2>/dev/null | head -1 | awk -F'=' '{print $2}' | awk '{print $1}')
 if [ -z "$NN_FWB" ]; then
     NN_FWB=2  # default in NEMO
 fi
