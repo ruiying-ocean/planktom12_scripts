@@ -246,7 +246,10 @@ currentDate=$( grep "nn_date0" namelist_ref_coldstart | head -1 | awk -F'=' '{pr
 
 if [ "$currentDate" != "$expectedDate" ]; then
 	info "nn_date0: $currentDate → $expectedDate"
-	sed -i "s/nn_date0.*=.*/nn_date0    = $expectedDate/" namelist_ref_coldstart
+	# --follow-symlinks: write through the symlink to the target file.
+	# Without it, sed -i replaces the symlink with a regular file, severing
+	# the layer-1 abstraction (namelist_ref_coldstart -> namelist_ref_${forcing}_coldstart).
+	sed --follow-symlinks -i "s/nn_date0.*=.*/nn_date0    = $expectedDate/" namelist_ref_coldstart
 fi
 
 # Layer 2: Temporal symlinks (when each is used)
