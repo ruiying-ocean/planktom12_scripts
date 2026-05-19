@@ -62,6 +62,7 @@ keepDiad:1
 keepPtrc:1
 keepIce:1
 keepLimPhy:0
+keepGflux:0
 
 # Location of breakdown parameter file (if not specified, will use default)
 breakdown_parms:/gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/breakdown/breakdown_config.toml

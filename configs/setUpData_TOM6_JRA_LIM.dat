@@ -52,6 +52,7 @@ keepDiad:1
 keepPtrc:1
 keepIce:0
 keepLimPhy:1
+keepGflux:0
 
 # Base directory for saving model run data
 basedir:/gpfs/home/vhf24tbu/scratch/ModelRuns/

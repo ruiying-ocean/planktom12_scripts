@@ -88,6 +88,7 @@ while IFS= read -r line || [ -n "$line" ]; do
 			if [[ $name == "keepGrid_V" ]]; then keepGrid_V=$val; fi
 			if [[ $name == "keepGrid_W" ]]; then keepGrid_W=$val; fi
 			if [[ $name == "keepLimPhy" ]]; then keepLimPhy=$val; fi
+			if [[ $name == "keepGflux" ]]; then keepGflux=$val; fi
 		fi
 	fi
 done < $dataFileFullPath
@@ -111,7 +112,7 @@ cp $setUpDatafile $modelDir
 cd $modelDir
 
 # ----- Output tidy up parameters -----
-echo $spinupStart $spinupEnd $spinupRestartKeepFrequency $spinupOutputKeepFrequency $runRestartKeepFrequency $runOutputKeepFrequency $keepGrid_T $keepDiad $keepPtrc $keepIce $keepGrid_V $keepGrid_U $keepGrid_W $keepLimPhy > tidy_parms
+echo $spinupStart $spinupEnd $spinupRestartKeepFrequency $spinupOutputKeepFrequency $runRestartKeepFrequency $runOutputKeepFrequency $keepGrid_T $keepDiad $keepPtrc $keepIce $keepGrid_V $keepGrid_U $keepGrid_W $keepLimPhy ${keepGflux:-0} > tidy_parms
 
 # ----- Create links -----
 rm -f opa

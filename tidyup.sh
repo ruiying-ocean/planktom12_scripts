@@ -23,6 +23,7 @@ keepGrid_V=${parms[10]}
 keepGrid_U=${parms[11]}
 keepGrid_W=${parms[12]}
 keepLimPhy=${parms[13]}
+keepGflux=${parms[14]:-0}
 
 # Echo parameters to tidy.log
 echo $spinupStart
@@ -39,9 +40,27 @@ echo $keepGrid_V
 echo $keepGrid_U
 echo $keepGrid_W
 echo $keepLimPhy
+echo $keepGflux
 
 pointsPerYear=5475
 freq=1m
+
+# Compress a NetCDF file in place with nccopy -d 4 -s.
+# No-op if file is missing or already has deflate>=1. Original is preserved on failure.
+compress_nc() {
+	local f=$1
+	[ -f "$f" ] || return 0
+	if ncdump -hs "$f" 2>/dev/null | grep -q '_DeflateLevel = [1-9]'; then
+		return 0
+	fi
+	local tmp="${f%.nc}.tmp.nc"
+	if nccopy -d 4 -s "$f" "$tmp"; then
+		mv -f "$tmp" "$f"
+	else
+		echo "compress_nc FAILED on $f (original untouched)"
+		rm -f "$tmp"
+	fi
+}
 
 model_id=$(basename "$PWD")
 id=${model_id: -4}
@@ -87,6 +106,17 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 
 	if [[ "$remainder" -eq 0 || $y -eq $yearTo ]]; then
 
+		echo "Compressing outputs $y"
+		[[ $keepGrid_T -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc"
+		[[ $keepDiad -eq 1 ]]   && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc"
+		[[ $keepPtrc -eq 1 ]]   && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc"
+		[[ $keepIce -eq 1 ]]    && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_icemod.nc"
+		[[ $keepGrid_U -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc"
+		[[ $keepGrid_V -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc"
+		[[ $keepGrid_W -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc"
+		[[ $keepLimPhy -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_limphy.nc"
+		[[ $keepGflux -eq 1 ]]  && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc"
+
 		echo "Copying output $y"
 		if [[ $keepGrid_T -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc $afm_dir$model_id; fi
 		if [[ $keepDiad -eq 1 ]];   then cp ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc $afm_dir$model_id; fi
@@ -96,6 +126,7 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 		if [[ $keepGrid_V -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc $afm_dir$model_id; fi
 		if [[ $keepGrid_W -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc $afm_dir$model_id; fi
 		if [[ $keepLimPhy -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_limphy.nc $afm_dir$model_id; fi
+		if [[ $keepGflux -eq 1 ]];  then cp ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc $afm_dir$model_id; fi
 
 		# Copy MOC file if it exists
 		if [[ -f MOC/moc_${y}.nc ]]; then
@@ -120,6 +151,7 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc || $keepGrid_V -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc; fi
 		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc || $keepGrid_W -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc; fi
 		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_limphy.nc || $keepLimPhy -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_limphy.nc; fi
+		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc || $keepGflux -eq 0 ]];  then rm -f ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc; fi
 
 		echo "Creating symlinks for copied data"
 		if [[ $keepGrid_T -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc; fi
@@ -130,12 +162,14 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 		if [[ $keepGrid_V -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc; fi
 		if [[ $keepGrid_W -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc; fi
 		if [[ $keepLimPhy -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_limphy.nc; fi
+		if [[ $keepGflux -eq 1 ]];  then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc; fi
 	else
 		rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_*.nc
 		rm -f ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc
 		rm -f ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc
 		rm -f ORCA2_${freq}_${y}0101_${y}1231_icemod.nc
 		rm -f ORCA2_${freq}_${y}0101_${y}1231_limphy.nc
+		rm -f ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc
 	fi
 
 	# Process restart files
