@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH -p compute
+#SBATCH -p ht
 #SBATCH -t 06:00:00 
 #SBATCH --job-name=tidyup
 #SBATCH -o tidy-%j.log
