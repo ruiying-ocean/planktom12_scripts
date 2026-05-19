@@ -1,13 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=analyse        # Job name
-#SBATCH -p ht
 #SBATCH --output=job_%j.out          # Output file name (%j expands to jobID)
 #SBATCH --error=job_%j.err           # Error file name (%j expands to jobID)
-#SBATCH --time=20:00:00              # Run time (hh:mm:ss)
+#SBATCH --time=20:00:00              # Run time (hh:mm:ss) - 1 hour
 #SBATCH --ntasks=1                   # Number of tasks (processes)
 #SBATCH --nodes=1                    # Number of nodes
 #SBATCH --cpus-per-task=1             # Number of CPU cores per task
-#SBATCH --mem=80G                     # Memory needed per node
+#SBATCH --mem=100G                     # Memory needed per node (4GB)
 
 echo "Job ID: $SLURM_JOB_ID"
 echo "Node: $SLURM_JOB_NODELIST"
