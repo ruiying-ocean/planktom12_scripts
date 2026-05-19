@@ -145,10 +145,10 @@ namelist_ref_era_coldstart:/gpfs/home/vhf24tbu/EXP00/namelist_ref_era_start
 namelist_ref_era_cycling:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ref_era_looping
 
 # TOP config namelist
-namelist_top_cfg:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_top_cfg
+namelist_top_cfg:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_top_cfg
 
-# PlankTOM6 SMS namelist (MEDUSA grazing parameters)
-namelist.trc.sms:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist.trc.sms_tom6
+# PlankTOM6 SMS namelist
+namelist.trc.sms:/gpfs/home/vhf24tbu/EXP00/namelist.trc.sms.tom6
 
 # Ice namelists
 namelist_ice_cfg:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_ice_cfg
