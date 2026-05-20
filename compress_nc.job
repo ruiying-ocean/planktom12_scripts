@@ -1,0 +1,22 @@
+#!/bin/sh
+#SBATCH -p ht
+#SBATCH --qos=ht
+#SBATCH -t 12:00:00
+#SBATCH --job-name=compress_nc
+#SBATCH -o compress_nc-%j.log
+#SBATCH -e compress_nc-%j.log
+#SBATCH --mem 16G
+
+# Usage: sbatch --export=model_id=TOM12_RY_E001 compress_nc.job
+
+if [ -z "$model_id" ]; then
+	echo "ERROR: model_id is not set. Submit with:"
+	echo "  sbatch --export=model_id=<MODEL_ID> compress_nc.job"
+	exit 1
+fi
+
+echo "Compressing NetCDF files for: $model_id"
+
+module add gcc hdf5/1.10.6/gcc-openmpi netcdf/4.7.4/parallel/gcc-openmpi
+
+"$SLURM_SUBMIT_DIR/compress_nc.sh" "$model_id"
