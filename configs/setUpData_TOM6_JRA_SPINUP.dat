@@ -45,12 +45,12 @@ runOutputKeepFrequency:10
 
 # Flags for keeping respective files (0 = delete, 1 = keep)
 keepGrid_T:1
-keepGrid_U:1
+keepGrid_U:0
 keepGrid_V:1
-keepGrid_W:1
+keepGrid_W:0
 keepDiad:1
 keepPtrc:1
-keepIce:1
+keepIce:0
 keepLimPhy:0
 keepGflux:0
 
