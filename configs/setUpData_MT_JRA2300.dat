@@ -203,7 +203,7 @@ namelist_c14b:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_P
 field_def.xml:/gpfs/home/vhf24tbu/EXP00/field_def.xml
 
 # Fields output by the model
-iodef.xml:/gpfs/home/vhf24tbu/EXP00/iodef_tom12piicc14.xml
+iodef.xml:/gpfs/home/vhf24tbu/EXP00/iodef_tom12limphy.xml
 
 # How the domains (each area that a CPU calculates) are defined
 domain_def.xml:/gpfs/home/vhf24tbu/EXP00/domain_def.xml

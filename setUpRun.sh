@@ -311,10 +311,10 @@ err=0
 
 if [ $LP = ".true." ]; then
 	ok "LimPhy: ON"
-
-	if [ $KP != 1 ]; then
-		warn "KEEP value for LimPhy not set to 1"
-		err=1
+	if [ $KP = 1 ]; then
+		info "LimPhy output will be kept"
+	else
+		info "LimPhy output will be discarded (keepLimPhy=0)"
 	fi
 else
 	info "LimPhy: OFF"
