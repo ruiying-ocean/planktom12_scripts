@@ -3,10 +3,44 @@ set -euo pipefail
 
 STEP_PER_YEAR=5475
 
-if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-    echo "Usage: $0 RUN_NAME [MODE]"
+usage() {
+    echo "Usage: $0 [--follow-symlink] RUN_NAME [MODE]"
     echo "  MODE: fixed    - keep latest, -20yr, -40yr (default)"
     echo "        adaptive - keep first, middle, latest"
+    echo "  --follow-symlink: also delete the target file when a restart is a symlink"
+}
+
+FOLLOW_SYMLINK=0
+POSITIONAL=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --follow-symlink)
+            FOLLOW_SYMLINK=1
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --)
+            shift
+            while [ $# -gt 0 ]; do POSITIONAL+=("$1"); shift; done
+            ;;
+        -*)
+            echo "Unknown option: $1" >&2
+            usage >&2
+            exit 1
+            ;;
+        *)
+            POSITIONAL+=("$1")
+            shift
+            ;;
+    esac
+done
+set -- "${POSITIONAL[@]}"
+
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+    usage >&2
     exit 1
 fi
 
@@ -65,6 +99,10 @@ for family in "restart_" "restart_ice_" "restart_trc_"; do
 	step_str=$(echo "$f" | sed -n 's/.*_\([0-9]\{8\}\)_'${family}'.*/\1/p')
 	step=$((10#$step_str))
 	if [[ -z "${keep_map[$step]+x}" ]]; then
+	    if [[ "$FOLLOW_SYMLINK" == 1 && -L "$f" ]]; then
+		target=$(readlink -f "$f")
+		[[ -n "$target" && -e "$target" ]] && rm -f "$target"
+	    fi
 	    rm "$f"
 	fi
     done
