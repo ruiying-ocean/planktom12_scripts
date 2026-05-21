@@ -26,7 +26,7 @@
 
 # ========== RUN COMPONENTS ==========
 # Model version to run (options: STD, DEV, CR)
-model:STD
+model:DEV
 
 # Starting year of the run
 # - forcing data starts in 1948 (NCEP) and 1940 (ERA5) so data before then will be a looping year of 1990 for spin-up purposes
