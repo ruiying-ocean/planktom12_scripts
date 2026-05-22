@@ -7,7 +7,7 @@ version=$3
 modelOutputDir=$4
 
 # Get parameters as specified in setUpData.dat file
-read -r -a parms < tidy_parms 
+read -r -a parms < tidy_parms
 
 spinupStart=${parms[0]}
 spinupEnd=${parms[1]}
@@ -75,132 +75,92 @@ if [ ! -d $afm_dir$model_id ]; then
 	mkdir $afm_dir$model_id
 fi
 
+# Per-year processing: copy every output and restart to AFM, leave a scratch symlink.
+# Selective pruning by keep-frequency happens at end of simulation below.
 echo "Copying data centrally"
 for (( y=$yearFrom; y<=$yearTo; y++ )); do
 
-         # Compute AMOC from grid_V using CDFtools (before analyser so moc file is ready)
+	# Compute AMOC from grid_V using CDFtools (before analyser so moc file is ready)
 	grid_v_file="ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc"
 	grid_t_file="ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc"
 	if [ -f "$grid_v_file" ]; then
 		bash compute_amoc.sh "$grid_v_file" "$grid_t_file"
 	fi
 
-         # Python based totalling
-         echo "Python version: $(which python)"
+	# Python based totalling
+	echo "Python version: $(which python)"
 	python3 analyser.py analyser_config.toml ${y} ${y}
 
 	# Run timeseries visualization script
 	python3 make_timeseries.py $model_id --model-run-dir $modelOutputDir
 
-	# Process output files
-	if [[ $y < $spinupEnd ]]; then
-		# years from start
-		since=$((y-spinupStart))
-		remainder=$(( since % spinupOutputKeepFrequency ))
-	else
-        	since=$((y-spinupEnd))
-		remainder=$(( since % runOutputKeepFrequency ))
-	fi
-    
-	echo $remainder $since
+	echo "Compressing outputs $y"
+	[[ $keepGrid_T -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc"
+	[[ $keepDiad -eq 1 ]]   && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc"
+	[[ $keepPtrc -eq 1 ]]   && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc"
+	[[ $keepIce -eq 1 ]]    && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_icemod.nc"
+	[[ $keepGrid_U -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc"
+	[[ $keepGrid_V -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc"
+	[[ $keepGrid_W -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc"
+	[[ $keepLimPhy -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_limphy.nc"
+	[[ $keepGflux -eq 1 ]]  && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc"
 
-	if [[ "$remainder" -eq 0 || $y -eq $yearTo ]]; then
+	echo "Copying output $y"
+	if [[ $keepGrid_T -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc $afm_dir$model_id; fi
+	if [[ $keepDiad -eq 1 ]];   then cp ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc $afm_dir$model_id; fi
+	if [[ $keepPtrc -eq 1 ]];   then cp ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc $afm_dir$model_id; fi
+	if [[ $keepIce -eq 1 ]];    then cp ORCA2_${freq}_${y}0101_${y}1231_icemod.nc $afm_dir$model_id; fi
+	if [[ $keepGrid_U -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc $afm_dir$model_id; fi
+	if [[ $keepGrid_V -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc $afm_dir$model_id; fi
+	if [[ $keepGrid_W -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc $afm_dir$model_id; fi
+	if [[ $keepLimPhy -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_limphy.nc $afm_dir$model_id; fi
+	if [[ $keepGflux -eq 1 ]];  then cp ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc $afm_dir$model_id; fi
 
-		echo "Compressing outputs $y"
-		[[ $keepGrid_T -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc"
-		[[ $keepDiad -eq 1 ]]   && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc"
-		[[ $keepPtrc -eq 1 ]]   && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc"
-		[[ $keepIce -eq 1 ]]    && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_icemod.nc"
-		[[ $keepGrid_U -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc"
-		[[ $keepGrid_V -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc"
-		[[ $keepGrid_W -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc"
-		[[ $keepLimPhy -eq 1 ]] && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_limphy.nc"
-		[[ $keepGflux -eq 1 ]]  && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc"
-
-		echo "Copying output $y"
-		if [[ $keepGrid_T -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc $afm_dir$model_id; fi
-		if [[ $keepDiad -eq 1 ]];   then cp ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc $afm_dir$model_id; fi
-		if [[ $keepPtrc -eq 1 ]];   then cp ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc $afm_dir$model_id; fi
-		if [[ $keepIce -eq 1 ]];    then cp ORCA2_${freq}_${y}0101_${y}1231_icemod.nc $afm_dir$model_id; fi
-		if [[ $keepGrid_U -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc $afm_dir$model_id; fi
-		if [[ $keepGrid_V -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc $afm_dir$model_id; fi
-		if [[ $keepGrid_W -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc $afm_dir$model_id; fi
-		if [[ $keepLimPhy -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_limphy.nc $afm_dir$model_id; fi
-		if [[ $keepGflux -eq 1 ]];  then cp ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc $afm_dir$model_id; fi
-
-		# Copy MOC file if it exists
-		if [[ -f MOC/moc_${y}.nc ]]; then
-			mkdir -p $afm_dir$model_id/MOC
-			cp MOC/moc_${y}.nc $afm_dir$model_id/MOC/
-		fi
-
-		echo "Copying extra set up data and EMPave files"
-		cp EMPave_${y}.dat $afm_dir$model_id
-		cp namelist* $afm_dir$model_id
-		cp *xml $afm_dir$model_id
-		cp setUpData*dat $afm_dir$model_id
-		cp ocean.output $afm_dir$model_id
-		cp opa $afm_dir$model_id
-
-		echo "Deleting local data if it exists centrally"
-		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc || $keepGrid_T -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc; fi
-		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc || $keepDiad -eq 0 ]];   then rm -f ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc; fi
-		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc || $keepPtrc -eq 0 ]];   then rm -f ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc; fi
-		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_icemod.nc || $keepIce -eq 0 ]];    then rm -f ORCA2_${freq}_${y}0101_${y}1231_icemod.nc; fi
-		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc || $keepGrid_U -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc; fi
-		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc || $keepGrid_V -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc; fi
-		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc || $keepGrid_W -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc; fi
-		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_limphy.nc || $keepLimPhy -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_limphy.nc; fi
-		if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc || $keepGflux -eq 0 ]];  then rm -f ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc; fi
-
-		echo "Creating symlinks for copied data"
-		if [[ $keepGrid_T -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc; fi
-		if [[ $keepDiad -eq 1 ]];   then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc; fi
-		if [[ $keepPtrc -eq 1 ]];   then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc; fi
-		if [[ $keepIce -eq 1 ]];    then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_icemod.nc; fi
-		if [[ $keepGrid_U -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc; fi
-		if [[ $keepGrid_V -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc; fi
-		if [[ $keepGrid_W -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc; fi
-		if [[ $keepLimPhy -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_limphy.nc; fi
-		if [[ $keepGflux -eq 1 ]];  then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc; fi
-	else
-		rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_*.nc
-		rm -f ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc
-		rm -f ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc
-		rm -f ORCA2_${freq}_${y}0101_${y}1231_icemod.nc
-		rm -f ORCA2_${freq}_${y}0101_${y}1231_limphy.nc
-		rm -f ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc
+	# Copy MOC file if it exists
+	if [[ -f MOC/moc_${y}.nc ]]; then
+		mkdir -p $afm_dir$model_id/MOC
+		cp MOC/moc_${y}.nc $afm_dir$model_id/MOC/
 	fi
 
-	# Process restart files
-	if [[ $y < $spinupEnd ]]; then
-		# Years from start
-		since=$(( y-spinupStart ))
-		remainder=$(( since % spinupRestartKeepFrequency ))
-	else
-		since=$(( y-spinupEnd ))
-		remainder=$(( since % runRestartKeepFrequency ))
-	fi
+	echo "Copying extra set up data and EMPave files"
+	cp EMPave_${y}.dat $afm_dir$model_id
+	cp namelist* $afm_dir$model_id
+	cp *xml $afm_dir$model_id
+	cp setUpData*dat $afm_dir$model_id
+	cp ocean.output $afm_dir$model_id
+	cp opa $afm_dir$model_id
 
-	# Reset since to correctly count points for linking and deleting purposes
-	yr=$yearStart
-	since=$(( y-yr ))
+	echo "Deleting local data if it exists centrally"
+	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc || $keepGrid_T -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc; fi
+	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc || $keepDiad -eq 0 ]];   then rm -f ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc; fi
+	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc || $keepPtrc -eq 0 ]];   then rm -f ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc; fi
+	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_icemod.nc || $keepIce -eq 0 ]];    then rm -f ORCA2_${freq}_${y}0101_${y}1231_icemod.nc; fi
+	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc || $keepGrid_U -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc; fi
+	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc || $keepGrid_V -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc; fi
+	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc || $keepGrid_W -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc; fi
+	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_limphy.nc || $keepLimPhy -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_limphy.nc; fi
+	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc || $keepGflux -eq 0 ]];  then rm -f ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc; fi
 
-	# This is concerned with the previous year's restart files, no restarts are deleted until the next year is complete    
+	echo "Creating symlinks for copied data"
+	if [[ $keepGrid_T -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc; fi
+	if [[ $keepDiad -eq 1 ]];   then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc; fi
+	if [[ $keepPtrc -eq 1 ]];   then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc; fi
+	if [[ $keepIce -eq 1 ]];    then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_icemod.nc; fi
+	if [[ $keepGrid_U -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc; fi
+	if [[ $keepGrid_V -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc; fi
+	if [[ $keepGrid_W -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc; fi
+	if [[ $keepLimPhy -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_limphy.nc; fi
+	if [[ $keepGflux -eq 1 ]];  then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc; fi
+
+	# Restart files: timestep is end of year (y-1) = start of year y
+	since=$(( y-yearStart ))
 	points=$(( pointsPerYear * since ))
 	printf -v timestep "%08d" $points
-	
-	echo $points $timestep $remainder $since
 
-	if [[ "$remainder" -eq 0 || $y -eq $yearTo ]]; then
-		echo "Copying restart $y"
-		cp ORCA2_*${timestep}_restart_*.nc $afm_dir$model_id
-		rm -f ORCA2_*${timestep}_restart_*.nc
-		ls -1 ${afm_dir}${model_id}/ORCA2_*${timestep}_restart_*.nc | awk '{print "ln -s "$1 }' | bash
-	else
-		echo "Deleting local data"
-		rm -f ORCA2_*${timestep}_restart_*.nc
-	fi
+	echo "Copying restart $y (timestep $timestep)"
+	cp ORCA2_*${timestep}_restart_*.nc $afm_dir$model_id
+	rm -f ORCA2_*${timestep}_restart_*.nc
+	ls -1 ${afm_dir}${model_id}/ORCA2_*${timestep}_restart_*.nc | awk '{print "ln -s "$1 }' | bash
 done
 
 # Sort CSV files by year to ensure correct ordering
@@ -214,6 +174,55 @@ done
 
 # Commands to execute at the end of the simulation (final year only)
 if [[ $yearTo -eq $yearEnd ]]; then
+
+	# Prune non-keep restart and output files from scratch + AFM based on keep frequency.
+	# Per-year tidyup copies every restart/output to AFM (for crash recovery) and
+	# leaves scratch symlinks pointing at AFM; this is where the selective-saving
+	# spec from tidy_parms is actually enforced.
+	echo "Pruning non-keep restart files (scratch + AFM)"
+	for (( yy=$yearStart; yy<=$yearEnd; yy++ )); do
+		if [[ $yy -lt $spinupEnd ]]; then
+			yy_since=$(( yy - spinupStart ))
+			yy_remainder=$(( yy_since % spinupRestartKeepFrequency ))
+		else
+			yy_since=$(( yy - spinupEnd ))
+			yy_remainder=$(( yy_since % runRestartKeepFrequency ))
+		fi
+
+		# Keep frequency-matching years and always preserve the final year
+		if [[ $yy_remainder -eq 0 || $yy -eq $yearEnd ]]; then
+			continue
+		fi
+
+		yy_offset=$(( yy - yearStart ))
+		yy_points=$(( pointsPerYear * yy_offset ))
+		printf -v yy_ts "%08d" $yy_points
+
+		echo "Removing restart year $yy (timestep $yy_ts)"
+		rm -f ${afm_dir}${model_id}/ORCA2_*${yy_ts}_restart_*.nc
+		rm -f ORCA2_*${yy_ts}_restart_*.nc
+	done
+
+	echo "Pruning non-keep output files (scratch + AFM)"
+	for (( yy=$yearStart; yy<=$yearEnd; yy++ )); do
+		if [[ $yy -lt $spinupEnd ]]; then
+			yy_since=$(( yy - spinupStart ))
+			yy_remainder=$(( yy_since % spinupOutputKeepFrequency ))
+		else
+			yy_since=$(( yy - spinupEnd ))
+			yy_remainder=$(( yy_since % runOutputKeepFrequency ))
+		fi
+
+		if [[ $yy_remainder -eq 0 || $yy -eq $yearEnd ]]; then
+			continue
+		fi
+
+		echo "Removing output year $yy"
+		for ftype in grid_T diad_T ptrc_T icemod grid_U grid_V grid_W limphy gflux_T; do
+			rm -f ${afm_dir}${model_id}/ORCA2_${freq}_${yy}0101_${yy}1231_${ftype}.nc
+			rm -f ORCA2_${freq}_${yy}0101_${yy}1231_${ftype}.nc
+		done
+	done
 
 	# copy all analyser files to base model directory
 	echo "copying analyser files"
