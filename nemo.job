@@ -30,7 +30,7 @@ export MYAPP=./opa
 date
 START=`date`
 #mpirun -np $cpus $MYAPP
-mpirun --mca btl_openib_if_include mlx5_0:1,mlx5_1:1 -np $cpus $MYAPP
+mpirun --mca btl_openib_if_include mlx5_0:1,mlx5_1:1 --mca btl_vader_single_copy_mechanism none -np $cpus $MYAPP
 date
 FINISH=`date`
 

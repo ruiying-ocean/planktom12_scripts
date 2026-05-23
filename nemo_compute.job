@@ -27,7 +27,7 @@ export MYAPP=./opa
 
 date
 START=`date`
-mpirun -np $cpus $MYAPP
+mpirun --mca btl ^openib --mca btl_vader_single_copy_mechanism none -np $cpus $MYAPP
 date
 FINISH=`date`
 
