@@ -137,7 +137,7 @@ opa_TOM6:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/BLD/
 namelist_cfg:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_cfg
 
 # PlankTOM6 tracer list (30 tracers with key_trc_piic)
-namelist_top_ref:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_top_ref_tom6limphy
+namelist_top_ref:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/namelist_top_ref_tom6
 
 # JRA forcing namelists
 namelist_ref_jra_restart:/gpfs/home/vhf24tbu/EXP00/namelist_ref_jra_restart
@@ -159,7 +159,7 @@ namelist_ice_ref:/gpfs/data/greenocean/software/CodeReview/KAR12/CONFIG/ORCA2_LI
 field_def.xml:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/field_def.xml
 
 # PlankTOM6 output definition
-iodef.xml:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/iodef_tom6lop.xml
+iodef.xml:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/iodef_tom6.xml
 
 # Domain definition
 domain_def.xml:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/domain_def.xml
