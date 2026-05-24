@@ -1,14 +1,20 @@
 # -------------------------
 #
-# NEMO5 ORCA2_ICE_PlankTOM starter configuration - ERA/transient
+# NEMO5 ORCA2_ICE_PlankTOM - ERA / SPINUP (cycling forcing)
 #
-# This file is read by setUpRun.sh on the nemo5-planktom branch.
-# Create and compile the NEMO5 config first:
+# Group-standard build = avd22gnu's KRF12 native PlankTOM port.
+# Converted from KF60's old DEV-format setUpData into the NEMO5 layout
+# that setUpRun.sh (nemo5-planktom branch) expects.
 #
-#   cd /gpfs/home/vhf24tbu/scratch/NEMO5
-#   ./makenemo -n ORCA2_ICE_PlankTOM -r X3_ORCA2_ICE_PISCES -m auto -j 0
-#   ./makenemo -n ORCA2_ICE_PlankTOM -m auto --add_key 'key_planktom key_trc_atmco2' -j 4
+# Namelist mapping (colleague keeps full config in namelist_ref* and swaps
+# those; setUpRun.sh swaps namelist_cfg*, so their ref variants are repointed
+# as the cfg overlays on top of a stock base ref):
+#   coldstart -> namelist_ref_looping_first_year (nn_rstctl=0, looping forcing)
+#   cycling   -> namelist_ref_looping            (nn_rstctl=2, looping forcing)
+#   restart   -> namelist_ref                     (nn_rstctl=2, transient; unused in spinup)
 #
+# CONFIRM before launch: basedir, and whether the group runs avd22gnu's KRF12
+# exe directly (as below) or a rebuild under a shared account.
 # -------------------------
 
 # ========== RUN COMPONENTS ==========
@@ -19,18 +25,17 @@ iceRestartName:restart_ice
 nemoCpus:48
 xiosCpus:12
 useXiosServer:true
-stepsPerYear:2920
+stepsPerYear:8760
 
-yearStart:1948
-yearEnd:2024
+yearStart:1750
+yearEnd:1939
 
 CO2:VARIABLE
-forcing_mode:transient
+forcing_mode:spinup
 forcing:ERA
 
 spinupStart:1750
-spinupEnd:1940
-
+spinupEnd:1939
 spinupRestartKeepFrequency:9999
 spinupOutputKeepFrequency:10
 runRestartKeepFrequency:9999
@@ -52,56 +57,49 @@ compilerKey:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/cpp_ORCA2_
 
 
 # ========== INPUT RESOURCES ==========
-# NEMO5 ORCA2 reads cn_domcfg="ORCA_R2_zps_domcfg".
-ORCA_R2_zps_domcfg.nc:/gpfs/home/vhf24tbu/input_data/nemo5/ORCA_R2_zps_domcfg.nc
+ORCA_R2_zps_domcfg.nc:/gpfs/home/avd22gnu/scratch/nemo/resources/ORCA_R2_zps_domcfg.nc
 
-# Restart files. NEMO5 SI3 reads restart_ice, not restart_ice_in.
-restart_trc.nc:/gpfs/home/vhf24tbu/input_data/nemo5/ORCA2_01109600_restart_trc.nc
-restart_ice.nc:/gpfs/home/vhf24tbu/input_data/nemo5/ORCA2_01109600_restart_ice.nc
-restart.nc:/gpfs/home/vhf24tbu/input_data/nemo5/ORCA2_01109600_restart.nc
+# Restart files (KRF12 tracer set; restart_trc must match their par_planktom)
+restart_trc.nc:/gpfs/home/avd22gnu/scratch/nemo/restart/restart_17491231_trc_v5_HOC.nc
+restart.nc:/gpfs/home/avd22gnu/scratch/nemo/restart/restart_17491231_opa_v5.nc
+restart_ice.nc:/gpfs/home/avd22gnu/scratch/nemo/restart/ORCA2_00005840_restart_ice.nc
 
-EMPaveFile:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/EMPave_1947.dat
-
-ahmcoef.nc:/gpfs/data/greenocean/software/resources/NEMO5/ahmcoef.nc
-zdfiwm_forcing_orca2.nc:/gpfs/data/greenocean/software/resources/NEMO5/zdfiwm_forcing_orca2.nc
-sdw_ecwaves_orca2.nc:/gpfs/data/greenocean/software/resources/NEMO5/sdw_ecwaves_orca2.nc
-
-atmco2.dat.variable:/gpfs/data/greenocean/software/resources/SOZONE_atmo/atmco2_ssp3-70.dat
+# Datafiles
+atmco2.dat.variable:/gpfs/data/greenocean/software/resources/SOZONE_atmo/atmco2_ssp1-26.dat
 atmco2.dat.static:/gpfs/data/greenocean/software/resources/ModelResources/AtmosCO2/atmco2_PT_v1_CONSTANT_1750.dat
 atmco2cfc.dat:/gpfs/data/greenocean/software/resources/ModelResources/AtmosCO2/atmco2cfc_NEEDS_WORK.dat
 atmb14.dat:/gpfs/data/greenocean/software/resources/SOZONE_atmo/atmb14_TJ_hm.dat
 atmc14.dat:/gpfs/data/greenocean/software/resources/SOZONE_atmo/atmc14_TJ_hm.dat
 
-bathy_level.nc:/gpfs/data/greenocean/software/resources/ModelResources/Bathymetry/bathy_level.nc
-bathy_meter.nc:/gpfs/data/greenocean/software/resources/ModelResources/Bathymetry/bathy_meter.nc
+# NetCDF files
+ahmcoef.nc:/gpfs/data/greenocean/software/resources/NEMO5/ahmcoef.nc
 bathy.orca.nc:/gpfs/data/greenocean/software/resources/NEMO5/bathy.orca.nc
-coordinates.nc:/gpfs/data/greenocean/software/resources/ModelResources/GridCoordinates/coordinates.nc
 basin_mask.nc:/gpfs/data/greenocean/software/resources/NEMO5/basin_mask.v5.nc
+chlorophyll.nc:/gpfs/data/greenocean/software/resources/NEMO5/chlorophyll.nc
 
-data_1m_potential_temperature_nomask.nc:/gpfs/data/greenocean/software/resources/NEMO5/data_1m_potential_temperature_nomask.v5.nc
-data_1m_salinity_nomask.nc:/gpfs/data/greenocean/software/resources/NEMO5/data_1m_salinity_nomask.v5.nc
+data_1m_potential_temperature_nomask.nc:/gpfs/home/avd22gnu/scratch/nemo/resources/data_1m_potential_temperature_nomask.nc
+data_1m_salinity_nomask.nc:/gpfs/home/avd22gnu/scratch/nemo/resources/data_1m_salinity_nomask.nc
 
 dust.orca.nc:/gpfs/data/greenocean/software/resources/NEMO5/dust.Jickells2005.times035.ORCA.v5.nc
 ndeposition.nc:/gpfs/data/greenocean/software/resources/NEMO5/ndeposition.orca.v5.nc
 river.nc:/gpfs/data/greenocean/software/resources/NEMO5/river.v5.nc
-runoff_core_monthly.nc:/gpfs/data/greenocean/software/resources/NEMO5/runoff_core_monthly.nc
 
-geothermal_heating.nc:/gpfs/data/greenocean/software/resources/NEMO5/geothermal_heating.nc
 eddy_viscosity_2D.nc:/gpfs/data/greenocean/software/resources/NEMO5/eddy_viscosity_2D.nc
 eddy_viscosity_3D.nc:/gpfs/data/greenocean/software/resources/NEMO5/eddy_viscosity_3D.nc
+
 hydrofe.orca.nc:/gpfs/data/greenocean/software/resources/NEMO5/hydrofe.orca.nc
+mask_itf.nc:/gpfs/data/greenocean/software/resources/NEMO5/mask_itf.nc
 K1rowdrg.nc:/gpfs/data/greenocean/software/resources/NEMO5/K1rowdrg.nc
 M2rowdrg.nc:/gpfs/data/greenocean/software/resources/NEMO5/M2rowdrg.nc
-chlorophyll.nc:/gpfs/data/greenocean/software/resources/NEMO5/chlorophyll.nc
-mask_itf.nc:/gpfs/data/greenocean/software/resources/NEMO5/mask_itf.nc
 par.orca.nc:/gpfs/data/greenocean/software/resources/NEMO5/par.orca.nc
 resto.nc:/gpfs/data/greenocean/software/resources/NEMO5/resto.nc
+
 sali_ref_clim_monthly.nc:/gpfs/data/greenocean/software/resources/NEMO5/sali_ref_clim_monthly.nc
 weights_3D_r360x180_bilin.nc:/gpfs/data/greenocean/software/resources/NEMO5/weights_3D_r360x180_bilin.nc
-calving.nc:/gpfs/data/greenocean/software/resources/NEMO5/calving.nc
 
 
 # ========== MODEL COMPONENTS ==========
+# XIOS 3 (matches our key_xios3 NEMO build)
 xios_server.exe:/gpfs/home/vhf24tbu/src/XIOS3/bin/xios_server.exe
 nemo_NEMO5:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/BLD/bin/nemo.exe
 
@@ -109,28 +107,25 @@ nemo_NEMO5:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/BLD/bin/nem
 # ========== NAMELISTS ==========
 namelist_ref:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/SHARED/namelist_ref
 
-# NEMO5 forcing/run-state choices belong in namelist_cfg overlays.
-namelist_cfg_era_coldstart:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_ref_first_year
-namelist_cfg_era_restart:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_ref
+namelist_cfg_era_coldstart:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_ref_looping_first_year
 namelist_cfg_era_cycling:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_ref_looping
+namelist_cfg_era_restart:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_ref
 
 namelist_top_ref:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_top_ref
 namelist_top_cfg:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_top_cfg
 namelist.trc.sms:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist.trc.sms_tom12ref
 
 namelist_ice_cfg:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_ice_cfg
-namelist_ice_ref:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/SHARED/namelist_ice_ref
+namelist_ice_ref:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_ice_ref
 
 
-# ========== XIOS3 XML ==========
+# ========== XIOS XML ==========
 iodef.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/iodef.xml
 context_nemo.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/context_nemo.xml
 axis_def_nemo.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/axis_def_nemo.xml
 domain_def_nemo.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/domain_def_nemo.xml
 grid_def_nemo.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/grid_def_nemo.xml
-field_def_nemo-oce.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/field_def_nemo-oce.xml
 field_def_nemo-ice.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/field_def_nemo-ice.xml
+field_def_nemo-oce.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/field_def_nemo-oce.xml
 field_def_nemo-planktom.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/field_def_nemo-planktom.xml
-file_def_nemo-oce.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/file_def_nemo-oce.xml
-file_def_nemo-ice.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/file_def_nemo-ice.xml
 file_def_nemo.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/file_def_nemo.xml
