@@ -165,9 +165,15 @@ while IFS= read -r line || [ -n "$line" ]; do
 			skip=false
 			if [[ $name == namelist_ref_era_* && $forcing != "ERA" ]]; then
 				skip=true
+			elif [[ $name == namelist_cfg_era_* && $forcing != "ERA" ]]; then
+				skip=true
 			elif [[ $name == namelist_ref_jra_* && $forcing != "JRA" ]]; then
 				skip=true
+			elif [[ $name == namelist_cfg_jra_* && $forcing != "JRA" ]]; then
+				skip=true
 			elif [[ $name == namelist_ref_ncep_* && $forcing != "NCEP" ]]; then
+				skip=true
+			elif [[ $name == namelist_cfg_ncep_* && $forcing != "NCEP" ]]; then
 				skip=true
 			fi
 
@@ -242,9 +248,6 @@ else
 	ln -s atmco2.dat.static atmco2.dat
 fi
 
-# Forcing
-rm -f namelist_ref
-
 ok "Forcing: $forcing"
 if [ $forcing == "NCEP" ]; then
 	forcing_prefix="ncep"
@@ -254,35 +257,43 @@ else
 	forcing_prefix="jra"
 fi
 
+if [[ "$nemoVersion" == "NEMO5" ]]; then
+	control_namelist="namelist_cfg"
+else
+	control_namelist="namelist_ref"
+fi
+
+rm -f $control_namelist
+
 # Layer 1: Functional symlinks (abstract forcing type)
 # - coldstart: nn_rstctl=0, uses nn_date0 for start date
 # - restart:   nn_rstctl=2, reads date from restart file, historical forcing
 # - cycling:   nn_rstctl=2, reads date from restart file, loops single year forcing
-ln -sf namelist_ref_${forcing_prefix}_coldstart namelist_ref_coldstart
-ln -sf namelist_ref_${forcing_prefix}_restart namelist_ref_restart
-ln -sf namelist_ref_${forcing_prefix}_cycling namelist_ref_cycling
+ln -sf ${control_namelist}_${forcing_prefix}_coldstart ${control_namelist}_coldstart
+ln -sf ${control_namelist}_${forcing_prefix}_restart ${control_namelist}_restart
+ln -sf ${control_namelist}_${forcing_prefix}_cycling ${control_namelist}_cycling
 
-# Automatically correct nn_date0 in namelist_ref_coldstart to match yearStart from setup data
+# Automatically correct nn_date0 in the coldstart namelist to match yearStart from setup data
 expectedDate="${yearStart}0101"
-currentDate=$( grep "nn_date0" namelist_ref_coldstart | head -1 | awk -F'=' '{print $2}' | awk '{print $1}' )
+currentDate=$( grep "nn_date0" ${control_namelist}_coldstart | head -1 | awk -F'=' '{print $2}' | awk '{print $1}' )
 
 if [ "$currentDate" != "$expectedDate" ]; then
 	info "nn_date0: $currentDate → $expectedDate"
 	# --follow-symlinks: write through the symlink to the target file.
 	# Without it, sed -i replaces the symlink with a regular file, severing
-	# the layer-1 abstraction (namelist_ref_coldstart -> namelist_ref_${forcing}_coldstart).
-	sed --follow-symlinks -i "s/nn_date0.*=.*/nn_date0    = $expectedDate/" namelist_ref_coldstart
+	# the layer-1 abstraction (${control_namelist}_coldstart -> ${control_namelist}_${forcing}_coldstart).
+	sed --follow-symlinks -i "s/nn_date0.*=.*/nn_date0    = $expectedDate/" ${control_namelist}_coldstart
 fi
 
 # Layer 2: Temporal symlinks (when each is used)
 # - first_year:  always uses coldstart
 # - other_years: uses cycling (spinup) or restart (transient)
 ok "Forcing mode: $forcing_mode"
-ln -sf namelist_ref_coldstart namelist_ref_first_year
+ln -sf ${control_namelist}_coldstart ${control_namelist}_first_year
 if [ "$forcing_mode" == "spinup" ]; then
-	ln -sf namelist_ref_cycling namelist_ref_other_years
+	ln -sf ${control_namelist}_cycling ${control_namelist}_other_years
 elif [ "$forcing_mode" == "transient" ]; then
-	ln -sf namelist_ref_restart namelist_ref_other_years
+	ln -sf ${control_namelist}_restart ${control_namelist}_other_years
 else
 	warn "Unrecognized forcing_mode '$forcing_mode' (expected 'spinup' or 'transient')"
 	exit 1
@@ -298,26 +309,19 @@ fi
 #   | Continued          | transient    | Yes         | restart  |
 #   | From spinup (*)    | spinup      | Yes         | cycling  |
 #   | From spinup (*)    | transient    | Yes         | restart  |
-#   (*) setup_spin.sh copies restart files then switches namelist_ref -> other_years
+#   (*) setup_spin.sh copies restart files then switches the active namelist -> other_years
 #
 if [ ! -f restart_0000.nc ]; then
-	ln -s namelist_ref_first_year namelist_ref
+	ln -sf ${control_namelist}_first_year $control_namelist
 else
-	ln -s namelist_ref_other_years namelist_ref
-fi
-
-if [[ "$nemoVersion" == "NEMO5" ]]; then
-	sed --follow-symlinks -i "s/ln_rstart[[:space:]]*=.*/ln_rstart   = .false.   !  start from rest (F) or from a restart file (T)/" namelist_ref_coldstart
-	sed --follow-symlinks -i "s/nn_rstctl[[:space:]]*=.*/nn_rstctl    =    0     !  restart control ==> activated only if ln_rstart=T/" namelist_ref_coldstart
-	sed --follow-symlinks -i "s/ln_rstart[[:space:]]*=.*/ln_rstart   = .true.    !  start from rest (F) or from a restart file (T)/" namelist_ref_restart namelist_ref_cycling
-	sed --follow-symlinks -i "s/nn_rstctl[[:space:]]*=.*/nn_rstctl    =    2     !  restart control ==> activated only if ln_rstart=T/" namelist_ref_restart namelist_ref_cycling
+	ln -sf ${control_namelist}_other_years $control_namelist
 fi
 
 section "Physics"
 
 # Temperature and salinity restoring
-TR=$( grep "nn_sstr " namelist_ref 2>/dev/null | awk -F' ' '{print $3}' )
-SR=$( grep "nn_sssr " namelist_ref 2>/dev/null | awk -F' ' '{print $3}' )
+TR=$( grep "nn_sstr " $control_namelist 2>/dev/null | awk -F' ' '{print $3}' )
+SR=$( grep "nn_sssr " $control_namelist 2>/dev/null | awk -F' ' '{print $3}' )
 LP=$( grep "ln_lop" namelist_top_ref 2>/dev/null | awk -F' ' '{print $3}' )
 LP=${LP:-.false.}
 

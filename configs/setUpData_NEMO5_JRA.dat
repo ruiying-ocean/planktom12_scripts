@@ -52,9 +52,9 @@ compilerKey:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/cpp_ORCA2_
 
 
 # ========== INPUT RESOURCES ==========
-# NEMO5 ORCA2 needs a domain configuration file. Replace this path with the
-# actual domcfg file on Hali before running.
-ORCA_R2_zps_domcfg.nc:/gpfs/home/vhf24tbu/input_data/nemo5/ORCA_R2_zps_domcfg.nc
+# NEMO5 ORCA2 reads cn_domcfg="ORCA_R2_zps_domcfg"; link your generated
+# domcfg.nc under that run-directory name.
+ORCA_R2_zps_domcfg.nc:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/domcfg.nc
 
 # Restart files. NEMO5 SI3 reads restart_ice, not restart_ice_in.
 restart_trc.nc:/gpfs/home/vhf24tbu/input_data/model_restart/restart_19471231_trc_RY_HOC_HuangFe.nc
@@ -95,16 +95,15 @@ nemo_NEMO5:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/BLD/bin/nem
 
 
 # ========== NAMELISTS ==========
-namelist_cfg:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_cfg
+namelist_ref:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/SHARED/namelist_ref
 
-# setUpRun.sh copies these into forcing-specific names, then toggles
-# ln_rstart/nn_rstctl for NEMO5 coldstart vs restart runs.
-namelist_ref_jra_restart:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/SHARED/namelist_ref
-namelist_ref_jra_coldstart:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/SHARED/namelist_ref
-namelist_ref_jra_cycling:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/SHARED/namelist_ref
+# NEMO5 forcing/run-state choices belong in namelist_cfg overlays.
+namelist_cfg_jra_coldstart:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_cfg_jra_coldstart
+namelist_cfg_jra_restart:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_cfg_jra_restart
+namelist_cfg_jra_cycling:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_cfg_jra_cycling
 
 namelist_top_ref:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/SHARED/namelist_top_ref
-namelist_top_cfg:/gpfs/home/vhf24tbu/scratch/NEMO5/src/TOP/PlankTOM/EXP00/namelist_top_cfg.planktom
+namelist_top_cfg:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_top_cfg
 namelist.trc.sms:/gpfs/home/vhf24tbu/scratch/NEMO5/src/TOP/PlankTOM/namelist.trc.sms.example
 
 namelist_ice_cfg:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_ice_cfg

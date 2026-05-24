@@ -101,6 +101,11 @@ if [ -z "$ICE_RESTART_NAME" ]; then
         ICE_RESTART_NAME="restart_ice_in"
     fi
 fi
+if [ "$NEMO_VERSION" = "NEMO5" ]; then
+    CONTROL_NAMELIST="namelist_cfg"
+else
+    CONTROL_NAMELIST="namelist_ref"
+fi
 
 TIMESTEP=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
 
@@ -157,13 +162,13 @@ rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/restart.nc
 
 ok "Old single-file restarts cleaned"
 
-# Update namelist_ref to use other_years (which already points to cycling for BIAS, restart for DYNAMIC)
-rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
-ln -s namelist_ref_other_years ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref
-ok "namelist_ref → namelist_ref_other_years"
+# Update the active run namelist to use other_years.
+rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/${CONTROL_NAMELIST}
+ln -s ${CONTROL_NAMELIST}_other_years ${MODEL_RUN_DIR}/${MODEL_ID}/${CONTROL_NAMELIST}
+ok "${CONTROL_NAMELIST} → ${CONTROL_NAMELIST}_other_years"
 
 ## copy EMP to new run directory (only needed when nn_fwb=2)
-NN_FWB=$(grep -E "^\s*nn_fwb\s*=" ${MODEL_RUN_DIR}/${MODEL_ID}/namelist_ref_other_years 2>/dev/null | head -1 | awk -F'=' '{print $2}' | awk '{print $1}')
+NN_FWB=$(grep -E "^\s*nn_fwb\s*=" ${MODEL_RUN_DIR}/${MODEL_ID}/${CONTROL_NAMELIST}_other_years 2>/dev/null | head -1 | awk -F'=' '{print $2}' | awk '{print $1}')
 if [ -z "$NN_FWB" ]; then
     NN_FWB=2  # default in NEMO
 fi

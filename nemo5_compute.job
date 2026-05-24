@@ -50,7 +50,7 @@ if [ -f ORCA2_${timestep}_restart_0000.nc ]; then
 	[ -f ${ice_restart_name}.nc ] && mv ${ice_restart_name}.nc ${ice_restart_name}_first_year.nc
 	[ -f EMPave.dat ] && mv EMPave.dat EMPave_${yearPrevious}.dat
 
-	ln -fs namelist_ref_other_years namelist_ref
+	ln -fs namelist_cfg_other_years namelist_cfg
 
 	for (( i=0; i<$cpus; i++ )); do
 		proc=$(printf "%02d" $i)
