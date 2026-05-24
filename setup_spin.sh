@@ -54,9 +54,6 @@ if [ ! -d "${MODEL_RUN_DIR}/${MODEL_ID}" ]; then
     exit 1
 fi
 
-STEPS_PER_YEAR=5475
-FIRST_YEAR_SPINUP=1750
-
 # Parse FIRST_YEAR_TRANSIENT from the model run directory's setUpData file
 TRANSIENT_SETUP_DATA=$(find "${MODEL_RUN_DIR}/${MODEL_ID}" -maxdepth 1 -name "setUpData*.dat" | head -1)
 if [ -z "$TRANSIENT_SETUP_DATA" ] || [ ! -f "$TRANSIENT_SETUP_DATA" ]; then
@@ -81,6 +78,28 @@ FORCING_MODE=$(grep "^forcing_mode:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
 if [ -z "$FORCING_MODE" ]; then
     info "Could not parse forcing_mode, defaulting to spinup"
     FORCING_MODE="spinup"
+fi
+
+NEMO_VERSION=$(grep "^nemoVersion:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
+NEMO_CPUS=$(grep "^nemoCpus:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
+STEPS_PER_YEAR=$(grep "^stepsPerYear:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
+FIRST_YEAR_SPINUP=$(grep "^spinupStart:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
+ICE_RESTART_NAME=$(grep "^iceRestartName:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
+NEMO_CPUS=${NEMO_CPUS:-48}
+FIRST_YEAR_SPINUP=${FIRST_YEAR_SPINUP:-1750}
+if [ -z "$STEPS_PER_YEAR" ]; then
+    if [ "$NEMO_VERSION" = "NEMO5" ]; then
+        STEPS_PER_YEAR=5840
+    else
+        STEPS_PER_YEAR=5475
+    fi
+fi
+if [ -z "$ICE_RESTART_NAME" ]; then
+    if [ "$NEMO_VERSION" = "NEMO5" ]; then
+        ICE_RESTART_NAME="restart_ice"
+    else
+        ICE_RESTART_NAME="restart_ice_in"
+    fi
 fi
 
 TIMESTEP=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
@@ -124,7 +143,7 @@ fi
 
 # Command
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-bash ${SCRIPT_DIR}/setup_restarts.sh $SPIN_DIR $TIMESTEP ${MODEL_RUN_DIR}/${MODEL_ID}
+bash ${SCRIPT_DIR}/setup_restarts.sh $SPIN_DIR $TIMESTEP ${MODEL_RUN_DIR}/${MODEL_ID} $ICE_RESTART_NAME $NEMO_CPUS
 if [ $? -ne 0 ]; then
     warn "Setup restarts script failed"
     exit 1
@@ -132,7 +151,7 @@ fi
 
 ok "Restart links created (timestep $TIMESTEP)"
 
-rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/restart_ice_in.nc
+rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/${ICE_RESTART_NAME}.nc
 rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/restart_trc.nc
 rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/restart.nc
 

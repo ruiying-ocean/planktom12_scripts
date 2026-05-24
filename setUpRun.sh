@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Colors
 BOLD='\e[1m'
@@ -73,6 +73,12 @@ while IFS= read -r line || [ -n "$line" ]; do
 			if [[ $name == "model" ]]; then Model=$val; fi
 			if [[ $name == "forcing_mode" ]]; then forcing_mode=$val; fi
 			if [[ $name == "compilerKey" ]]; then compKey=$val; fi
+			if [[ $name == "nemoVersion" ]]; then nemoVersion=$val; fi
+			if [[ $name == "executable" ]]; then executable=$val; fi
+			if [[ $name == "iceRestartName" ]]; then iceRestartName=$val; fi
+			if [[ $name == "nemoCpus" ]]; then nemoCpus=$val; fi
+			if [[ $name == "xiosCpus" ]]; then xiosCpus=$val; fi
+			if [[ $name == "useXiosServer" ]]; then useXiosServer=$val; fi
 			# Tidy up parameters
 			if [[ $name == "spinupStart" ]]; then spinupStart=$val; fi
 			if [[ $name == "spinupEnd" ]]; then spinupEnd=$val; fi
@@ -94,6 +100,20 @@ while IFS= read -r line || [ -n "$line" ]; do
 done < $dataFileFullPath
 
 prevYear=$(($yearStart-1))
+nemoVersion=${nemoVersion:-NEMO36}
+nemoCpus=${nemoCpus:-48}
+xiosCpus=${xiosCpus:-0}
+useXiosServer=${useXiosServer:-false}
+
+if [[ "$nemoVersion" == "NEMO5" ]]; then
+	executable=${executable:-nemo}
+	iceRestartName=${iceRestartName:-restart_ice}
+	if [ "$useXiosServer" = "false" ]; then useXiosServer=true; fi
+	if [ "$xiosCpus" = "0" ]; then xiosCpus=12; fi
+else
+	executable=${executable:-opa}
+	iceRestartName=${iceRestartName:-restart_ice_in}
+fi
 
 # ----- Move to or create model directory -----
 # Adjust for a possible ~ expansion problem
@@ -115,7 +135,7 @@ cd $modelDir
 echo $spinupStart $spinupEnd $spinupRestartKeepFrequency $spinupOutputKeepFrequency $runRestartKeepFrequency $runOutputKeepFrequency $keepGrid_T $keepDiad $keepPtrc $keepIce $keepGrid_V $keepGrid_U $keepGrid_W $keepLimPhy ${keepGflux:-0} > tidy_parms
 
 # ----- Create links -----
-rm -f opa
+rm -f opa nemo
 
 section "Links & Files"
 
@@ -170,13 +190,14 @@ while IFS= read -r line || [ -n "$line" ]; do
 		fi
 
 		# Copy the executable over, good to keep these.
-		if [[ $name == "opa"*$Model ]]; then
+		if [[ $name == "opa"*$Model || $name == "nemo"*$Model ]]; then
 			if [ -f $name ]; then
 				skip "$name exists"
 			else
 				cp $val $name
 				ok "Executable: $name"
 			fi
+			ln -fs $name $executable
 			ln -fs $name opa
 		fi
 	fi
@@ -285,20 +306,28 @@ else
 	ln -s namelist_ref_other_years namelist_ref
 fi
 
+if [[ "$nemoVersion" == "NEMO5" ]]; then
+	sed --follow-symlinks -i "s/ln_rstart[[:space:]]*=.*/ln_rstart   = .false.   !  start from rest (F) or from a restart file (T)/" namelist_ref_coldstart
+	sed --follow-symlinks -i "s/nn_rstctl[[:space:]]*=.*/nn_rstctl    =    0     !  restart control ==> activated only if ln_rstart=T/" namelist_ref_coldstart
+	sed --follow-symlinks -i "s/ln_rstart[[:space:]]*=.*/ln_rstart   = .true.    !  start from rest (F) or from a restart file (T)/" namelist_ref_restart namelist_ref_cycling
+	sed --follow-symlinks -i "s/nn_rstctl[[:space:]]*=.*/nn_rstctl    =    2     !  restart control ==> activated only if ln_rstart=T/" namelist_ref_restart namelist_ref_cycling
+fi
+
 section "Physics"
 
 # Temperature and salinity restoring
-TR=$( grep "nn_sstr " namelist_ref | awk -F' ' '{print $3}' )
-SR=$( grep "nn_sssr " namelist_ref | awk -F' ' '{print $3}' )
-LP=$( grep "ln_lop" namelist_top_ref | awk -F' ' '{print $3}' )
+TR=$( grep "nn_sstr " namelist_ref 2>/dev/null | awk -F' ' '{print $3}' )
+SR=$( grep "nn_sssr " namelist_ref 2>/dev/null | awk -F' ' '{print $3}' )
+LP=$( grep "ln_lop" namelist_top_ref 2>/dev/null | awk -F' ' '{print $3}' )
+LP=${LP:-.false.}
 
-if [ $TR = 1 ]; then
+if [ "$TR" = 1 ]; then
 	ok "Temperature restoring: ON"
 else
 	info "Temperature restoring: OFF"
 fi
 
-if [ $SR = 1 ]; then
+if [ "$SR" = 1 ]; then
 	ok "Salinity restoring: ON"
 else
 	info "Salinity restoring: OFF"
@@ -309,7 +338,7 @@ IODEF_PATH=$( grep "^iodef.xml:" $setUpDatafile | awk -F':' '{print $2}' )
 KP=$( grep "^keepLimPhy:" $setUpDatafile | awk -F':' '{print $NF}' )
 err=0
 
-if [ $LP = ".true." ]; then
+if [ "$LP" = ".true." ]; then
 	ok "LimPhy: ON"
 
 	if [ $KP != 1 ]; then
@@ -336,15 +365,23 @@ if [ $err == 1 ]; then
 fi
 
 # Get code version
-codeVersion=$( grep "opa_*$Model" $setUpDatafile | awk -F'/' '{print$(NF-5)}' )
+codePath=$( awk -F':' -v model="$Model" '$1 ~ "^(opa|nemo).*" model "$" {print $2; exit}' "$setUpDatafile" )
+codeVersion=$( echo "$codePath" | awk -F'/' '{print$(NF-5)}' )
 
 # ----- Create copies of files used for run -----
 # Get NEMO job files
+jobTemplate=nemo.job
+computeJobTemplate=nemo_compute.job
+if [[ "$nemoVersion" == "NEMO5" ]]; then
+	jobTemplate=nemo5.job
+	computeJobTemplate=nemo5_compute.job
+fi
+
 if [ ! -f nemo.job ]; then
-	cp ${SCRIPT_DIR}/nemo.job nemo.job
+	cp ${SCRIPT_DIR}/$jobTemplate nemo.job
 fi
 if [ ! -f nemo_compute.job ]; then
-	cp ${SCRIPT_DIR}/nemo_compute.job nemo_compute.job
+	cp ${SCRIPT_DIR}/$computeJobTemplate nemo_compute.job
 fi
 
 # Get tidying up scripts
@@ -391,8 +428,10 @@ echo -e "  ${DIM}Years:${RESET}           $yearToRun → $yearEnd"
 echo -e "  ${DIM}Model dir:${RESET}       $modelDir"
 echo -e "  ${DIM}Simulation:${RESET}      $simulation"
 echo -e "  ${DIM}Model:${RESET}           $Model"
+echo -e "  ${DIM}NEMO version:${RESET}    $nemoVersion"
 echo -e "  ${DIM}Forcing:${RESET}         ${forcing_prefix} / ${forcing_mode}"
 export yearToRun yearStart yearEnd basedir modelDir simulation Model forcing_prefix forcing_mode
+export nemoVersion executable iceRestartName nemoCpus xiosCpus useXiosServer
 
 echo ""
 read -p "Press any key to run it? (cntr+c otherwise)"
