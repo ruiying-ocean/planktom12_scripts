@@ -52,9 +52,8 @@ compilerKey:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/cpp_ORCA2_
 
 
 # ========== INPUT RESOURCES ==========
-# NEMO5 ORCA2 reads cn_domcfg="ORCA_R2_zps_domcfg"; link your generated
-# domcfg.nc under that run-directory name.
-ORCA_R2_zps_domcfg.nc:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/domcfg.nc
+# NEMO5 ORCA2 reads cn_domcfg="ORCA_R2_zps_domcfg".
+ORCA_R2_zps_domcfg.nc:/gpfs/home/vhf24tbu/input_data/nemo5/ORCA_R2_zps_domcfg.nc
 
 # Restart files. NEMO5 SI3 reads restart_ice, not restart_ice_in.
 restart_trc.nc:/gpfs/home/vhf24tbu/input_data/model_restart/restart_19471231_trc_RY_HOC_HuangFe.nc
