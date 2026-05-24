@@ -116,7 +116,7 @@ namelist_cfg_era_cycling:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankT
 
 namelist_top_ref:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_top_ref
 namelist_top_cfg:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_top_cfg
-namelist.trc.sms:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist.trc.sms_tom12ref
+namelist.trc.sms:/gpfs/home/vhf24tbu/EXP00/namelist.trc.sms
 
 namelist_ice_cfg:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_ice_cfg
 namelist_ice_ref:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/SHARED/namelist_ice_ref
