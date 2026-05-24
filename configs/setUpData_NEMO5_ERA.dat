@@ -19,7 +19,7 @@ iceRestartName:restart_ice
 nemoCpus:48
 xiosCpus:12
 useXiosServer:true
-stepsPerYear:5840
+stepsPerYear:2920
 
 yearStart:1948
 yearEnd:2024
