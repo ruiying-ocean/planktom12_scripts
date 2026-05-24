@@ -1,13 +1,13 @@
 # -------------------------
 #
-# NEMO5 ORCA2_ICE_PLANKTOM starter configuration - JRA/transient
+# NEMO5 ORCA2_ICE_PlankTOM starter configuration - JRA/transient
 #
 # This file is read by setUpRun.sh on the nemo5-planktom branch.
 # Create and compile the NEMO5 config first:
 #
 #   cd /gpfs/home/vhf24tbu/scratch/NEMO5
-#   ./makenemo -n ORCA2_ICE_PLANKTOM -r X3_ORCA2_ICE_PISCES -m auto -j 0
-#   ./makenemo -n ORCA2_ICE_PLANKTOM -m auto --add_key 'key_planktom key_trc_atmco2' -j 4
+#   ./makenemo -n ORCA2_ICE_PlankTOM -r X3_ORCA2_ICE_PISCES -m auto -j 0
+#   ./makenemo -n ORCA2_ICE_PlankTOM -m auto --add_key 'key_planktom key_trc_atmco2' -j 4
 #
 # -------------------------
 
@@ -48,7 +48,7 @@ keepGflux:0
 
 basedir:/gpfs/home/vhf24tbu/scratch/ModelRuns/
 
-compilerKey:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/cpp_ORCA2_ICE_PLANKTOM.fcm
+compilerKey:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/cpp_ORCA2_ICE_PlankTOM.fcm
 
 
 # ========== INPUT RESOURCES ==========
@@ -91,11 +91,11 @@ mask_itf.nc:/gpfs/data/greenocean/software/resources/ModelResources/Masks/mask_i
 
 # ========== MODEL COMPONENTS ==========
 xios_server.exe:/gpfs/home/vhf24tbu/src/XIOS3/bin/xios_server.exe
-nemo_NEMO5:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/BLD/bin/nemo.exe
+nemo_NEMO5:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/BLD/bin/nemo.exe
 
 
 # ========== NAMELISTS ==========
-namelist_cfg:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/EXP00/namelist_cfg
+namelist_cfg:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_cfg
 
 # setUpRun.sh copies these into forcing-specific names, then toggles
 # ln_rstart/nn_rstctl for NEMO5 coldstart vs restart runs.
@@ -107,19 +107,19 @@ namelist_top_ref:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/SHARED/namelist_top_ref
 namelist_top_cfg:/gpfs/home/vhf24tbu/scratch/NEMO5/src/TOP/PlankTOM/EXP00/namelist_top_cfg.planktom
 namelist.trc.sms:/gpfs/home/vhf24tbu/scratch/NEMO5/src/TOP/PlankTOM/namelist.trc.sms.example
 
-namelist_ice_cfg:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/EXP00/namelist_ice_cfg
+namelist_ice_cfg:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/namelist_ice_cfg
 namelist_ice_ref:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/SHARED/namelist_ice_ref
 
 
 # ========== XIOS3 XML ==========
-iodef.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/EXP00/iodef.xml
-context_nemo.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/EXP00/context_nemo.xml
-axis_def_nemo.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/EXP00/axis_def_nemo.xml
-domain_def_nemo.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/EXP00/domain_def_nemo.xml
-grid_def_nemo.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/EXP00/grid_def_nemo.xml
-field_def_nemo-oce.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/EXP00/field_def_nemo-oce.xml
-field_def_nemo-ice.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/EXP00/field_def_nemo-ice.xml
-field_def_nemo-pisces.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/EXP00/field_def_nemo-pisces.xml
-file_def_nemo-oce.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/EXP00/file_def_nemo-oce.xml
-file_def_nemo-ice.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/EXP00/file_def_nemo-ice.xml
-file_def_nemo-pisces.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PLANKTOM/EXP00/file_def_nemo-pisces.xml
+iodef.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/iodef.xml
+context_nemo.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/context_nemo.xml
+axis_def_nemo.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/axis_def_nemo.xml
+domain_def_nemo.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/domain_def_nemo.xml
+grid_def_nemo.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/grid_def_nemo.xml
+field_def_nemo-oce.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/field_def_nemo-oce.xml
+field_def_nemo-ice.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/field_def_nemo-ice.xml
+field_def_nemo-pisces.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/field_def_nemo-pisces.xml
+file_def_nemo-oce.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/file_def_nemo-oce.xml
+file_def_nemo-ice.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/file_def_nemo-ice.xml
+file_def_nemo-pisces.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/file_def_nemo-pisces.xml
