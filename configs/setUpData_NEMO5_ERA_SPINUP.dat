@@ -99,8 +99,8 @@ weights_3D_r360x180_bilin.nc:/gpfs/data/greenocean/software/resources/NEMO5/weig
 
 
 # ========== MODEL COMPONENTS ==========
-# XIOS 3 (matches our key_xios3 NEMO build)
-xios_server.exe:/gpfs/home/vhf24tbu/src/XIOS3/bin/xios_server.exe
+# XIOS 2.0 (group build, matches gcc-9.2.0 NEMO without key_xios3)
+xios_server.exe:/gpfs/software/hali/xios/xios-2.0/bin/xios_server.exe
 nemo_NEMO5:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/BLD/bin/nemo.exe
 
 
