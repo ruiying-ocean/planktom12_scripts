@@ -9,6 +9,7 @@ import xarray as xr
 from typing import Optional, List, Tuple
 
 from map_utils import OceanMapPlotter, PHYTOS, ZOOS, calculate_aou_3d, calculate_rls
+from config_utils import get_obs_path
 
 
 def load_grid_t_for_aou(
@@ -223,7 +224,9 @@ def load_observations(
     Load observational datasets for nutrients and carbon chemistry.
 
     Args:
-        obs_dir: Directory containing observational data files
+        obs_dir: Observations directory (a script's --obs-dir); None resolves to
+            [files].obs_dir from the active visualise_config.toml. Filenames come
+            from the config's [files.obs] table via config_utils.get_obs_path.
         nutrients: List of nutrients to load observations for
         carbon_chemistry: List of carbon chemistry variables to load (e.g., ['_ALK', '_DIC'])
 
@@ -233,7 +236,7 @@ def load_observations(
     obs_datasets = {}
 
     # Try to load WOA data for NO3, PO4, Si, O2
-    woa_file = obs_dir / 'woa_orca_bil.nc'
+    woa_file = Path(get_obs_path('woa', obs_dir))
     if woa_file.exists():
         print(f"Loading WOA data from {woa_file}")
         woa_ds = xr.open_dataset(woa_file, decode_times=False)
@@ -254,7 +257,7 @@ def load_observations(
         print(f"Warning: WOA file not found at {woa_file}")
 
     # Try to load Fe data from Huang2022
-    fe_file = obs_dir / 'Huang2022_orca.nc'
+    fe_file = Path(get_obs_path('fe', obs_dir))
     if '_Fer' in nutrients:
         if fe_file.exists():
             print(f"Loading Fe data from {fe_file}")
@@ -267,7 +270,7 @@ def load_observations(
 
     # Try to load GLODAP data for carbon chemistry (ALK, DIC)
     if carbon_chemistry:
-        glodap_file = obs_dir / 'glodap_orca_bil.nc'
+        glodap_file = Path(get_obs_path('glodap', obs_dir))
         if glodap_file.exists():
             print(f"Loading GLODAP data from {glodap_file}")
             glodap_ds = xr.open_dataset(glodap_file, decode_times=False)
@@ -283,7 +286,7 @@ def load_observations(
 
     # Try to load Landschützer MPI-SOM-FFN surface pCO2 and flux
     if surface_carbon:
-        spco2_file = obs_dir / 'spco2_orca_bil.nc'
+        spco2_file = Path(get_obs_path('spco2', obs_dir))
         if spco2_file.exists():
             print(f"Loading Landschützer spco2 data from {spco2_file}")
             spco2_ds = xr.open_dataset(spco2_file, decode_times=False)

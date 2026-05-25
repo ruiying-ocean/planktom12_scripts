@@ -42,6 +42,7 @@ from preprocess_data import (
     load_observations,
     get_nav_coordinates
 )
+from config_utils import get_obs_dir, get_obs_path
 
 
 def plot_pft_maps(
@@ -907,8 +908,9 @@ def main():
                        default=None,
                        help='Path to basin mask file (default: visualise_config.toml [files].basin_mask)')
     parser.add_argument('--obs-dir',
-                       default='/gpfs/home/vhf24tbu/Observations',
-                       help='Directory containing observational data files')
+                       default=None,
+                       help='Observations directory (default: visualise_config.toml [files].obs_dir); '
+                            'overrides only the directory, filenames stay config-driven')
     parser.add_argument('--no-nutrient-comparison', action='store_true',
                        help='Disable model vs observations nutrient comparison plots (generate model-only)')
     parser.add_argument('--skip-physics-sections', action='store_true',
@@ -981,8 +983,8 @@ def main():
 
     # 1. Ecosystem diagnostics (TChl, EXP, PPINT) with satellite chlorophyll comparison
     print("1. Ecosystem diagnostics with satellite chlorophyll...")
-    obs_dir = Path(args.obs_dir)
-    chl_obs_file = obs_dir / 'OC-CCI/climatology/OC-CCI_climatology_1deg.nc'
+    obs_dir = Path(get_obs_dir(args.obs_dir))
+    chl_obs_file = Path(get_obs_path('chl_1deg', obs_dir))
 
     plot_ecosystem_diagnostics(
         plotter=plotter,
@@ -1016,7 +1018,7 @@ def main():
         print("4. Nutrients (model vs observations)...")
 
         # Load observational datasets using preprocessing module (including O2 and AOU)
-        obs_dir = Path(args.obs_dir)
+        obs_dir = Path(get_obs_dir(args.obs_dir))
         nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2'] + (['_AOU'] if compute_aou else [])
         obs_datasets = load_observations(obs_dir, nutrients=nutrients)
 

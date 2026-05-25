@@ -19,7 +19,7 @@ import pandas as pd
 import xarray as xr
 from scipy.spatial import cKDTree
 
-from config_utils import get_mesh_mask_path
+from config_utils import get_mesh_mask_path, get_obs_dir, get_obs_path
 
 
 # ── Variable definitions ────────────────────────────────────────────────
@@ -28,7 +28,7 @@ VARIABLES = [
         "name": "TChl",
         "model_var": "TChl",
         "model_file": "diad",
-        "obs_file": "OC-CCI/climatology/OC-CCI_climatology_orca2.nc",
+        "obs_key": "chl_orca",
         "obs_var": "chlor_a",
         "model_factor": 1e6,        # raw diad units → mg/m³ (OC-CCI unit)
         "unit": "mg/m³",
@@ -39,7 +39,7 @@ VARIABLES = [
         "name": "NO3",
         "model_var": "NO3",
         "model_file": "ptrc",
-        "obs_file": "woa_orca_bil.nc",
+        "obs_key": "woa",
         "obs_var": "no3",
         "model_factor": 1e6,        # mol/L → µmol/L
         "unit": "µmol/L",
@@ -50,7 +50,7 @@ VARIABLES = [
         "name": "PO4",
         "model_var": "PO4",
         "model_file": "ptrc",
-        "obs_file": "woa_orca_bil.nc",
+        "obs_key": "woa",
         "obs_var": "po4",
         "model_factor": 1e6 / 122,   # mol-C/L → µmol-P/L (Redfield C:P=122)
         "unit": "µmol/L",
@@ -61,7 +61,7 @@ VARIABLES = [
         "name": "Si",
         "model_var": "Si",
         "model_file": "ptrc",
-        "obs_file": "woa_orca_bil.nc",
+        "obs_key": "woa",
         "obs_var": "si",
         "model_factor": 1e6,
         "unit": "µmol/L",
@@ -72,7 +72,7 @@ VARIABLES = [
         "name": "Fer",
         "model_var": "Fer",
         "model_file": "ptrc",
-        "obs_file": "Huang2022_orca.nc",
+        "obs_key": "fe",
         "obs_var": "fe",
         "model_factor": 1e9,        # mol/L → nmol/L
         "unit": "nmol/L",
@@ -289,13 +289,14 @@ def main():
     )
     parser.add_argument(
         "--obs-dir",
-        default="/gpfs/home/vhf24tbu/Observations",
-        help="Directory containing observational data files (default: %(default)s)",
+        default=None,
+        help="Observations directory (default: visualise_config.toml [files].obs_dir); "
+             "overrides only the directory, filenames stay config-driven",
     )
     args = parser.parse_args()
 
     model_run_dir = Path(args.model_run_dir).expanduser()
-    obs_dir = Path(args.obs_dir).expanduser()
+    obs_dir = Path(get_obs_dir(args.obs_dir)).expanduser()
     run_dir = model_run_dir / args.run_name
 
     date_str = f"{args.year}0101_{args.year}1231"
@@ -314,7 +315,7 @@ def main():
     # ── Compute & collect rows ──────────────────────────────────────────
     rows = []  # list of (label, r2, rmse, bias, mscore, unit)
     for var in VARIABLES:
-        obs_path = obs_dir / var["obs_file"]
+        obs_path = Path(get_obs_path(var["obs_key"], obs_dir))
         if not obs_path.exists():
             print(f"Warning: obs file not found for {var['name']}: {obs_path}",
                   file=sys.stderr)

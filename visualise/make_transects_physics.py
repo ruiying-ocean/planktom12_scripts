@@ -20,6 +20,7 @@ import xarray as xr
 from scipy.interpolate import interp1d
 
 from logging_utils import print_warning
+from config_utils import get_obs_dir, get_obs_path
 
 
 # Basin longitude masks (applied to the ORCA2 2-D lon grid)
@@ -102,10 +103,10 @@ def plot_physics_sections(
         year: Year string (used in filenames and titles)
     """
     grid_t_file = Path(grid_t_file)
-    obs_dir     = Path(obs_dir)
+    obs_dir     = Path(get_obs_dir(obs_dir))   # --obs-dir override, else config obs_dir
     output_dir  = Path(output_dir)
 
-    woa_file = obs_dir / 'woa_orca_bil.nc'
+    woa_file = Path(get_obs_path('woa', obs_dir))
     if not woa_file.exists():
         print_warning(f"woa_orca_bil.nc not found at {woa_file} — skipping physics sections")
         return
@@ -253,9 +254,9 @@ def main():
     parser.add_argument('--output-dir', default=None,
                         help='Output directory (default: <model-run-dir>/monitor/<run_name>)')
     parser.add_argument('--obs-dir',
-                        default='/gpfs/home/vhf24tbu/Observations',
-                        help='Observations directory containing woa_orca_bil.nc '
-                             '(default: %(default)s)')
+                        default=None,
+                        help='Observations directory (default: visualise_config.toml '
+                             '[files].obs_dir); overrides only the directory')
 
     args = parser.parse_args()
 

@@ -27,6 +27,7 @@ from preprocess_data import (
     load_observations,
     get_nav_coordinates
 )
+from config_utils import get_obs_dir
 
 # Import shared transect utilities
 from transect_utils import get_longitude_transect, get_central_latitude
@@ -312,8 +313,9 @@ def main():
                        default=None,
                        help='Path to basin mask file (default: visualise_config.toml [files].basin_mask)')
     parser.add_argument('--obs-dir',
-                       default='/gpfs/home/vhf24tbu/Observations',
-                       help='Directory containing observational data files')
+                       default=None,
+                       help='Observations directory (default: visualise_config.toml '
+                            '[files].obs_dir); overrides only the directory')
     parser.add_argument('--max-depth', type=float, default=500.0,
                        help='Maximum depth for PFT transects in meters (default: 500)')
 
@@ -373,7 +375,7 @@ def main():
 
     # Load observational datasets (including O2)
     nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
-    obs_dir = Path(args.obs_dir)
+    obs_dir = Path(get_obs_dir(args.obs_dir))
     obs_datasets = load_observations(obs_dir, nutrients=['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU'])
 
     # Generate transects

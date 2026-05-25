@@ -34,6 +34,7 @@ from make_transects_physics import plot_physics_sections
 from make_vertical_profiles import plot_vertical_profiles
 from difference_utils import plot_comparison_panel
 from logging_utils import print_header, print_step, print_success, print_warning
+from config_utils import get_obs_dir, get_obs_path
 
 
 def main():
@@ -54,8 +55,9 @@ def main():
                        default='/gpfs/home/vhf24tbu/masks',
                        help='Directory containing mask files for vertical profiles')
     parser.add_argument('--obs-dir',
-                       default='/gpfs/home/vhf24tbu/Observations',
-                       help='Directory containing observational data files')
+                       default=None,
+                       help='Observations directory (default: visualise_config.toml '
+                            '[files].obs_dir); overrides only the directory')
     parser.add_argument('--skip-maps', action='store_true',
                        help='Skip generating spatial maps')
     parser.add_argument('--skip-transects', action='store_true',
@@ -86,6 +88,10 @@ def main():
         output_dir = Path(args.output_dir).expanduser()
 
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Resolve the observations directory once (--obs-dir override, else config
+    # [files].obs_dir) so every step below can use it regardless of which steps run.
+    obs_dir = Path(get_obs_dir(args.obs_dir))
 
     # Construct file paths
     date_str = f"{args.year}0101_{args.year}1231"
@@ -149,8 +155,7 @@ def main():
 
         # 2.1 Ecosystem diagnostics with satellite chlorophyll
         print_step(1, 6, "Ecosystem diagnostics (TChl, EXP, PPINT)")
-        obs_dir = Path(args.obs_dir)
-        chl_obs_file = obs_dir / 'OC-CCI/climatology/OC-CCI_climatology_1deg.nc'
+        chl_obs_file = Path(get_obs_path('chl_1deg', obs_dir))
 
         plot_ecosystem_diagnostics(
             plotter=plotter,

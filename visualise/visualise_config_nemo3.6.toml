@@ -6,6 +6,19 @@
 # Read by visualise/config_utils.py; any script's --mask-path still overrides.
 basin_mask = "/gpfs/data/greenocean/software/resources/breakdown/basin_mask.nc"
 mesh_mask = "/gpfs/data/greenocean/software/resources/breakdown/mesh_mask3_6_low_res.nc"
+# Observation climatologies on the 3.6 ORCA grid (182x149) — the original set.
+obs_dir = "/gpfs/home/vhf24tbu/Observations"
+
+[files.obs]
+# Logical name -> path relative to obs_dir. Keys identical to the NEMO5 config;
+# only obs_dir differs. Resolved by config_utils.get_obs_path().
+woa      = "woa_orca_bil.nc"            # WOA18 nutrients + T/S (no3 po4 si o2 temp sal aou)
+fe       = "Huang2022_orca.nc"          # dissolved iron (Huang 2022)
+glodap   = "glodap_orca_bil.nc"         # carbon (alk dic) + nutrients
+spco2    = "spco2_orca_bil.nc"          # surface pCO2 + air-sea CO2 flux
+chl_1deg = "OC-CCI/climatology/OC-CCI_climatology_1deg.nc"   # satellite chl, regular 1deg grid
+chl_orca = "OC-CCI/climatology/OC-CCI_climatology_orca2.nc"  # satellite chl on model grid (scorecard)
+so_chl   = "Johnson2013/SO_Chl_monthly_climatology.nc"       # Southern Ocean seasonal chl
 
 [figure]
 dpi = 300

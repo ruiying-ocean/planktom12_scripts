@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import gsw
 import argparse
 
+from config_utils import get_obs_dir, get_obs_path
+
 
 def get_ocn_mask(path, domcfg):
     orca_basin_mask = xr.open_dataset(path)
@@ -71,8 +73,9 @@ def get_dom_cfg(path):
     return xr.open_dataset(path)
 
 
-# Default paths - will be overridden by command line args
-DEFAULT_OBS_DIR = Path("/gpfs/home/vhf24tbu/Observations")
+# Default paths - will be overridden by command line args.
+# Obs dir now comes from visualise_config.toml [files].obs_dir (config_utils.get_obs_dir);
+# the masks below remain hardcoded (3.6 lowRes) — separate axis, not yet config-driven.
 DEFAULT_MASK_DIR = Path("/gpfs/home/vhf24tbu/masks")
 DEFAULT_MODEL_DIR = Path("~/scratch/ModelRuns").expanduser()
 
@@ -92,9 +95,9 @@ land_mask_3d = None
 
 def load_reference_data(obs_dir, mask_dir):
     """Load observational data and masks"""
-    woa_data = xr.open_dataset(obs_dir / "woa_orca_bil.nc", decode_times=False)
-    glodap_data = xr.open_dataset(obs_dir / "glodap_orca_bil.nc")
-    huang2022 = xr.open_dataset(obs_dir / "Huang2022_orca.nc")
+    woa_data = xr.open_dataset(get_obs_path('woa', obs_dir), decode_times=False)
+    glodap_data = xr.open_dataset(get_obs_path('glodap', obs_dir))
+    huang2022 = xr.open_dataset(get_obs_path('fe', obs_dir))
     # nmol/L -> mol/L
     huang2022['fe'] = huang2022['fe'] * 1E-9
 
@@ -239,7 +242,7 @@ def plot_vertical_profiles(
         variables: List of variables to plot (e.g., ['no3', 'po4', 'si', 'o2'])
         model_dir: Path to model run directory
         output_dir: Path to output directory
-        obs_dir: Path to observations directory (default: DEFAULT_OBS_DIR)
+        obs_dir: Observations directory (--obs-dir); None resolves to config obs_dir
         mask_dir: Path to mask files directory (default: DEFAULT_MASK_DIR)
         run_name: Run name for output file naming (default: join model_ids)
 
@@ -248,7 +251,7 @@ def plot_vertical_profiles(
     """
     model_dir = Path(model_dir).expanduser()
     output_dir = Path(output_dir).expanduser()
-    obs_dir = Path(obs_dir).expanduser() if obs_dir else DEFAULT_OBS_DIR
+    obs_dir = Path(get_obs_dir(obs_dir)).expanduser()
     mask_dir = Path(mask_dir).expanduser() if mask_dir else DEFAULT_MASK_DIR
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -377,8 +380,9 @@ Examples:
     )
     parser.add_argument(
         '--obs-dir',
-        default=str(DEFAULT_OBS_DIR),
-        help="Directory containing observational data (default: %(default)s)"
+        default=None,
+        help="Observations directory (default: visualise_config.toml [files].obs_dir); "
+             "overrides only the directory"
     )
     parser.add_argument(
         '--mask-dir',
@@ -391,7 +395,7 @@ Examples:
     # Convert to Paths
     model_dir = Path(args.model_dir).expanduser()
     output_dir = Path(args.output_dir).expanduser()
-    obs_dir = Path(args.obs_dir).expanduser()
+    obs_dir = Path(get_obs_dir(args.obs_dir)).expanduser()
     mask_dir = Path(args.mask_dir).expanduser()
 
     # Create output directory if needed

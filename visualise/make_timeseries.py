@@ -21,6 +21,7 @@ from timeseries_util import (
     FigureSaver,
     AxisSetup
 )
+from config_utils import get_obs_dir, get_obs_path
 
 class ModelDataLoader:
     def __init__(self, base_dir, model_name):
@@ -204,7 +205,8 @@ class FigureCreator:
         self.save_dir = pathlib.Path(save_dir)
         self.model_name = model_name
         self.model_output_dir = pathlib.Path(model_output_dir)
-        self.obs_dir = pathlib.Path(obs_dir) if obs_dir else pathlib.Path("~/Observations").expanduser()
+        # --obs-dir override (obs_dir) else [files].obs_dir from the active config
+        self.obs_dir = pathlib.Path(get_obs_dir(obs_dir)).expanduser()
 
         # Load configuration using shared utility
         self.config = ConfigLoader.load_config(config_path)
@@ -235,7 +237,7 @@ class FigureCreator:
 
     def _load_occci_seasonal_regions(self):
         """Load OC-CCI chlorophyll climatology and compute regional means for each TCHL_REGION_DEF."""
-        chl_file = self.obs_dir / "OC-CCI/climatology/OC-CCI_climatology_1deg.nc"
+        chl_file = pathlib.Path(get_obs_path('chl_1deg', self.obs_dir))
         if not chl_file.exists():
             print(f"  ⚠ OC-CCI file not found: {chl_file} — no obs overlay")
             return None
@@ -289,7 +291,7 @@ class FigureCreator:
 
     def _load_johnson_so_regions(self):
         """Load Johnson 2013 SO Chl climatology for SAZ and AZ regions only."""
-        chl_file = self.obs_dir / "Johnson2013/SO_Chl_monthly_climatology.nc"
+        chl_file = pathlib.Path(get_obs_path('so_chl', self.obs_dir))
         if not chl_file.exists():
             print(f"  ⚠ Johnson SO Chl file not found: {chl_file} — no Johnson obs overlay")
             return None
@@ -795,15 +797,16 @@ def main():
     )
     parser.add_argument(
         '--obs-dir',
-        default='~/Observations',
-        help='Base directory for observational data (default: %(default)s)'
+        default=None,
+        help='Observations directory (default: visualise_config.toml [files].obs_dir); '
+             'overrides only the directory'
     )
 
     args = parser.parse_args()
 
     model_name = args.model_id
     model_output_dir = pathlib.Path(args.model_run_dir).expanduser()
-    obs_dir = pathlib.Path(args.obs_dir).expanduser()
+    obs_dir = args.obs_dir   # None -> config [files].obs_dir, resolved in FigureCreator
 
     print(f"\n🌊 Ocean Model Visualization Tool")
     print(f"📊 Processing model: {model_name}")
