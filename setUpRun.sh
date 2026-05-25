@@ -131,8 +131,8 @@ fi
 cp $setUpDatafile $modelDir
 cd $modelDir
 
-# ----- Output tidy up parameters -----
-echo $spinupStart $spinupEnd $spinupRestartKeepFrequency $spinupOutputKeepFrequency $runRestartKeepFrequency $runOutputKeepFrequency $keepGrid_T $keepDiad $keepPtrc $keepIce $keepGrid_V $keepGrid_U $keepGrid_W $keepLimPhy ${keepGflux:-0} > tidy_parms
+# Tidy-up parameters are no longer re-emitted to a tidy_parms file; tidyup.sh
+# reads them by name directly from the copied setUpData (single source of truth).
 
 # ----- Create links -----
 rm -f opa nemo

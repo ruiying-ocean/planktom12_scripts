@@ -6,24 +6,27 @@ yearTo=$2
 version=$3
 modelOutputDir=$4
 
-# Get parameters as specified in setUpData.dat file
-read -r -a parms < tidy_parms
+# Read parameters by name from the run-dir setUpData (single source of truth).
+# Previously these were re-encoded positionally into a tidy_parms file by
+# setUpRun; reading by name avoids order/format misalignment.
+setupData=$(ls setUpData*dat 2>/dev/null | head -1)
+getparm() { grep -h "^$1:" "$setupData" 2>/dev/null | head -1 | cut -d':' -f2; }
 
-spinupStart=${parms[0]}
-spinupEnd=${parms[1]}
-spinupRestartKeepFrequency=${parms[2]}
-spinupOutputKeepFrequency=${parms[3]}
-runRestartKeepFrequency=${parms[4]}
-runOutputKeepFrequency=${parms[5]}
-keepGrid_T=${parms[6]}
-keepDiad=${parms[7]}
-keepPtrc=${parms[8]}
-keepIce=${parms[9]}
-keepGrid_V=${parms[10]}
-keepGrid_U=${parms[11]}
-keepGrid_W=${parms[12]}
-keepLimPhy=${parms[13]}
-keepGflux=${parms[14]:-0}
+spinupStart=$(getparm spinupStart)
+spinupEnd=$(getparm spinupEnd)
+spinupRestartKeepFrequency=$(getparm spinupRestartKeepFrequency)
+spinupOutputKeepFrequency=$(getparm spinupOutputKeepFrequency)
+runRestartKeepFrequency=$(getparm runRestartKeepFrequency)
+runOutputKeepFrequency=$(getparm runOutputKeepFrequency)
+keepGrid_T=$(getparm keepGrid_T)
+keepDiad=$(getparm keepDiad)
+keepPtrc=$(getparm keepPtrc)
+keepIce=$(getparm keepIce)
+keepGrid_V=$(getparm keepGrid_V)
+keepGrid_U=$(getparm keepGrid_U)
+keepGrid_W=$(getparm keepGrid_W)
+keepLimPhy=$(getparm keepLimPhy)
+keepGflux=$(getparm keepGflux); keepGflux=${keepGflux:-0}
 
 # Echo parameters to tidy.log
 echo $spinupStart
@@ -189,7 +192,7 @@ if [[ $yearTo -eq $yearEnd ]]; then
 	# Prune non-keep restart and output files from scratch + AFM based on keep frequency.
 	# Per-year tidyup copies every restart/output to AFM (for crash recovery) and
 	# leaves scratch symlinks pointing at AFM; this is where the selective-saving
-	# spec from tidy_parms is actually enforced.
+	# spec from setUpData is actually enforced.
 	echo "Pruning non-keep restart files (scratch + AFM)"
 	for (( yy=$yearStart; yy<=$yearEnd; yy++ )); do
 		if [[ $yy -lt $spinupEnd ]]; then
