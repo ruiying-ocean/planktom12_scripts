@@ -302,7 +302,7 @@ def get_nav_coords_and_mask(models, file_type):
     return None, None, None
 
 
-def load_area_weights(mask_path="/gpfs/data/greenocean/software/resources/breakdown/basin_mask.nc"):
+def load_area_weights(mask_path="/gpfs/data/greenocean/software/resources/NEMO5/basin_mask.v5.nc"):
     """Load area weights from basin mask file."""
     try:
         with xr.open_dataset(mask_path) as ds:

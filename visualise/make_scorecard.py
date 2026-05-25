@@ -194,7 +194,7 @@ def _compare(mod, obs):
 
 # ── POC flux scoring (point-obs vs 3-D model field) ─────────────────────
 POC_CSV = Path("/gpfs/home/vhf24tbu/Observations/Global_POC_Database_21022025.csv")
-MESH_MASK = Path("/gpfs/data/greenocean/software/resources/breakdown/mesh_mask3_6_low_res.nc")
+MESH_MASK = Path("/gpfs/data/greenocean/software/resources/NEMO5/meshmask.v5.nc")
 # mol/m²/s  →  mg C/m²/day
 EXP_FACTOR = 12.011 * 1000 * 86400
 

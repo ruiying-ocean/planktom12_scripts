@@ -40,7 +40,7 @@ class OceanMapPlotter:
     - Horizontal colorbars with proper units
     """
 
-    def __init__(self, mask_path: str = "/gpfs/data/greenocean/software/resources/breakdown/basin_mask.nc"):
+    def __init__(self, mask_path: str = "/gpfs/data/greenocean/software/resources/NEMO5/basin_mask.v5.nc"):
         """
         Initialize the map plotter with land/basin masks.
 

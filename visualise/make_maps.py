@@ -899,7 +899,7 @@ def main():
     parser.add_argument('--output-dir', default=None,
                        help='Output directory for maps (default: <model-run-dir>/monitor/<run_name>)')
     parser.add_argument('--mask-path',
-                       default='/gpfs/data/greenocean/software/resources/breakdown/basin_mask.nc',
+                       default='/gpfs/data/greenocean/software/resources/NEMO5/basin_mask.v5.nc',
                        help='Path to basin mask file')
     parser.add_argument('--obs-dir',
                        default='/gpfs/home/vhf24tbu/Observations',

@@ -109,7 +109,7 @@ def main():
     parser.add_argument('--output-dir', default=None,
                        help='Output directory (default: ./<model1>-<model2>)')
     parser.add_argument('--mask-path',
-                       default='/gpfs/data/greenocean/software/resources/breakdown/basin_mask.nc',
+                       default='/gpfs/data/greenocean/software/resources/NEMO5/basin_mask.v5.nc',
                        help='Path to basin mask file')
     parser.add_argument('--skip-timeseries', action='store_true',
                        help='Skip generating timeseries plots')
