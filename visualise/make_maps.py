@@ -137,6 +137,7 @@ def plot_pft_maps(
     )
 
     # Second pass: plot each PFT using the global vmax
+    im = None
     for i, pft in enumerate(pft_list):
         ax = axs.flat[i]
 
@@ -167,16 +168,20 @@ def plot_pft_maps(
         # Title shows only PFT name (biomass totals shown in time series)
         ax.set_title(pft, fontsize=10)
 
-    # Add shared colorbar
-    plotter.add_shared_colorbar(
-        fig=fig,
-        im=im,
-        axs=axs,
-        label='µmol C L⁻¹',
-        orientation='horizontal',
-        pad=0.075,
-        fraction=0.05
-    )
+    # Add shared colorbar (only if at least one PFT was actually plotted)
+    if im is not None:
+        plotter.add_shared_colorbar(
+            fig=fig,
+            im=im,
+            axs=axs,
+            label='µmol C L⁻¹',
+            orientation='horizontal',
+            pad=0.075,
+            fraction=0.05
+        )
+    else:
+        print(f"  Warning: no {pft_type} PFTs above biomass threshold "
+              f"({biomass_threshold} µmol C L⁻¹); saving figure without colorbar")
 
     # Save figure
     output_path.parent.mkdir(parents=True, exist_ok=True)
