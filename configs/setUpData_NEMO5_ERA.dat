@@ -133,3 +133,9 @@ field_def_nemo-planktom.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_Pla
 file_def_nemo-oce.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/file_def_nemo-oce.xml
 file_def_nemo-ice.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/file_def_nemo-ice.xml
 file_def_nemo.xml:/gpfs/home/vhf24tbu/scratch/NEMO5/cfgs/ORCA2_ICE_PlankTOM/EXP00/file_def_nemo.xml
+
+# ========== ANALYSIS / VISUALISATION CONFIG ==========
+# TOML configs, resolved against analyser/ and visualise/ in the scripts repo
+# (absolute paths also accepted).
+analyser_config:analyser_config_nemo5.0.toml
+visualise_config:visualise_config_nemo5.0.toml

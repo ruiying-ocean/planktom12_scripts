@@ -1,5 +1,12 @@
 # Configuration for ocean model visualization
 
+[files]
+# NEMO3.6 variant: grid is 182x149. Counterpart of visualise_config_nemo5.0.toml
+# (the NEMO5/v5 grid); keep the two in sync — only this [files] block differs.
+# Read by visualise/config_utils.py; any script's --mask-path still overrides.
+basin_mask = "/gpfs/data/greenocean/software/resources/breakdown/basin_mask.nc"
+mesh_mask = "/gpfs/data/greenocean/software/resources/breakdown/mesh_mask3_6_low_res.nc"
+
 [figure]
 dpi = 300
 style = "seaborn-v0_8-poster"

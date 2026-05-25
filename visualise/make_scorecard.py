@@ -19,6 +19,8 @@ import pandas as pd
 import xarray as xr
 from scipy.spatial import cKDTree
 
+from config_utils import get_mesh_mask_path
+
 
 # ── Variable definitions ────────────────────────────────────────────────
 VARIABLES = [
@@ -194,7 +196,7 @@ def _compare(mod, obs):
 
 # ── POC flux scoring (point-obs vs 3-D model field) ─────────────────────
 POC_CSV = Path("/gpfs/home/vhf24tbu/Observations/Global_POC_Database_21022025.csv")
-MESH_MASK = Path("/gpfs/data/greenocean/software/resources/NEMO5/meshmask.v5.nc")
+MESH_MASK = Path(get_mesh_mask_path())  # from visualise_config.toml [files].mesh_mask
 # mol/m²/s  →  mg C/m²/day
 EXP_FACTOR = 12.011 * 1000 * 86400
 

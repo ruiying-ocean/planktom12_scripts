@@ -344,6 +344,22 @@ fi
 # Check that files for LIMPHY are set correctly
 IODEF_PATH=$( grep "^iodef.xml:" $setUpDatafile | awk -F':' '{print $2}' )
 KP=$( grep "^keepLimPhy:" $setUpDatafile | awk -F':' '{print $NF}' )
+
+# Analyser/visualiser config selection (per-run; e.g. NEMO5 vs NEMO3.6 grid).
+# Filenames are resolved against analyser/ and visualise/; absolute paths are
+# used as-is. These MUST be set in setUpData -- there is no NEMO-version default.
+ANALYSER_CONFIG=$( grep "^analyser_config:" $setUpDatafile | awk -F':' '{print $2}' )
+VISUALISE_CONFIG=$( grep "^visualise_config:" $setUpDatafile | awk -F':' '{print $2}' )
+if [[ "$ANALYSER_CONFIG" = /* ]]; then
+	analyserCfgPath="$ANALYSER_CONFIG"
+else
+	analyserCfgPath="${SCRIPT_DIR}/analyser/${ANALYSER_CONFIG}"
+fi
+if [[ "$VISUALISE_CONFIG" = /* ]]; then
+	visualiseCfgPath="$VISUALISE_CONFIG"
+else
+	visualiseCfgPath="${SCRIPT_DIR}/visualise/${VISUALISE_CONFIG}"
+fi
 err=0
 
 if [ "$LP" = ".true." ]; then
@@ -365,6 +381,22 @@ fi
 # Check iodef file exists
 if [ ! -f "$IODEF_PATH" ]; then
 	warn "IODEF file does not exist: $IODEF_PATH"
+	err=1
+fi
+
+# analyser_config / visualise_config must be set and exist (no version default)
+if [ -z "$ANALYSER_CONFIG" ]; then
+	warn "analyser_config: not set in $(basename $setUpDatafile)"
+	err=1
+elif [ ! -f "$analyserCfgPath" ]; then
+	warn "analyser config not found: $analyserCfgPath"
+	err=1
+fi
+if [ -z "$VISUALISE_CONFIG" ]; then
+	warn "visualise_config: not set in $(basename $setUpDatafile)"
+	err=1
+elif [ ! -f "$visualiseCfgPath" ]; then
+	warn "visualise config not found: $visualiseCfgPath"
 	err=1
 fi
 
@@ -401,7 +433,9 @@ ln -fs ${SCRIPT_DIR}/compute_amoc.sh compute_amoc.sh
 for file in ${SCRIPT_DIR}/analyser/analyser*.py; do
 	ln -fs $file $(basename $file)
 done
-ln -fs ${SCRIPT_DIR}/analyser/analyser_config.toml .
+# Link the selected analyser config under the canonical (version-neutral) name
+# the analysis scripts expect. $analyserCfgPath was resolved and validated above.
+ln -fs "$analyserCfgPath" analyser_config.toml
 ln -fs ${SCRIPT_DIR}/shared shared
 if [ -f ${SCRIPT_DIR}/iodef_tom12piicc14.xml ]; then
 	cp ${SCRIPT_DIR}/iodef_tom12piicc14.xml .
@@ -411,6 +445,10 @@ fi
 for file in ${SCRIPT_DIR}/visualise/*; do
 	ln -fs $file $(basename $file)
 done
+
+# Link the selected visualise config under the canonical (version-neutral) name
+# (overrides the wholesale link above). $visualiseCfgPath validated above.
+ln -fs "$visualiseCfgPath" visualise_config.toml
 
 # Save parameters needed for creating html file
 echo $id $codeVersion $(date '+%d-%b-%Y') $yearStart $yearEnd ${CO2,,} $forcing ${forcing_mode,,} $TR $SR > html_parms

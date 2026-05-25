@@ -1,0 +1,272 @@
+# Configuration for ocean model visualization
+
+[files]
+# Grid mask/mesh files. Must match the model output grid. These are the NEMO5
+# v5 grid (180x148); the NEMO3.6 grid (182x149) lives in
+# visualise_config_nemo3.6.toml. Read by visualise/config_utils.py; any script's
+# --mask-path still overrides at the command line.
+basin_mask = "/gpfs/data/greenocean/software/resources/NEMO5/basin_mask.v5.nc"
+mesh_mask = "/gpfs/data/greenocean/software/resources/NEMO5/meshmask.v5.nc"
+
+[figure]
+dpi = 300
+style = "seaborn-v0_8-poster"
+format = "png"  # Options: png (lossless), svg (vector), jpg (compressed)
+
+[colors]
+# Use a professional color palette
+palette = "tab10"  # Options: tab10, Set3, Paired, husl, etc.
+
+# Multi-model comparison colors (for plotting multiple models on same axes)
+# These are the high-quality colors from multimodel's PlotConfig
+multimodel_palette = [
+    "#1f77b4",  # Blue
+    "#ff7f0e",  # Orange
+    "#2ca02c",  # Green
+    "#d62728",  # Red
+    "#9467bd",  # Purple
+    "#8c564b",  # Brown
+    "#e377c2",  # Pink
+    "#7f7f7f",  # Gray
+    "#bcbd22",  # Olive
+    "#17becf",  # Cyan
+]
+
+[layout]
+# Automatic layout using constrained_layout
+use_constrained_layout = true
+
+# Standard subplot size - all plots use the same per-subplot dimensions
+# Final figure size = (cols * subplot_width, rows * subplot_height)
+subplot_width = 2.5   # Width of each individual subplot
+subplot_height = 2.0   # Height of each individual subplot
+
+# Grid configurations for different plot types (rows x cols only)
+[layout.global_summary]
+rows = 4
+cols = 3
+
+[layout.pft_summary]
+rows = 4
+cols = 3
+
+[layout.nutrient_summary]
+rows = 3
+cols = 3
+
+[layout.physics_summary]
+rows = 2
+cols = 2
+
+[layout.derived_summary]
+rows = 2
+cols = 2
+
+[layout.trophic_summary]
+rows = 3
+cols = 3
+
+[layout.organic_carbon_summary]
+rows = 2
+cols = 2
+
+[layout.benthic_summary]
+rows = 3
+cols = 3
+
+[layout.ppt_by_pft_summary]
+rows = 2
+cols = 3
+
+# Multimodel-specific settings
+[multimodel]
+# Figure aspect ratio (width = height * ratio)
+figure_ratio = 2.5
+
+# Maximum number of models to compare
+max_models = 8
+
+# Maximum number of models for spatial plots (maps/transects)
+# Beyond this threshold, maps and transects are skipped (too wide to be useful)
+max_models_for_spatial = 3
+
+# Plot styling
+[style]
+linewidth = 1.0
+alpha = 0.9
+grid_linewidth = 0.5
+grid_color = "#cccccc"
+grid_linestyle = "--"
+
+# Font sizes
+[style.fonts]
+base = 8
+title = 10
+axis_label = 9
+tick_label = 7
+legend = 7
+figure_title = 12
+
+# Axis styling
+[style.axes]
+linewidth = 0.8
+tick_major_width = 0.8
+tick_major_size = 3
+
+# Observation styling
+[style.observations]
+# For filled/solid observation ranges (single-model plots)
+range_color = "#6c757d"
+range_alpha = 0.1
+
+# For hatched observation ranges (multi-model plots - preferred style)
+hatch_color = "k"  # Black
+hatch_alpha = 0.15
+hatch_pattern = "///"  # Diagonal lines
+hatch_fill = false  # Don't fill, only hatch
+
+# For observation line values
+line_color = "k"  # Black (multimodel style) or "#d00000" (red)
+line_linestyle = "--"
+line_alpha = 0.8
+line_linewidth = 1.5
+
+# Observation ranges (from literature)
+[observations.global]
+TChl = 0.2921  # OCCCI observation [μg Chl/L]
+PPT = [51, 65]  # Primary production [PgC/yr]
+EXP = [7.8, 12.2]  # Export at 100m [PgC/yr]
+PROCACO3 = [1.04, 3.34]  # CaCO3 production [PgC/yr]
+EXPCACO3 = [0.68, 0.9]  # CaCO3 export [PgC/yr]
+probsi = [203, 307]  # Silica production [Tmol/yr]
+SI_FLX = [89, 135]  # Silica export [Tmol/yr]
+
+[observations.pfts]
+PIC = [0.28, 0.52]  # Picophytoplankton [PgC]
+PHA = [0.11, 0.69]  # Phaeocystis [PgC]
+DIA = [0.013, 0.75]  # Diatoms [PgC]
+COC = [0.001, 0.032]  # Coccolithophores [PgC]
+FIX = [0.008, 0.12]  # N2-fixers [PgC]
+GEL = 0.51  # Gelatinous zooplankton [PgC] - Luo et al. (2020) GBC
+PRO = [0.10, 0.37]  # Protozooplankton [PgC]
+BAC = [0.25, 0.26]  # Bacteria [PgC]
+CRU = [0.01, 0.64]  # Crustaceans [PgC]
+PTE = [0.048, 0.057]  # Pteropods [PgC]
+MES = [0.21, 0.34]  # Mesozooplankton [PgC]
+# MIX has no observations
+
+[observations.nutrients]
+PO4 = 0.517  # Phosphate [μmol/L] - surface, normalized by 122
+NO3 = 5.044  # Nitrate [μmol/L] - surface
+Si = 7.227  # Silica [μmol/L] - surface
+O2 = 168.3  # Oxygen [μmol/L] - at 300m depth
+Alkalini = 2296.80  # Alkalinity [μmol/kg] - GLODAPv2.2016b (cos-lat-weighted surface mean)
+DIC = 2021.67  # DIC [μmol/kg] - GLODAPv2.2016b (cos-lat-weighted surface mean)
+AOU = 110.68  # AOU [μmol/kg] - at 300m depth
+# Fer has no reliable global observations
+
+[observations.derived]
+ALK_DIC = 275.13  # ALK-DIC [μmol/kg] - GLODAPv2.2016b (2296.80 - 2021.67)
+
+[observations.benthic]
+bPO4 = 2.21  # Phosphate [μmol/L] - WOA18 2000-5000m cos-lat-weighted mean
+bNO3 = 31.89  # Nitrate [μmol/L] - WOA18 2000-5000m cos-lat-weighted mean
+bSi = 111.88  # Silica [μmol/L] - WOA18 2000-5000m cos-lat-weighted mean
+bO2 = 183.62  # Oxygen [μmol/L] - WOA18 2000-5000m cos-lat-weighted mean
+bDIC = 2277.37  # DIC [μmol/kg] - GLODAP 2000-5000m area-weighted mean
+bAlkalini = 2380.37  # Alkalinity [μmol/kg] - GLODAP 2000-5000m area-weighted mean
+bDOC = 39.98  # DOC [μmol/kg] - DOC_climatology.nc bathypelagic (>1000m) cos-lat-weighted mean (Panaïotis et al. 2025)
+# bFer has no reliable deep-ocean observations
+
+# Plot titles and units (title = subplot heading, unit = y-axis label)
+[plot_info.ecosystem]
+Cflx = {title = "Air-Sea Carbon Flux", unit = "PgC/yr", color_index = 0}
+TChl = {title = "Surface Chlorophyll", unit = "μg Chl/L", color_index = 1}
+PPT = {title = "Primary Production", unit = "PgC/yr", color_index = 2}
+EXP = {title = "Export at 100m", unit = "PgC/yr", color_index = 3}
+EXP1000 = {title = "Export at 1000m", unit = "PgC/yr", color_index = 4}
+PROCACO3 = {title = "CaCO₃ Production", unit = "PgC/yr", color_index = 5}
+EXPCACO3 = {title = "CaCO₃ Export at 100m", unit = "PgC/yr", color_index = 6}
+probsi = {title = "Silica Production", unit = "Tmol/yr", color_index = 7}
+SI_FLX = {title = "Silica Export at 100m", unit = "Tmol/yr", color_index = 8}
+PPT_Trop = {title = "Tropical NPP (30S-30N)", unit = "PgC/yr", color_index = 9}
+PPT_ExtTrop = {title = "Extratropical NPP", unit = "PgC/yr", color_index = 10}
+
+[plot_info.pfts.phytoplankton]
+PIC = {title = "Picophytoplankton", unit = "PgC", color_index = 0}
+PHA = {title = "Phaeocystis", unit = "PgC", color_index = 1}
+MIX = {title = "Mixotrophs", unit = "PgC", color_index = 2}
+DIA = {title = "Diatoms", unit = "PgC", color_index = 3}
+COC = {title = "Coccolithophores", unit = "PgC", color_index = 4}
+FIX = {title = "Nitrogen Fixers", unit = "PgC", color_index = 5}
+
+# Primary production by phytoplankton PFT
+[plot_info.ppt_by_pft]
+PPT_PIC = {title = "PIC NPP", unit = "PgC/yr", color_index = 0}
+PPT_PHA = {title = "PHA NPP", unit = "PgC/yr", color_index = 1}
+PPT_MIX = {title = "MIX NPP", unit = "PgC/yr", color_index = 2}
+PPT_DIA = {title = "DIA NPP", unit = "PgC/yr", color_index = 3}
+PPT_COC = {title = "COC NPP", unit = "PgC/yr", color_index = 4}
+PPT_FIX = {title = "FIX NPP", unit = "PgC/yr", color_index = 5}
+
+[plot_info.pfts.zooplankton]
+GEL = {title = "Gelatinous Zooplankton", unit = "PgC", color_index = 6}
+PRO = {title = "Protozooplankton", unit = "PgC", color_index = 7}
+BAC = {title = "Bacteria", unit = "PgC", color_index = 8}
+CRU = {title = "Crustaceans", unit = "PgC", color_index = 9}
+PTE = {title = "Pteropods", unit = "PgC", color_index = 0}
+MES = {title = "Mesozooplankton", unit = "PgC", color_index = 1}
+
+[plot_info.nutrients]
+nPO4 = {title = "Surface Phosphate", unit = "μmol/L", color_index = 0, obs_key = "PO4"}
+NO3 = {title = "Surface Nitrate", unit = "μmol/L", color_index = 1}
+nFer = {title = "Surface Iron", unit = "nmol/L", color_index = 2, obs_key = "Fer"}
+Si = {title = "Surface Silica", unit = "μmol/L", color_index = 3}
+O2 = {title = "Oxygen at 300m", unit = "μmol/L", color_index = 4}
+Alkalini = {title = "Surface Alkalinity", unit = "μmol/L", color_index = 5}
+DIC = {title = "Surface DIC", unit = "μmol/L", color_index = 6}
+AOU = {title = "AOU at 300m", unit = "μmol/L", color_index = 7}
+
+[plot_info.derived]
+eratio = {title = "Export Ratio (e-ratio)", unit = "Dimensionless", color_index = 2}
+Teff = {title = "Transfer Efficiency", unit = "Dimensionless", color_index = 3}
+rls = {title = "RLS", unit = "m", color_index = 4}
+ALK_DIC = {title = "ALK − DIC", unit = "μmol/L", color_index = 6}
+
+[plot_info.trophic]
+SP = {title = "Secondary Production", unit = "PgC/yr", color_index = 0}
+recycle = {title = "Residual Production", unit = "PgC/yr", color_index = 1}
+spratio = {title = "SP/NPP", unit = "Dimensionless", color_index = 5}
+TA = {title = "Trophic Amplification", unit = "Dimensionless", color_index = 6}
+BA = {title = "Biomass Amplification", unit = "Dimensionless", color_index = 7}
+ratio_TL2 = {title = "TL2/NPP", unit = "Dimensionless", color_index = 7}
+ratio_TL3 = {title = "TL3/NPP", unit = "Dimensionless", color_index = 8}
+FCE = {title = "TL4/NPP", unit = "Dimensionless", color_index = 9}
+
+[plot_info.benthic]
+bPO4 = {title = "Deep Phosphate", unit = "μmol/L", color_index = 0}
+bNO3 = {title = "Deep Nitrate", unit = "μmol/L", color_index = 1}
+bFer = {title = "Deep Iron", unit = "nmol/L", color_index = 2}
+bSi = {title = "Deep Silica", unit = "μmol/L", color_index = 3}
+bO2 = {title = "Deep Oxygen", unit = "μmol/L", color_index = 4}
+bAlkalini = {title = "Deep Alkalinity", unit = "μmol/L", color_index = 5}
+bDIC = {title = "Deep DIC", unit = "μmol/L", color_index = 6}
+bDOC = {title = "Deep DOC", unit = "μmol/L", color_index = 7}
+
+[plot_info.organic_carbon]
+POC = {title = "POC", unit = "PgC", color_index = 0}
+DOC = {title = "DOC", unit = "PgC", color_index = 1}
+GOC = {title = "GOC", unit = "PgC", color_index = 2}
+HOC = {title = "HOC", unit = "PgC", color_index = 3}
+
+[plot_info.physics]
+SST = {title = "Sea Surface Temperature", unit = "°C", color_index = 0}
+SSS = {title = "Sea Surface Salinity", unit = "PSU", color_index = 1}
+MLD = {title = "Mixed Layer Depth", unit = "m", color_index = 2}
+AMOC = {title = "AMOC at 26.5N", unit = "Sv", color_index = 3}
+
+[observations.physics]
+AMOC = [15.5, 18.5]  # RAPID array mean and range [Sv]
+
+[observations.organic_carbon]
+DOC = [47.0, 50.4]  # DOC inventory 0-200m [PgC] - derived from DOC_climatology.nc (Panaïotis et al. 2025)

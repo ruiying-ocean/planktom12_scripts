@@ -75,6 +75,13 @@ if [ ! -d $afm_dir$model_id ]; then
 	mkdir $afm_dir$model_id
 fi
 
+# Per-run analyser config (e.g. NEMO5 vs NEMO3.6 grid). Use the named .toml
+# only if it is present in the run dir; otherwise fall back to the canonical
+# analyser_config.toml symlink set up by setUpRun (which points at the right
+# variant already).
+analyserConfig=$(grep -h "^analyser_config:" setUpData*dat 2>/dev/null | head -1 | awk -F':' '{print $2}')
+{ [ -n "$analyserConfig" ] && [ -f "$analyserConfig" ]; } || analyserConfig=analyser_config.toml
+
 # Per-year processing: copy every output and restart to AFM, leave a scratch symlink.
 # Selective pruning by keep-frequency happens at end of simulation below.
 echo "Copying data centrally"
@@ -89,7 +96,7 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 
 	# Python based totalling
 	echo "Python version: $(which python)"
-	python3 analyser.py analyser_config.toml ${y} ${y}
+	python3 analyser.py "$analyserConfig" ${y} ${y}
 
 	# Run timeseries visualization script
 	python3 make_timeseries.py $model_id --model-run-dir $modelOutputDir

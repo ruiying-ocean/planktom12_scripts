@@ -164,3 +164,9 @@ iodef.xml:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP
 
 # Domain definition
 domain_def.xml:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_PlankTOM/EXP00/domain_def.xml
+
+# ========== ANALYSIS / VISUALISATION CONFIG ==========
+# TOML configs, resolved against analyser/ and visualise/ in the scripts repo
+# (absolute paths also accepted).
+analyser_config:analyser_config_nemo3.6.toml
+visualise_config:visualise_config_nemo3.6.toml

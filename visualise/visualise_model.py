@@ -48,8 +48,8 @@ def main():
     parser.add_argument('--output-dir', default=None,
                        help='Output directory (default: <model-run-dir>/monitor/<run_name>)')
     parser.add_argument('--mask-path',
-                       default='/gpfs/data/greenocean/software/resources/NEMO5/basin_mask.v5.nc',
-                       help='Path to basin mask file')
+                       default=None,
+                       help='Path to basin mask file (default: visualise_config.toml [files].basin_mask)')
     parser.add_argument('--mask-dir',
                        default='/gpfs/home/vhf24tbu/masks',
                        help='Directory containing mask files for vertical profiles')

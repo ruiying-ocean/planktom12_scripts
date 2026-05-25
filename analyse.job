@@ -36,7 +36,16 @@ rm -f analyser*
 cp "$SCRIPT_DIR/analyser/"* .
 
 ln -fs "$SCRIPT_DIR/shared" shared
-python3 analyser.py analyser_config.toml 1940 2100
+
+# Honour the per-run analyser config selected in setUpData (e.g. NEMO5 vs
+# NEMO3.6 grid). The chosen .toml was copied in with analyser/* above.
+# No NEMO-version default: fail if it is not set or not present.
+analyserConfig=$(grep -h "^analyser_config:" setUpData*dat 2>/dev/null | head -1 | awk -F':' '{print $2}')
+if [ -z "$analyserConfig" ] || [ ! -f "$analyserConfig" ]; then
+    echo "ERROR: analyser_config not set in setUpData or file missing: '$analyserConfig'" >&2
+    exit 1
+fi
+python3 analyser.py "$analyserConfig" 1940 2100
 
 # Print completion time
 echo "End time: $(date)"

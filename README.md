@@ -40,8 +40,11 @@ PlankTomRunner/
 2. **Generate analyser statistics**:
    ```bash
    cd ~/scratch/ModelRuns/<model_id>/
+   # analyser_config.toml here is the run-dir symlink that setUpRun points at the
+   # grid-specific config chosen in setUpData (analyser_config_nemo5.0.toml or
+   # analyser_config_nemo3.6.toml). There is no version-neutral default config.
    python /path/to/PlankTomRunner/analyser/analyser.py \
-       /path/to/PlankTomRunner/analyser/analyser_config.toml \
+       analyser_config.toml \
        <start_year> <end_year>
    ```
 
@@ -65,11 +68,11 @@ PlankTomRunner/
    ```bash
    cd ~/scratch/ModelRuns/TOM12_RY_SPE2/
    python /path/to/PlankTomRunner/analyser/analyser.py \
-       /path/to/PlankTomRunner/analyser/analyser_config.toml 1750 1790
+       analyser_config.toml 1750 1790
 
    cd ~/scratch/ModelRuns/TOM12_RY_SPE5/
    python /path/to/PlankTomRunner/analyser/analyser.py \
-       /path/to/PlankTomRunner/analyser/analyser_config.toml 1750 1790
+       analyser_config.toml 1750 1790
    ```
 
 3. **Create comparison configuration** (`modelsToPlot.csv`):
@@ -110,7 +113,7 @@ python /path/to/analyser/analyser.py <config_file.toml> <start_year> <end_year>
 - `analyser.int.annual.csv` - Depth-integrated variables (e.g., phytoplankton biomass)
 - Monthly versions: `*.monthly.csv`
 
-**Configuration**: `analyser/analyser_config.toml`
+**Configuration**: `analyser/analyser_config_nemo5.0.toml` or `analyser/analyser_config_nemo3.6.toml` (grid-specific; chosen per-run via `analyser_config:` in setUpData)
 
 ### Single Model Visualization
 
@@ -294,7 +297,7 @@ python generate_multimodel_html.py modelsToPlot.csv <output_dir>
 
 ### Visualization Configuration
 
-**File**: `visualise/visualise_config.toml`
+**File**: `visualise/visualise_config_nemo5.0.toml` or `visualise/visualise_config_nemo3.6.toml` (grid-specific; chosen per-run via `visualise_config:` in setUpData). Mask/mesh paths live in its `[files]` section — there is no NEMO-version default.
 
 **Key settings**:
 - `dpi`: Figure resolution (default: 300)
@@ -315,7 +318,7 @@ EXP = [7.8, 12.2]  # Export production range [PgC/yr]
 
 ### Analyser Configuration
 
-**File**: `analyser/analyser_config.toml`
+**File**: `analyser/analyser_config_nemo5.0.toml` or `analyser/analyser_config_nemo3.6.toml` (grid-specific; chosen per-run via `analyser_config:` in setUpData)
 
 Defines which variables to extract and their spatial/temporal integration:
 - Surface variables
@@ -462,7 +465,7 @@ For model-observation comparisons, observational data should be placed in:
 
 **5. Empty or missing analyser files**
 - Ensure `analyser.py` completed successfully
-- Check analyser configuration in `analyser/analyser_config.toml`
+- Check analyser configuration in the run-dir `analyser_config.toml` (the per-run grid-specific config linked by setUpRun)
 - Verify NetCDF variables exist in model output
 
 ### Getting Help

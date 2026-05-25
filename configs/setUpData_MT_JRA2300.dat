@@ -207,3 +207,9 @@ iodef.xml:/gpfs/home/vhf24tbu/EXP00/iodef_tom12.xml
 
 # How the domains (each area that a CPU calculates) are defined
 domain_def.xml:/gpfs/home/vhf24tbu/EXP00/domain_def.xml
+
+# ========== ANALYSIS / VISUALISATION CONFIG ==========
+# TOML configs, resolved against analyser/ and visualise/ in the scripts repo
+# (absolute paths also accepted).
+analyser_config:analyser_config_nemo3.6.toml
+visualise_config:visualise_config_nemo3.6.toml

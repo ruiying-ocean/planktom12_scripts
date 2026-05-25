@@ -28,6 +28,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from shared.rls import calculate_rls_numba
 from shared.aou import calculate_aou as _calculate_aou_shared, calculate_aou_3d
 
+from config_utils import (
+    get_mask_paths,
+    get_basin_mask_path,
+    get_mesh_mask_path,
+)
+
 
 class OceanMapPlotter:
     """
@@ -40,13 +46,16 @@ class OceanMapPlotter:
     - Horizontal colorbars with proper units
     """
 
-    def __init__(self, mask_path: str = "/gpfs/data/greenocean/software/resources/NEMO5/basin_mask.v5.nc"):
+    def __init__(self, mask_path: Optional[str] = None):
         """
         Initialize the map plotter with land/basin masks.
 
         Args:
-            mask_path: Path to basin mask NetCDF file
+            mask_path: Path to basin mask NetCDF file. If None, resolved from
+                visualise_config.toml [files].basin_mask (raises if unset).
         """
+        if mask_path is None:
+            mask_path = get_basin_mask_path()
         self.mask_path = mask_path
         self.land_mask_2d = None
         self.land_mask_3d = None

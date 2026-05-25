@@ -309,8 +309,8 @@ def main():
     parser.add_argument('--output-dir', default=None,
                        help='Output directory for transects (default: <model-dir>/monitor/<run_name>)')
     parser.add_argument('--mask-path',
-                       default='/gpfs/data/greenocean/software/resources/NEMO5/basin_mask.v5.nc',
-                       help='Path to basin mask file')
+                       default=None,
+                       help='Path to basin mask file (default: visualise_config.toml [files].basin_mask)')
     parser.add_argument('--obs-dir',
                        default='/gpfs/home/vhf24tbu/Observations',
                        help='Directory containing observational data files')
