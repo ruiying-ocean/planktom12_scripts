@@ -908,6 +908,8 @@ def main():
                        help='Disable model vs observations nutrient comparison plots (generate model-only)')
     parser.add_argument('--skip-physics-sections', action='store_true',
                        help='Skip generating T/S zonal-mean section plots')
+    parser.add_argument('--skip-aou', action='store_true',
+                       help='Skip AOU (gsw/TEOS-10) computation and AOU plots')
 
     args = parser.parse_args()
 
@@ -945,8 +947,10 @@ def main():
 
     # Load and preprocess datasets using preprocessing module
     # Compute AOU if grid_T file is available
-    compute_aou = grid_t_file.exists()
-    if not compute_aou:
+    compute_aou = grid_t_file.exists() and not args.skip_aou
+    if args.skip_aou:
+        print("Note: --skip-aou set, AOU will not be computed")
+    elif not compute_aou:
         print(f"Note: grid_T file not found at {grid_t_file}, AOU will not be computed")
 
     ptrc_ds = load_and_preprocess_ptrc(
@@ -1008,7 +1012,7 @@ def main():
 
         # Load observational datasets using preprocessing module (including O2 and AOU)
         obs_dir = Path(args.obs_dir)
-        nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
+        nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2'] + (['_AOU'] if compute_aou else [])
         obs_datasets = load_observations(obs_dir, nutrients=nutrients)
 
         # Generate comparison plot
@@ -1055,7 +1059,7 @@ def main():
         print("4. Nutrients (model only)...")
 
         # Create a simple model-only nutrient plot (including O2 and AOU)
-        nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
+        nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2'] + (['_AOU'] if compute_aou else [])
         # Use 3 columns, 2 rows for 6 nutrients
         fig, axs = plotter.create_subplot_grid(
             nrows=2, ncols=3,
