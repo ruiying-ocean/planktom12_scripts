@@ -75,12 +75,9 @@ if [ ! -d $afm_dir$model_id ]; then
 	mkdir $afm_dir$model_id
 fi
 
-# Per-run analyser config (e.g. NEMO5 vs NEMO3.6 grid). Use the named .toml
-# only if it is present in the run dir; otherwise fall back to the canonical
-# analyser_config.toml symlink set up by setUpRun (which points at the right
-# variant already).
-analyserConfig=$(grep -h "^analyser_config:" setUpData*dat 2>/dev/null | head -1 | awk -F':' '{print $2}')
-{ [ -n "$analyserConfig" ] && [ -f "$analyserConfig" ]; } || analyserConfig=analyser_config.toml
+# Per-run analyser config snapshot copied into the run dir by setUpRun
+# (the grid-specific config the run was set up with).
+analyserConfig=analyser_config.toml
 
 # Per-year processing: copy every output and restart to AFM, leave a scratch symlink.
 # Selective pruning by keep-frequency happens at end of simulation below.

@@ -31,21 +31,21 @@ SCRIPT_DIR=~/setUpRuns/planktom12_scripts
 
 cd /gpfs/home/vhf24tbu/scratch/ModelRuns/TOM12_RY_JRA3
 
-rm -f analyser*
-
-cp "$SCRIPT_DIR/analyser/"* .
+# Refresh the analyser code (symlinks track the repo) but DO NOT touch the
+# per-run config snapshot (analyser_config.toml) that setUpRun copied in.
+rm -f analyser*.py
+for f in "$SCRIPT_DIR"/analyser/analyser*.py; do
+    ln -fs "$f" "$(basename "$f")"
+done
 
 ln -fs "$SCRIPT_DIR/shared" shared
 
-# Honour the per-run analyser config selected in setUpData (e.g. NEMO5 vs
-# NEMO3.6 grid). The chosen .toml was copied in with analyser/* above.
-# No NEMO-version default: fail if it is not set or not present.
-analyserConfig=$(grep -h "^analyser_config:" setUpData*dat 2>/dev/null | head -1 | awk -F':' '{print $2}')
-if [ -z "$analyserConfig" ] || [ ! -f "$analyserConfig" ]; then
-    echo "ERROR: analyser_config not set in setUpData or file missing: '$analyserConfig'" >&2
+# Use the per-run config snapshot copied in by setUpRun. No version default.
+if [ ! -f analyser_config.toml ]; then
+    echo "ERROR: analyser_config.toml not found in run dir; run setUpRun first." >&2
     exit 1
 fi
-python3 analyser.py "$analyserConfig" 1940 2100
+python3 analyser.py analyser_config.toml 1940 2100
 
 # Print completion time
 echo "End time: $(date)"

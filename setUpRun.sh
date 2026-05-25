@@ -433,22 +433,27 @@ ln -fs ${SCRIPT_DIR}/compute_amoc.sh compute_amoc.sh
 for file in ${SCRIPT_DIR}/analyser/analyser*.py; do
 	ln -fs $file $(basename $file)
 done
-# Link the selected analyser config under the canonical (version-neutral) name
-# the analysis scripts expect. $analyserCfgPath was resolved and validated above.
-ln -fs "$analyserCfgPath" analyser_config.toml
+# Copy (not symlink) the selected analyser config under the canonical
+# (version-neutral) name, so the run keeps a snapshot of the exact parameters
+# it ran with -- like setUpData.dat. $analyserCfgPath was validated above.
+cp "$analyserCfgPath" analyser_config.toml
 ln -fs ${SCRIPT_DIR}/shared shared
 if [ -f ${SCRIPT_DIR}/iodef_tom12piicc14.xml ]; then
 	cp ${SCRIPT_DIR}/iodef_tom12piicc14.xml .
 fi
 
-# Get visualise scripts and files
+# Get visualise scripts and files (symlink code/assets; skip the .toml configs,
+# which are copied below so the run keeps its own snapshot).
 for file in ${SCRIPT_DIR}/visualise/*; do
+	case "$file" in
+		*.toml) continue ;;
+	esac
 	ln -fs $file $(basename $file)
 done
 
-# Link the selected visualise config under the canonical (version-neutral) name
-# (overrides the wholesale link above). $visualiseCfgPath validated above.
-ln -fs "$visualiseCfgPath" visualise_config.toml
+# Copy (not symlink) the selected visualise config under the canonical
+# (version-neutral) name, so the run keeps a snapshot. Validated above.
+cp "$visualiseCfgPath" visualise_config.toml
 
 # Save parameters needed for creating html file
 echo $id $codeVersion $(date '+%d-%b-%Y') $yearStart $yearEnd ${CO2,,} $forcing ${forcing_mode,,} $TR $SR > html_parms
