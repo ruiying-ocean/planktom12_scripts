@@ -11,6 +11,7 @@
 #
 #   rn_Dt (NEMO5) | rn_rdt (NEMO3.6)   ->  new_dt
 #   nn_itend, nn_stock, nn_fsbc        ->  * old_dt/new_dt   (steps per fixed duration)
+#   nn_it000 (cumulative start step)   ->  (v-1)*old/new + 1 (1 stays 1; keeps span)
 #   nn_e   (barotropic sub-steps)      ->  * new_dt/old_dt   (keep sub-step length)
 #   ln_1st_euler                       ->  .true.            (if present & not already)
 #   setUpData stepsPerYear             ->  * old_dt/new_dt   (kept in sync)
@@ -119,6 +120,16 @@ for f in "${TARGETS[@]}"; do
         nv=$(scale_exact "$ov" "$old_dt" "$NEW_DT" "$k")
         PLAN+=("$f"$'\t'"$k"$'\t'"$nv"); printf '   %-12s %s -> %s\n' "$k" "$ov" "$nv"
     done
+    # nn_it000 is a CUMULATIVE start step (= previous years' steps + 1), so scale the
+    # offset, not the raw value: it000_new = (it000_old-1)*old/new + 1. Cold starts
+    # (it000=1) are scale-invariant and left alone. Skipping this is what breaks the
+    # restart template: scaling nn_itend but not nn_it000 corrupts the per-year span
+    # (nn_itend-nn_it000+1) that nemo*.job reads to advance each year.
+    iv=$(nl_get nn_it000 "$f")
+    if [ -n "$iv" ] && [ "${iv%.*}" -gt 1 ]; then
+        nv=$(( $(scale_exact "$(( ${iv%.*} - 1 ))" "$old_dt" "$NEW_DT" "nn_it000") + 1 ))
+        PLAN+=("$f"$'\t'"nn_it000"$'\t'"$nv"); printf '   %-12s %s -> %s\n' "nn_it000" "$iv" "$nv"
+    fi
     ek=$(nl_get nn_e "$f")                            # scale by new_dt/old_dt
     if [ -n "$ek" ]; then
         ev=$(scale_exact "$ek" "$NEW_DT" "$old_dt" "nn_e")
