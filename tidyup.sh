@@ -42,7 +42,14 @@ echo $keepGrid_W
 echo $keepLimPhy
 echo $keepGflux
 
-pointsPerYear=5475
+# Model timesteps per year, used to build restart-file timestep numbers. This
+# is per-run (depends on NEMO version / rn_rdt), so read it from setUpData like
+# setup_spin.sh does (NEMO5 90-min step = 5840; NEMO3.6 96-min step = 5475).
+nemoVersion=$(grep -h "^nemoVersion:" setUpData*dat 2>/dev/null | head -1 | cut -d':' -f2)
+pointsPerYear=$(grep -h "^stepsPerYear:" setUpData*dat 2>/dev/null | head -1 | cut -d':' -f2)
+if [ -z "$pointsPerYear" ]; then
+	if [ "$nemoVersion" = "NEMO5" ]; then pointsPerYear=5840; else pointsPerYear=5475; fi
+fi
 freq=1m
 
 # Compress a NetCDF file in place with nccopy -d 4 -s.
