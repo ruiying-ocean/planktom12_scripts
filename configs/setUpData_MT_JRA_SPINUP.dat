@@ -32,8 +32,8 @@ model:DEV
 # - forcing data starts in 1948 (NCEP) and 1940 (ERA5) so data before then will be a looping year of 1990 for spin-up purposes
 yearStart:1750
 yearEnd:1940
+timestep:5760
 stepsPerYear:5475
-
 # CO2 (VARIABLE or STATIC)
 CO2:VARIABLE
 

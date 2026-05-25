@@ -321,6 +321,12 @@ else
 	ln -sf ${control_namelist}_other_years $control_namelist
 fi
 
+# Apply the per-run ocean timestep (setUpData timestep:) to the local namelists,
+# scaling the dependent counters and stepsPerYear. No-op when already consistent.
+if [ -x "${SCRIPT_DIR}/update_timestep.sh" ]; then
+	"${SCRIPT_DIR}/update_timestep.sh" . --apply || warn "update_timestep.sh failed; namelists left at their template timestep"
+fi
+
 section "Physics"
 
 # Temperature and salinity restoring

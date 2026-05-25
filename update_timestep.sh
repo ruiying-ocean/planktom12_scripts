@@ -1,48 +1,50 @@
 #!/usr/bin/env bash
 #
-# update_timestep.sh — rescale the NEMO ocean timestep and all timestep-dependent
-# namelist counters consistently, across every phase namelist in a directory.
+# update_timestep.sh — rescale the NEMO ocean timestep and every timestep-dependent
+# counter consistently: the namelist counters AND setUpData's stepsPerYear.
 #
 # Changing the timestep by hand is painful: rn_Dt/rn_rdt plus nn_itend, nn_stock,
-# nn_e and nn_fsbc all have to move together, in the coldstart / restart / cycling
-# namelists. This does it in one shot, keeping the physical run length and the
-# SBC/barotropic intervals constant.
+# nn_e and nn_fsbc must move together across the coldstart/restart/cycling
+# namelists, and stepsPerYear (restart-step math) has to match. This does it in
+# one shot. ALL scaling is by the dt ratio only, so it makes NO calendar
+# (days-per-year / nn_leapy) assumption:
 #
-# Scaling (r = new_dt / old_dt):
-#   rn_Dt (NEMO5) | rn_rdt (NEMO3.6)  ->  new_dt
-#   nn_itend, nn_stock, nn_fsbc       ->  old * old_dt/new_dt   (# steps for a fixed
-#                                                                physical duration)
-#   nn_e   (barotropic sub-steps)     ->  old * new_dt/old_dt   (keep sub-step length,
-#                                                                e.g. ~180 s, constant)
-#   ln_1st_euler                      ->  .true.                (required across a dt
-#                                                                change; set if present)
-# Example (NEMO5 TOM6, RK3, double the step to 3 h):
-#   rn_Dt 5400.->10800.  nn_itend/nn_stock 5840->2920  nn_e 30->60  nn_fsbc 2->1
+#   rn_Dt (NEMO5) | rn_rdt (NEMO3.6)   ->  new_dt
+#   nn_itend, nn_stock, nn_fsbc        ->  * old_dt/new_dt   (steps per fixed duration)
+#   nn_e   (barotropic sub-steps)      ->  * new_dt/old_dt   (keep sub-step length)
+#   ln_1st_euler                       ->  .true.            (if present & not already)
+#   setUpData stepsPerYear             ->  * old_dt/new_dt   (kept in sync)
 #
-# It patches every *regular* file matching namelist* in DIR that defines the
-# timestep (symlinks are skipped — their targets are patched once), so point it
-# at a run dir (namelist_cfg_<forcing>_* copies) or an EXP00 template
-# (namelist_ref*). If a setUpData*dat is present in DIR, stepsPerYear is updated
-# to 31536000/new_dt as well.
+# Example (NEMO5 TOM6 RK3, double to 3 h): rn_Dt 5400.->10800., nn_itend/nn_stock
+# 5840->2920, nn_e 30->60, nn_fsbc 2->1, stepsPerYear 5840->2920.
 #
-# DRY-RUN by default; pass --apply to write. Run on the HPC where the namelists
-# live. Always review the dry-run before --apply.
+# Target dt comes from setUpData (timestep:); --new-dt overrides it. Patches every
+# *regular* namelist* file in DIR that defines the timestep (symlinks skipped —
+# their targets are patched once), so point it at a run dir or an EXP00 template.
+# Files already at the target dt are left untouched. All scalings are computed and
+# checked to be clean integers BEFORE anything is written (no partial patches).
+#
+# Workflow: edit timestep: in setUpData, then run this (setUpRun runs it for you).
+# Do not hand-edit stepsPerYear — this keeps it in step with the timestep.
+#
+# DRY-RUN by default; pass --apply to write. Uses GNU grep -P / sed
+# --follow-symlinks / bash mapfile, so run it on the HPC. Review the dry-run first.
 
 set -euo pipefail
 
-SECONDS_PER_YEAR=31536000   # 365 d, no leap (NEMO 365_day calendar)
-
 usage() {
     cat >&2 <<EOF
-Usage: $0 DIR --new-dt SECONDS [--apply]
+Usage: $0 DIR [--new-dt SECONDS] [--apply]
 
-  DIR          directory containing the namelist files (run dir or EXP00 template)
-  --new-dt N   target ocean timestep in seconds (e.g. 10800)
+  DIR          directory with the namelist files (run dir or EXP00 template)
+  --new-dt N   target ocean timestep in seconds; default: timestep: from the
+               setUpData in DIR
   --apply      write the changes (default: dry-run, just print what would change)
 
-Example:
-  $0 ~/scratch/ModelRuns/TOM6_RK3            --new-dt 10800            # preview
-  $0 ~/scratch/ModelRuns/TOM6_RK3            --new-dt 10800 --apply    # write
+Examples:
+  $0 ~/scratch/ModelRuns/TOM6_RK3                  # use setUpData timestep, preview
+  $0 ~/scratch/ModelRuns/TOM6_RK3 --apply          # use setUpData timestep, write
+  $0 /path/EXP00 --new-dt 10800 --apply            # explicit override, write
 EOF
 }
 
@@ -57,111 +59,109 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-[ -n "$DIR" ] && [ -n "$NEW_DT" ] || { usage; exit 1; }
+[ -n "$DIR" ] || { usage; exit 1; }
 [ -d "$DIR" ] || { echo "Error: not a directory: $DIR" >&2; exit 1; }
-case "$NEW_DT" in (*[!0-9]*|"") echo "Error: --new-dt must be a positive integer (seconds): '$NEW_DT'" >&2; exit 1 ;; esac
 
-# Read the first numeric value of namelist key $1 in file $2 ("" if absent).
+# Default the target timestep to setUpData's timestep: (single source of truth).
+SD=$(find "$DIR" -maxdepth 1 -type f -name 'setUpData*dat' 2>/dev/null | head -1 || true)
+if [ -z "$NEW_DT" ]; then
+    [ -n "$SD" ] && NEW_DT=$(grep -h '^timestep:' "$SD" 2>/dev/null | head -1 | cut -d':' -f2 || true)
+    [ -n "$NEW_DT" ] || { echo "Error: no --new-dt given and no 'timestep:' in setUpData under $DIR" >&2; exit 1; }
+    echo "Target timestep from $(basename "$SD"): ${NEW_DT}s"
+fi
+case "$NEW_DT" in (*[!0-9]*|"") echo "Error: timestep must be a positive integer (seconds): '$NEW_DT'" >&2; exit 1 ;; esac
+
+# First numeric value of namelist key $1 in file $2 ("" if absent).
 nl_get() { grep -oP '^\s*'"$1"'\s*=\s*\K[-0-9.]+' "$2" 2>/dev/null | head -1 || true; }
 
-# Replace the numeric value of key $1 with $2 in file $3, preserving any trailing
-# comment. --follow-symlinks is harmless on a regular file.
-nl_set() {
-    sed --follow-symlinks -i -E "s/^([[:space:]]*$1[[:space:]]*=)[[:space:]]*[-0-9.]+/\1 $2/" "$3"
-}
-
-# Integer scaling with an exact-divisibility guard. die on non-exact so we never
-# emit a fractional step count.
-scale_exact() { # value, mul, div, label, file
-    local v=$1 mul=$2 div=$3 label=$4 file=$5
+# Integer scaling with an exact-divisibility guard; die (exit 2) on non-exact so
+# we never emit a fractional counter. Called during planning, before any write.
+scale_exact() { # value, mul, div, label
+    local v=$1 mul=$2 div=$3 label=$4
     if [ $(( (v * mul) % div )) -ne 0 ]; then
-        echo "  ERROR: $label=$v does not scale to an integer ($v*$mul/$div); aborting." >&2
-        echo "         (check the timestep ratio divides $label cleanly)" >&2
+        echo "  ERROR: $label=$v does not scale to an integer ($v*$mul/$div); aborting (nothing written)." >&2
         exit 2
     fi
     echo $(( v * mul / div ))
 }
 
-# Find target namelists: regular files named namelist* that define the timestep.
+# Target namelists: regular files named namelist* that define the timestep.
 mapfile -t TARGETS < <(
     find "$DIR" -maxdepth 1 -type f -name 'namelist*' 2>/dev/null \
-    | while read -r f; do
-        if grep -qP '^\s*(rn_Dt|rn_rdt)\s*=' "$f" 2>/dev/null; then echo "$f"; fi
-      done | sort
+    | while read -r f; do grep -qP '^\s*(rn_Dt|rn_rdt)\s*=' "$f" 2>/dev/null && echo "$f"; done \
+    | sort
 )
-
-if [ ${#TARGETS[@]} -eq 0 ]; then
-    echo "Error: no regular namelist* file defining rn_Dt/rn_rdt found in $DIR" >&2
-    exit 1
-fi
+[ ${#TARGETS[@]} -gt 0 ] || { echo "Error: no regular namelist* file defining rn_Dt/rn_rdt in $DIR" >&2; exit 1; }
 
 echo "Target timestep: ${NEW_DT}s   mode: $([ $APPLY -eq 1 ] && echo APPLY || echo DRY-RUN)"
-echo "Namelists (${#TARGETS[@]}):"
-printf '  %s\n' "${TARGETS[@]}"
 echo
 
+# --- Plan + validate everything first (no writes). PLAN entries: file<TAB>key<TAB>newval
+PLAN=() ; SPY_PLAN="" ; run_old_dt=""
 for f in "${TARGETS[@]}"; do
-    # Which timestep variable does this file use?
     if grep -qP '^\s*rn_Dt\s*=' "$f"; then dt_var=rn_Dt; else dt_var=rn_rdt; fi
     old_dt_raw=$(nl_get "$dt_var" "$f")
-    old_dt=${old_dt_raw%.*}          # strip trailing ".": 5400. -> 5400
-    [ -n "$old_dt" ] || { echo "  skip (no $dt_var value): $f" >&2; continue; }
+    old_dt=${old_dt_raw%.*}                 # strip trailing ".": 5400. -> 5400
+    [ -n "$old_dt" ] || { echo "  skip (no $dt_var value): $(basename "$f")" >&2; continue; }
+    run_old_dt=$old_dt                      # all phase namelists share one dt
 
-    echo "== $(basename "$f")  ($dt_var: ${old_dt} -> ${NEW_DT})"
+    if [ "$old_dt" = "$NEW_DT" ]; then
+        echo "== $(basename "$f"): already ${NEW_DT}s, unchanged"
+        continue
+    fi
 
-    # Build the change set (only for keys present in this file).
-    declare -a keys=() olds=() news=()
-    keys+=("$dt_var"); olds+=("$old_dt_raw"); news+=("${NEW_DT}.")
+    echo "== $(basename "$f")  ($dt_var ${old_dt} -> ${NEW_DT})"
+    PLAN+=("$f"$'\t'"$dt_var"$'\t'"${NEW_DT}.")
+    printf '   %-12s %s -> %s.\n' "$dt_var" "$old_dt_raw" "$NEW_DT"
 
     for k in nn_itend nn_stock nn_fsbc; do          # scale by old_dt/new_dt
         ov=$(nl_get "$k" "$f"); [ -n "$ov" ] || continue
-        nv=$(scale_exact "$ov" "$old_dt" "$NEW_DT" "$k" "$f")
-        keys+=("$k"); olds+=("$ov"); news+=("$nv")
+        nv=$(scale_exact "$ov" "$old_dt" "$NEW_DT" "$k")
+        PLAN+=("$f"$'\t'"$k"$'\t'"$nv"); printf '   %-12s %s -> %s\n' "$k" "$ov" "$nv"
     done
     ek=$(nl_get nn_e "$f")                            # scale by new_dt/old_dt
     if [ -n "$ek" ]; then
-        ev=$(scale_exact "$ek" "$NEW_DT" "$old_dt" "nn_e" "$f")
-        keys+=("nn_e"); olds+=("$ek"); news+=("$ev")
+        ev=$(scale_exact "$ek" "$NEW_DT" "$old_dt" "nn_e")
+        PLAN+=("$f"$'\t'"nn_e"$'\t'"$ev"); printf '   %-12s %s -> %s\n' "nn_e" "$ek" "$ev"
     fi
-
-    for i in "${!keys[@]}"; do
-        printf '   %-10s %s -> %s\n' "${keys[$i]}" "${olds[$i]}" "${news[$i]}"
-    done
     le=$(grep -oP '^\s*ln_1st_euler\s*=\s*\K\.\w+\.' "$f" 2>/dev/null | head -1 || true)
-    [ -n "$le" ] && printf '   %-10s %s -> .true.\n' "ln_1st_euler" "$le"
-
-    if [ $APPLY -eq 1 ]; then
-        for i in "${!keys[@]}"; do
-            nl_set "${keys[$i]}" "${news[$i]}" "$f"
-        done
-        [ -n "$le" ] && sed --follow-symlinks -i -E \
-            "s/^([[:space:]]*ln_1st_euler[[:space:]]*=)[[:space:]]*\.[A-Za-z]+\./\1 .true./" "$f"
+    if [ -n "$le" ] && [ "$le" != ".true." ]; then
+        PLAN+=("$f"$'\t'"ln_1st_euler"$'\t'".true."); printf '   %-12s %s -> .true.\n' "ln_1st_euler" "$le"
     fi
-    unset keys olds news
     echo
 done
 
-# Keep stepsPerYear (restart-step math) in sync with the new timestep.
-sd=$(find "$DIR" -maxdepth 1 -type f -name 'setUpData*dat' 2>/dev/null | head -1 || true)
-if [ -n "$sd" ]; then
-    if [ $(( SECONDS_PER_YEAR % NEW_DT )) -ne 0 ]; then
-        echo "WARNING: ${SECONDS_PER_YEAR}/${NEW_DT} is not an integer; stepsPerYear NOT updated in $(basename "$sd")" >&2
-    else
-        new_spy=$(( SECONDS_PER_YEAR / NEW_DT ))
-        old_spy=$(grep -h '^stepsPerYear:' "$sd" | head -1 | cut -d':' -f2 || true)
-        echo "setUpData $(basename "$sd"): stepsPerYear ${old_spy:-<unset>} -> ${new_spy}"
-        if [ $APPLY -eq 1 ]; then
-            if [ -n "$old_spy" ]; then
-                sed -i -E "s/^(stepsPerYear:).*/\1${new_spy}/" "$sd"
-            else
-                printf 'stepsPerYear:%s\n' "$new_spy" >> "$sd"
-            fi
-        fi
+# stepsPerYear in setUpData, scaled by the SAME dt ratio (calendar-independent).
+if [ -n "$SD" ] && [ -n "$run_old_dt" ] && [ "$run_old_dt" != "$NEW_DT" ]; then
+    osp=$(grep -h '^stepsPerYear:' "$SD" | head -1 | cut -d':' -f2 || true)
+    if [ -n "$osp" ]; then
+        nsp=$(scale_exact "$osp" "$run_old_dt" "$NEW_DT" "stepsPerYear")
+        SPY_PLAN="$SD"$'\t'"$nsp"
+        echo "setUpData $(basename "$SD"): stepsPerYear ${osp} -> ${nsp}"
+        echo
     fi
 fi
 
+if [ ${#PLAN[@]} -eq 0 ] && [ -z "$SPY_PLAN" ]; then
+    echo "Nothing to do: already at ${NEW_DT}s."
+    exit 0
+fi
+
+# --- Apply (all scalings already validated above).
 if [ $APPLY -eq 1 ]; then
-    echo "Applied. Re-run NEMO from a coldstart or ensure ln_1st_euler handling on the dt change."
+    for e in "${PLAN[@]}"; do
+        IFS=$'\t' read -r file key val <<<"$e"
+        if [ "$key" = "ln_1st_euler" ]; then
+            sed --follow-symlinks -i -E "s/^([[:space:]]*ln_1st_euler[[:space:]]*=)[[:space:]]*\.[A-Za-z]+\./\1 .true./" "$file"
+        else
+            sed --follow-symlinks -i -E "s/^([[:space:]]*$key[[:space:]]*=)[[:space:]]*[-0-9.]+/\1 $val/" "$file"
+        fi
+    done
+    if [ -n "$SPY_PLAN" ]; then
+        IFS=$'\t' read -r file nsp <<<"$SPY_PLAN"
+        sed -i -E "s/^(stepsPerYear:).*/\1${nsp}/" "$file"
+    fi
+    echo "Applied."
 else
     echo "Dry-run only. Re-run with --apply to write."
 fi

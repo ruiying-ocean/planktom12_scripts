@@ -23,8 +23,8 @@ model:TOM6
 # Starting year of the run
 yearStart:1940
 yearEnd:2100
+timestep:5760
 stepsPerYear:5475
-
 # CO2 (VARIABLE or STATIC)
 CO2:VARIABLE
 
