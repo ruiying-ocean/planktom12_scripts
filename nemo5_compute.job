@@ -48,7 +48,6 @@ if [ -f ORCA2_${timestep}_restart_0000.nc ]; then
 	[ -f restart_trc.nc ] && mv restart_trc.nc restart_trc_first_year.nc
 	[ -f restart.nc ] && mv restart.nc restart_first_year.nc
 	[ -f ${ice_restart_name}.nc ] && mv ${ice_restart_name}.nc ${ice_restart_name}_first_year.nc
-	[ -f EMPave.dat ] && mv EMPave.dat EMPave_${yearPrevious}.dat
 
 	ln -fs namelist_cfg_other_years namelist_cfg
 
@@ -72,8 +71,6 @@ if [ -f ORCA2_${timestep}_restart_0000.nc ]; then
 		ln -fs ORCA2_${timestep}_restart_ice_00${proc}.nc ${ice_restart_name}_00${proc}.nc
 		ln -fs ORCA2_${timestep}_restart_trc_00${proc}.nc restart_trc_00${proc}.nc
 	done
-
-	ln -fs EMPave_${yearPrevious}.dat EMPave_old.dat
 
 	cp ocean.output ocean.output_${yearPrevious}
 	cp planktom-ER.log planktom-ER_${yearPrevious}.log

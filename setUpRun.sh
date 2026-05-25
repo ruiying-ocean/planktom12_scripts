@@ -209,14 +209,18 @@ while IFS= read -r line || [ -n "$line" ]; do
 	fi
 done < $dataFileFullPath
 
-# Link EMP file
-if [ ! -f EMPave_${prevYear}.dat ]; then
-	rm -f EMPave_${prevYear}.dat
-	ln -fs $EMPaveFile EMPave_${prevYear}.dat
-	ln -fs EMPave_${prevYear}.dat EMPave_old.dat
-else
-	skip "EMPave exists, using existing file"
-	ln -fs EMPave_${prevYear}.dat EMPave_old.dat
+# Link EMP file (freshwater-budget seed for nn_fwb=2).
+# Only NEMO3.6 needs this. NEMO5 stores the fwb (a_fwb) in the ocean restart,
+# so NEMO5 configs omit EMPaveFile and this block is skipped.
+if [ -n "$EMPaveFile" ]; then
+	if [ ! -f EMPave_${prevYear}.dat ]; then
+		rm -f EMPave_${prevYear}.dat
+		ln -fs $EMPaveFile EMPave_${prevYear}.dat
+		ln -fs EMPave_${prevYear}.dat EMPave_old.dat
+	else
+		skip "EMPave exists, using existing file"
+		ln -fs EMPave_${prevYear}.dat EMPave_old.dat
+	fi
 fi
 
 # ----- Check compiler keys -----

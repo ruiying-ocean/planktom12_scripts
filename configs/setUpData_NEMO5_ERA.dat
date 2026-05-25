@@ -60,7 +60,6 @@ restart_trc.nc:/gpfs/home/vhf24tbu/input_data/nemo5/ORCA2_01109600_restart_trc.n
 restart_ice.nc:/gpfs/home/vhf24tbu/input_data/nemo5/ORCA2_01109600_restart_ice.nc
 restart.nc:/gpfs/home/vhf24tbu/input_data/nemo5/ORCA2_01109600_restart.nc
 
-EMPaveFile:/gpfs/data/greenocean/software/resources/ModelResources/RestartFiles/EMPave_1947.dat
 
 ahmcoef.nc:/gpfs/data/greenocean/software/resources/NEMO5/ahmcoef.nc
 zdfiwm_forcing_orca2.nc:/gpfs/data/greenocean/software/resources/NEMO5/zdfiwm_forcing_orca2.nc
