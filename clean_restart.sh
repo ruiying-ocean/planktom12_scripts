@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-STEP_PER_YEAR=5475
 AFM_ROOT="/gpfs/afm/greenocean/software/runs"
 SCRATCH_ROOT="$HOME/scratch/ModelRuns"
+# STEP_PER_YEAR (NEMO timesteps/year, for restart-step math) is read per-run
+# from the run's setUpData below -- it depends on NEMO version / rn_rdt.
 
 usage() {
     echo "Usage: $0 [--follow-symlink] [--afm] RUN_NAME [MODE]"
@@ -72,6 +73,27 @@ fi
 if [ ! -d "$DIR" ]; then
     echo "Error: $DIR not found" >&2
     exit 1
+fi
+
+# Resolve steps-per-year from the run's setUpData (run dir, then scratch).
+# No version assumption when set; version-aware fallback only if absent.
+dat=""
+for d in "$DIR" "$SCRATCH_DIR"; do
+    [ -n "$d" ] || continue
+    for c in "$d"/setUpData*dat; do
+        [ -f "$c" ] && { dat="$c"; break; }
+    done
+    [ -n "$dat" ] && break
+done
+nemoVersion=""
+STEP_PER_YEAR=""
+if [ -n "$dat" ]; then
+    nemoVersion=$(grep "^nemoVersion:" "$dat" | head -1 | cut -d':' -f2 || true)
+    STEP_PER_YEAR=$(grep "^stepsPerYear:" "$dat" | head -1 | cut -d':' -f2 || true)
+fi
+if [ -z "$STEP_PER_YEAR" ]; then
+    if [ "$nemoVersion" = "NEMO5" ]; then STEP_PER_YEAR=5840; else STEP_PER_YEAR=5475; fi
+    echo "Note: stepsPerYear not in setUpData; using ${STEP_PER_YEAR} (nemoVersion='${nemoVersion:-unknown}')" >&2
 fi
 
 shopt -s nullglob
