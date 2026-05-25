@@ -103,11 +103,16 @@
 # ============================================================================
 
 [files]
-basin_mask = "/gpfs/data/greenocean/software/resources/breakdown/basin_mask.nc"
+# NEMO5 ORCA2 output is 180x148; basin_mask/mesh_mask must be on that grid.
+basin_mask = "/gpfs/data/greenocean/software/resources/NEMO5/basin_mask.v5.nc"
+mesh_mask = "/gpfs/data/greenocean/software/resources/NEMO5/meshmask.v5.nc"
+# The following are still on the 3.6 grid (182x149). They are only read for
+# region= based entries (region_mask/reccap_mask) or are currently unused
+# (woa_mask, ancillary_data), so they do not affect lon/lat-range analysis.
+# region= entries will fail until NEMO5 (180x148) versions are created.
 woa_mask = "/gpfs/data/greenocean/software/resources/breakdown/WOAmask.nc"
 region_mask = "/gpfs/data/greenocean/software/resources/breakdown/clq_basin_masks_ORCA.nc"
 reccap_mask = "/gpfs/data/greenocean/software/resources/breakdown/RECCAP2_region_masks_all_v20210412_ORCA.nc"
-mesh_mask = "/gpfs/data/greenocean/software/resources/breakdown/mesh_mask3_6_low_res.nc"
 ancillary_data = "/gpfs/data/greenocean/software/resources/breakdown/AncillaryData_v2.nc"
 
 [[surface]]
