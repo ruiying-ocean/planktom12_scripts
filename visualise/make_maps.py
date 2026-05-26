@@ -42,7 +42,8 @@ from preprocess_data import (
     load_observations,
     get_nav_coordinates
 )
-from config_utils import get_obs_dir, get_obs_path
+from config_utils import load_config, get_obs_dir, get_obs_path
+from nemo_files import nemo_file
 
 
 def plot_pft_maps(
@@ -933,10 +934,9 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Construct file paths
-    date_str = f"{args.year}0101_{args.year}1231"
-    ptrc_file = run_dir / f"ORCA2_1m_{date_str}_ptrc_T.nc"
-    diad_file = run_dir / f"ORCA2_1m_{date_str}_diad_T.nc"
-    grid_t_file = run_dir / f"ORCA2_1m_{date_str}_grid_T.nc"
+    ptrc_file = nemo_file(run_dir, args.year, "ptrc_T")
+    diad_file = nemo_file(run_dir, args.year, "diad_T")
+    grid_t_file = nemo_file(run_dir, args.year, "grid_T")
 
     # Check files exist
     if not ptrc_file.exists():
@@ -950,7 +950,8 @@ def main():
     print(f"Processing year: {args.year}")
 
     # Initialize plotter
-    plotter = OceanMapPlotter(mask_path=args.mask_path)
+    config = load_config(run_dir=run_dir)
+    plotter = OceanMapPlotter(mask_path=args.mask_path, config_dir=run_dir)
 
     # Load and preprocess datasets using preprocessing module
     # Compute AOU if grid_T file is available
@@ -983,8 +984,8 @@ def main():
 
     # 1. Ecosystem diagnostics (TChl, EXP, PPINT) with satellite chlorophyll comparison
     print("1. Ecosystem diagnostics with satellite chlorophyll...")
-    obs_dir = Path(get_obs_dir(args.obs_dir))
-    chl_obs_file = Path(get_obs_path('chl_1deg', obs_dir))
+    obs_dir = Path(get_obs_dir(config, args.obs_dir))
+    chl_obs_file = Path(get_obs_path(config, 'chl_1deg', obs_dir))
 
     plot_ecosystem_diagnostics(
         plotter=plotter,
@@ -1018,9 +1019,9 @@ def main():
         print("4. Nutrients (model vs observations)...")
 
         # Load observational datasets using preprocessing module (including O2 and AOU)
-        obs_dir = Path(get_obs_dir(args.obs_dir))
+        obs_dir = Path(get_obs_dir(config, args.obs_dir))
         nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2'] + (['_AOU'] if compute_aou else [])
-        obs_datasets = load_observations(obs_dir, nutrients=nutrients)
+        obs_datasets = load_observations(config, obs_dir, nutrients=nutrients)
 
         # Generate comparison plot
         plot_nutrient_comparison(
@@ -1142,7 +1143,7 @@ def main():
     # 6. Carbon chemistry (ALK, DIC)
     print("6. Carbon chemistry variables...")
     carbon_vars = ['_ALK', '_DIC']
-    carbon_obs = load_observations(obs_dir, nutrients=[], carbon_chemistry=carbon_vars)
+    carbon_obs = load_observations(config, obs_dir, nutrients=[], carbon_chemistry=carbon_vars)
     plot_carbon_chemistry(
         plotter=plotter,
         ptrc_ds=ptrc_ds,
@@ -1153,7 +1154,7 @@ def main():
 
     # 7. Surface carbon cycle (pCO2, Cflx vs Landschützer MPI-SOM-FFN)
     print("7. Surface carbon cycle (pCO2 and air-sea flux vs Landschützer)...")
-    spco2_obs = load_observations(obs_dir, nutrients=[], surface_carbon=True)
+    spco2_obs = load_observations(config, obs_dir, nutrients=[], surface_carbon=True)
     plot_surface_carbon(
         plotter=plotter,
         diad_ds=diad_ds,
@@ -1165,6 +1166,7 @@ def main():
     if not args.skip_physics_sections and compute_aou:  # grid_T must exist
         print("8. Physical sections (T/S Atlantic & Pacific)...")
         plot_physics_sections(
+            config=config,
             grid_t_file=grid_t_file,
             obs_dir=args.obs_dir,
             output_dir=output_dir,

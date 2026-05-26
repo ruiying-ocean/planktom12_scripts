@@ -15,13 +15,13 @@ from timeseries_util import (
     ObservationRange,
     ObservationLine,
     ObservationData,
-    ConfigLoader,
     DataFileLoader,
     PlotStyler,
     FigureSaver,
-    AxisSetup
+    AxisSetup,
+    TCHL_REGION_DEFS,
 )
-from config_utils import get_obs_dir, get_obs_path
+from config_utils import load_config, get_obs_dir, get_obs_path
 
 class ModelDataLoader:
     def __init__(self, base_dir, model_name):
@@ -153,63 +153,20 @@ class ModelDataLoader:
         return data
 
 class FigureCreator:
-    TCHL_REGION_DEFS = [
-        {
-            "title": "N. Pacific subtropical",
-            "lat_range": (15.0, 35.0),
-            "lon_range": (160.0, -130.0),
-        },
-        {
-            "title": "N. Pacific subpolar",
-            "lat_range": (50.0, 62.0),
-            "lon_range": (160.0, -140.0),
-        },
-        {
-            "title": "N. Atlantic subtropical",
-            "lat_range": (20.0, 35.0),
-            "lon_range": (-80.0, -20.0),
-        },
-        {
-            "title": "N. Atlantic subpolar",
-            "lat_range": (45.0, 65.0),
-            "lon_range": (-60.0, -10.0),
-        },
-        {
-            "title": "Equatorial Pacific",
-            "lat_range": (-5.0, 5.0),
-            "lon_range": (160.0, -90.0),
-        },
-        {
-            "title": "S. Pacific subtropical",
-            "lat_range": (-35.0, -15.0),
-            "lon_range": (170.0, -100.0),
-        },
-        {
-            "title": "S. Atlantic subtropical",
-            "lat_range": (-30.0, -10.0),
-            "lon_range": (-50.0, 10.0),
-        },
-        {
-            "title": "Sub-Antarctic Zone (Indian)",
-            "lat_range": (-50.0, -40.0),
-            "lon_range": (20.0, 120.0),
-        },
-        {
-            "title": "Antarctic Zone",
-            "lat_range": (-65.0, -55.0),
-            "lon_range": None,
-        },
-    ]
+    TCHL_REGION_DEFS = TCHL_REGION_DEFS  # shared definition from timeseries_util
 
     def __init__(self, save_dir, model_name, model_output_dir, obs_dir=None, config_path=None):
         self.save_dir = pathlib.Path(save_dir)
         self.model_name = model_name
         self.model_output_dir = pathlib.Path(model_output_dir)
+        # Per-run visualise_config resolved from the run's setUpData (no env/cwd lookup)
+        self._cfg = load_config(run_dir=self.model_output_dir / model_name)
         # --obs-dir override (obs_dir) else [files].obs_dir from the active config
-        self.obs_dir = pathlib.Path(get_obs_dir(obs_dir)).expanduser()
+        self.obs_dir = pathlib.Path(get_obs_dir(self._cfg, obs_dir)).expanduser()
 
-        # Load configuration using shared utility
-        self.config = ConfigLoader.load_config(config_path)
+        # Reuse the per-run config resolved above; load obs references from it.
+        self.config = self._cfg
+        ObservationData.configure(self._cfg)
 
         # Initialize styler and apply style
         self.styler = PlotStyler(self.config)
@@ -237,7 +194,7 @@ class FigureCreator:
 
     def _load_occci_seasonal_regions(self):
         """Load OC-CCI chlorophyll climatology and compute regional means for each TCHL_REGION_DEF."""
-        chl_file = pathlib.Path(get_obs_path('chl_1deg', self.obs_dir))
+        chl_file = pathlib.Path(get_obs_path(self._cfg, 'chl_1deg', self.obs_dir))
         if not chl_file.exists():
             print(f"  ⚠ OC-CCI file not found: {chl_file} — no obs overlay")
             return None
@@ -291,7 +248,7 @@ class FigureCreator:
 
     def _load_johnson_so_regions(self):
         """Load Johnson 2013 SO Chl climatology for SAZ and AZ regions only."""
-        chl_file = pathlib.Path(get_obs_path('so_chl', self.obs_dir))
+        chl_file = pathlib.Path(get_obs_path(self._cfg, 'so_chl', self.obs_dir))
         if not chl_file.exists():
             print(f"  ⚠ Johnson SO Chl file not found: {chl_file} — no Johnson obs overlay")
             return None

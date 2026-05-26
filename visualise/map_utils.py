@@ -28,11 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from shared.rls import calculate_rls_numba
 from shared.aou import calculate_aou as _calculate_aou_shared, calculate_aou_3d
 
-from config_utils import (
-    get_mask_paths,
-    get_basin_mask_path,
-    get_mesh_mask_path,
-)
+from config_utils import load_config, get_basin_mask_path
 
 
 class OceanMapPlotter:
@@ -46,16 +42,24 @@ class OceanMapPlotter:
     - Horizontal colorbars with proper units
     """
 
-    def __init__(self, mask_path: Optional[str] = None):
+    def __init__(self, mask_path: Optional[str] = None, config_dir=None):
         """
         Initialize the map plotter with land/basin masks.
 
         Args:
-            mask_path: Path to basin mask NetCDF file. If None, resolved from
-                visualise_config.toml [files].basin_mask (raises if unset).
+            mask_path: Path to basin mask NetCDF file. If None, it is resolved from
+                the visualise_config of the run at ``config_dir`` ([files].basin_mask).
+            config_dir: A model run directory whose setUpData selects the
+                visualise_config; used to resolve the basin mask when ``mask_path``
+                is not given. There is no ambient/env-var lookup.
         """
         if mask_path is None:
-            mask_path = get_basin_mask_path()
+            if config_dir is None:
+                raise ValueError(
+                    "OceanMapPlotter needs mask_path or config_dir to resolve the "
+                    "basin mask (no ambient visualise_config lookup)."
+                )
+            mask_path = get_basin_mask_path(load_config(run_dir=config_dir))
         self.mask_path = mask_path
         self.land_mask_2d = None
         self.land_mask_3d = None

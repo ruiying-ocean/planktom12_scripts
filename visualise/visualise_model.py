@@ -34,7 +34,8 @@ from make_transects_physics import plot_physics_sections
 from make_vertical_profiles import plot_vertical_profiles
 from difference_utils import plot_comparison_panel
 from logging_utils import print_header, print_step, print_success, print_warning
-from config_utils import get_obs_dir, get_obs_path
+from config_utils import load_config, get_obs_dir, get_obs_path
+from nemo_files import nemo_file
 
 
 def main():
@@ -80,6 +81,7 @@ def main():
     # Setup paths
     model_run_dir = Path(args.model_run_dir).expanduser()
     run_dir = model_run_dir / args.run_name
+    config = load_config(run_dir=run_dir)
 
     # Set default output directory
     if args.output_dir is None:
@@ -91,13 +93,12 @@ def main():
 
     # Resolve the observations directory once (--obs-dir override, else config
     # [files].obs_dir) so every step below can use it regardless of which steps run.
-    obs_dir = Path(get_obs_dir(args.obs_dir))
+    obs_dir = Path(get_obs_dir(config, args.obs_dir))
 
     # Construct file paths
-    date_str = f"{args.year}0101_{args.year}1231"
-    ptrc_file = run_dir / f"ORCA2_1m_{date_str}_ptrc_T.nc"
-    diad_file = run_dir / f"ORCA2_1m_{date_str}_diad_T.nc"
-    grid_t_file = run_dir / f"ORCA2_1m_{date_str}_grid_T.nc"
+    ptrc_file = nemo_file(run_dir, args.year, "ptrc_T")
+    diad_file = nemo_file(run_dir, args.year, "diad_T")
+    grid_t_file = nemo_file(run_dir, args.year, "grid_T")
 
     # Check files exist
     if not ptrc_file.exists():
@@ -125,7 +126,7 @@ def main():
     print_header("Step 1: Data Preprocessing")
 
     # Initialize plotter
-    plotter = OceanMapPlotter(mask_path=args.mask_path)
+    plotter = OceanMapPlotter(mask_path=args.mask_path, config_dir=run_dir)
 
     # Load and preprocess model datasets
     need_transects = not args.skip_transects
@@ -155,7 +156,7 @@ def main():
 
         # 2.1 Ecosystem diagnostics with satellite chlorophyll
         print_step(1, 6, "Ecosystem diagnostics (TChl, EXP, PPINT)")
-        chl_obs_file = Path(get_obs_path('chl_1deg', obs_dir))
+        chl_obs_file = Path(get_obs_path(config, 'chl_1deg', obs_dir))
 
         plot_ecosystem_diagnostics(
             plotter=plotter,
@@ -190,7 +191,7 @@ def main():
 
         if not args.skip_observations:
             # Load observations for comparison
-            obs_datasets = load_observations(obs_dir, nutrients=nutrients)
+            obs_datasets = load_observations(config, obs_dir, nutrients=nutrients)
 
             plot_nutrient_comparison(
                 plotter=plotter,
@@ -250,7 +251,7 @@ def main():
 
         if not args.skip_observations:
             # Load carbon chemistry observations from GLODAP
-            carbon_obs = load_observations(obs_dir, nutrients=[], carbon_chemistry=carbon_vars)
+            carbon_obs = load_observations(config, obs_dir, nutrients=[], carbon_chemistry=carbon_vars)
 
             plot_carbon_chemistry(
                 plotter=plotter,
@@ -302,6 +303,7 @@ def main():
                 print_step(1, 2, "Nutrient transects (Atlantic 35°W, Pacific 170°W)")
                 nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
                 obs_datasets = load_observations(
+                    config,
                     obs_dir,
                     nutrients=['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
                 )
@@ -346,6 +348,7 @@ def main():
     if not args.skip_physics_sections and compute_aou:  # grid_T must exist
         print_header("Step 3b: Generating Physical Sections (T/S)")
         plot_physics_sections(
+            config=config,
             grid_t_file=grid_t_file,
             obs_dir=args.obs_dir,
             output_dir=output_dir,
@@ -365,6 +368,7 @@ def main():
 
         try:
             plot_vertical_profiles(
+                config=config,
                 model_ids=[args.run_name],
                 year=args.year,
                 variables=profile_vars,

@@ -20,10 +20,13 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 from logging_utils import print_header, print_info, print_warning, print_error, print_success
 
 # Import shared utilities from parent directory
-from timeseries_util import ConfigLoader, DataFileLoader, ObservationData, PlotStyler
+from timeseries_util import DataFileLoader, ObservationData, PlotStyler, TCHL_REGION_DEFS
+from config_utils import load_config_for_runs
+from nemo_files import nemo_glob
 
-# Load configuration using shared utility
-CONFIG = ConfigLoader.load_config()
+# The per-run visualise_config is resolved at runtime in MultiModelPlotter from the
+# models' setUpData (no env-var/cwd lookup); see _apply_config below.
+CONFIG = None
 
 
 @dataclass
@@ -102,49 +105,61 @@ class ModelConfig:
         return self.get_monthly_index()
 
 
-# Initialize global PlotStyler for consistent styling across all plotters
-PLOT_STYLER = PlotStyler(CONFIG) if CONFIG else None
+# Module-level styling globals, referenced by the plotting functions below. They
+# start at safe defaults and are (re)derived from the per-run config by
+# _apply_config(), which MultiModelPlotter calls once the models are known.
+_DEFAULT_COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+                   "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
+PLOT_STYLER = None
+COLORS = _DEFAULT_COLORS
+USE_CONSTRAINED_LAYOUT = True
+SUBPLOT_WIDTH = 2.5
+SUBPLOT_HEIGHT = 2.0
+TITLE_FONTSIZE = 8
+LABEL_FONTSIZE = 10
+LINE_WIDTH = 1.5
+HATCH_STYLE = {"color": "k", "alpha": 0.15, "fill": False, "hatch": "///"}
+LINE_STYLE = {"color": "k", "linestyle": "--", "alpha": 0.8, "linewidth": 1.5}
 
-# Apply matplotlib styling globally
-if PLOT_STYLER:
+
+def _apply_config(config):
+    """Derive the module-level styling globals + observation refs from a per-run
+    config. Called once with the run's config (None keeps the defaults above)."""
+    global CONFIG, PLOT_STYLER, COLORS, USE_CONSTRAINED_LAYOUT, SUBPLOT_WIDTH
+    global SUBPLOT_HEIGHT, TITLE_FONTSIZE, LABEL_FONTSIZE, LINE_WIDTH
+    global HATCH_STYLE, LINE_STYLE
+
+    CONFIG = config
+    if not config:
+        return
+
+    PLOT_STYLER = PlotStyler(config)
     PLOT_STYLER.apply_style()
 
-# Use colors from multimodel_palette in config, or fall back to standard colors
-if CONFIG:
-    COLORS = CONFIG.get("colors", {}).get("multimodel_palette", PLOT_STYLER.colors if PLOT_STYLER else [
-        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
-        "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
-    ])
-    USE_CONSTRAINED_LAYOUT = CONFIG.get("layout", {}).get("use_constrained_layout", True)
+    COLORS = config.get("colors", {}).get("multimodel_palette",
+                                          PLOT_STYLER.colors or _DEFAULT_COLORS)
+    USE_CONSTRAINED_LAYOUT = config.get("layout", {}).get("use_constrained_layout", True)
     # Use same subplot sizing as single-model for consistency
-    SUBPLOT_WIDTH = CONFIG.get("layout", {}).get("subplot_width", 2.5)
-    SUBPLOT_HEIGHT = CONFIG.get("layout", {}).get("subplot_height", 2.0)
-else:
-    COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
-              "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
-    USE_CONSTRAINED_LAYOUT = True
-    SUBPLOT_WIDTH = 2.5
-    SUBPLOT_HEIGHT = 2.0
+    SUBPLOT_WIDTH = config.get("layout", {}).get("subplot_width", 2.5)
+    SUBPLOT_HEIGHT = config.get("layout", {}).get("subplot_height", 2.0)
 
-# Direct access to styler properties (no wrapper class)
-TITLE_FONTSIZE = PLOT_STYLER.font_title if PLOT_STYLER else 8
-LABEL_FONTSIZE = PLOT_STYLER.font_axis_label if PLOT_STYLER else 10
-LINE_WIDTH = PLOT_STYLER.linewidth if PLOT_STYLER else 1.5
+    TITLE_FONTSIZE = PLOT_STYLER.font_title
+    LABEL_FONTSIZE = PLOT_STYLER.font_axis_label
+    LINE_WIDTH = PLOT_STYLER.linewidth
+    HATCH_STYLE = {
+        "color": PLOT_STYLER.obs_hatch_color,
+        "alpha": PLOT_STYLER.obs_hatch_alpha,
+        "fill": PLOT_STYLER.obs_hatch_fill,
+        "hatch": PLOT_STYLER.obs_hatch_pattern,
+    }
+    LINE_STYLE = {
+        "color": PLOT_STYLER.obs_line_color,
+        "linestyle": PLOT_STYLER.obs_line_linestyle,
+        "alpha": PLOT_STYLER.obs_line_alpha,
+        "linewidth": PLOT_STYLER.obs_line_linewidth,
+    }
 
-# Observation styling from shared styler
-HATCH_STYLE = {
-    "color": PLOT_STYLER.obs_hatch_color if PLOT_STYLER else "k",
-    "alpha": PLOT_STYLER.obs_hatch_alpha if PLOT_STYLER else 0.15,
-    "fill": PLOT_STYLER.obs_hatch_fill if PLOT_STYLER else False,
-    "hatch": PLOT_STYLER.obs_hatch_pattern if PLOT_STYLER else "///"
-}
-
-LINE_STYLE = {
-    "color": PLOT_STYLER.obs_line_color if PLOT_STYLER else "k",
-    "linestyle": PLOT_STYLER.obs_line_linestyle if PLOT_STYLER else "--",
-    "alpha": PLOT_STYLER.obs_line_alpha if PLOT_STYLER else 0.8,
-    "linewidth": PLOT_STYLER.obs_line_linewidth if PLOT_STYLER else 1.5
-}
+    ObservationData.configure(config)
 
 
 def setup_axes(axes):
@@ -949,17 +964,7 @@ class PPTByPFTNormalizedPlotter(PlotGenerator):
 class TChlPlotter(PlotGenerator):
     """Generates TChl seasonal summary plots by region, consistent with single-model output"""
 
-    TCHL_REGION_DEFS = [
-        {"title": "N. Pacific subtropical",  "lat_range": (15.0, 35.0),  "lon_range": (160.0, -130.0)},
-        {"title": "N. Pacific subpolar",      "lat_range": (50.0, 62.0),  "lon_range": (160.0, -140.0)},
-        {"title": "N. Atlantic subtropical",  "lat_range": (20.0, 35.0),  "lon_range": (-80.0, -20.0)},
-        {"title": "N. Atlantic subpolar",     "lat_range": (45.0, 65.0),  "lon_range": (-60.0, -10.0)},
-        {"title": "Equatorial Pacific",       "lat_range": (-5.0, 5.0),   "lon_range": (160.0, -90.0)},
-        {"title": "S. Pacific subtropical",   "lat_range": (-35.0, -15.0),"lon_range": (170.0, -100.0)},
-        {"title": "S. Atlantic subtropical",  "lat_range": (-30.0, -10.0),"lon_range": (-50.0, 10.0)},
-        {"title": "Sub-Antarctic Zone (Indian)", "lat_range": (-50.0, -40.0),"lon_range": (20.0, 120.0)},
-        {"title": "Antarctic Zone",           "lat_range": (-65.0, -55.0),"lon_range": None},
-    ]
+    TCHL_REGION_DEFS = TCHL_REGION_DEFS  # shared definition from timeseries_util
 
     @staticmethod
     def _build_lon_mask(lon, lon_range):
@@ -1017,7 +1022,7 @@ class TChlPlotter(PlotGenerator):
     def _plot_model(self, model, axes, color):
         import xarray as xr
         run_dir = pathlib.Path(model.model_dir) / model.name
-        diad_files = sorted(run_dir.glob("ORCA2_1m_*_diad_T.nc"))
+        diad_files = nemo_glob(run_dir, "diad_T")
         if not diad_files:
             print_warning(f"No ORCA2_1m_*_diad_T.nc found in {run_dir}")
             return
@@ -1864,6 +1869,12 @@ class MultiModelPlotter:
         self.models = DataLoader.load_model_configs(model_csv_path)
         self.save_dir = save_dir
         self.debug = debug
+
+        # Resolve the per-run visualise_config from the models' setUpData (no
+        # env-var/cwd lookup) and apply styling + observation references; a
+        # comparison shares one grid, so all models must name the same config.
+        run_dirs = [pathlib.Path(m.model_dir) / m.name for m in self.models]
+        _apply_config(load_config_for_runs(run_dirs))
 
         print_info(f"Loaded {len(self.models)} models:")
         for model in self.models:

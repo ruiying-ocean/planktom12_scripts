@@ -215,7 +215,8 @@ def load_and_preprocess_diad(
 
 
 def load_observations(
-    obs_dir: Path,
+    config: dict,
+    obs_dir: Path = None,
     nutrients: List[str] = ['_NO3', '_PO4', '_Si', '_Fer'],
     carbon_chemistry: List[str] = None,
     surface_carbon: bool = False
@@ -236,7 +237,7 @@ def load_observations(
     obs_datasets = {}
 
     # Try to load WOA data for NO3, PO4, Si, O2
-    woa_file = Path(get_obs_path('woa', obs_dir))
+    woa_file = Path(get_obs_path(config, 'woa', obs_dir))
     if woa_file.exists():
         print(f"Loading WOA data from {woa_file}")
         woa_ds = xr.open_dataset(woa_file, decode_times=False)
@@ -257,7 +258,7 @@ def load_observations(
         print(f"Warning: WOA file not found at {woa_file}")
 
     # Try to load Fe data from Huang2022
-    fe_file = Path(get_obs_path('fe', obs_dir))
+    fe_file = Path(get_obs_path(config, 'fe', obs_dir))
     if '_Fer' in nutrients:
         if fe_file.exists():
             print(f"Loading Fe data from {fe_file}")
@@ -270,7 +271,7 @@ def load_observations(
 
     # Try to load GLODAP data for carbon chemistry (ALK, DIC)
     if carbon_chemistry:
-        glodap_file = Path(get_obs_path('glodap', obs_dir))
+        glodap_file = Path(get_obs_path(config, 'glodap', obs_dir))
         if glodap_file.exists():
             print(f"Loading GLODAP data from {glodap_file}")
             glodap_ds = xr.open_dataset(glodap_file, decode_times=False)
@@ -286,7 +287,7 @@ def load_observations(
 
     # Try to load Landschützer MPI-SOM-FFN surface pCO2 and flux
     if surface_carbon:
-        spco2_file = Path(get_obs_path('spco2', obs_dir))
+        spco2_file = Path(get_obs_path(config, 'spco2', obs_dir))
         if spco2_file.exists():
             print(f"Loading Landschützer spco2 data from {spco2_file}")
             spco2_ds = xr.open_dataset(spco2_file, decode_times=False)

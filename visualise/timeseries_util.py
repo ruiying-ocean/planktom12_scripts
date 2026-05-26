@@ -11,11 +11,7 @@ import matplotlib.pyplot as plt
 from dataclasses import dataclass
 from typing import Optional, Dict, Any, Tuple
 
-# Import TOML parser (tomllib in Python 3.11+, tomli for earlier versions)
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib
+import config_utils
 
 
 @dataclass
@@ -31,6 +27,22 @@ class ObservationLine:
     """Represents an observational data point to plot as a horizontal line."""
     value: float
     label: str = "Observation"
+
+
+# Regions for the seasonal TChl summary, shared by the single- and multi-model
+# timeseries plotters so both stay in step. lon_range is (min, max) in -180..180
+# (None = all longitudes); a min > max wraps across the dateline.
+TCHL_REGION_DEFS = [
+    {"title": "N. Pacific subtropical",      "lat_range": (15.0, 35.0),   "lon_range": (160.0, -130.0)},
+    {"title": "N. Pacific subpolar",         "lat_range": (50.0, 62.0),   "lon_range": (160.0, -140.0)},
+    {"title": "N. Atlantic subtropical",     "lat_range": (20.0, 35.0),   "lon_range": (-80.0, -20.0)},
+    {"title": "N. Atlantic subpolar",        "lat_range": (45.0, 65.0),   "lon_range": (-60.0, -10.0)},
+    {"title": "Equatorial Pacific",          "lat_range": (-5.0, 5.0),    "lon_range": (160.0, -90.0)},
+    {"title": "S. Pacific subtropical",      "lat_range": (-35.0, -15.0), "lon_range": (170.0, -100.0)},
+    {"title": "S. Atlantic subtropical",     "lat_range": (-30.0, -10.0), "lon_range": (-50.0, 10.0)},
+    {"title": "Sub-Antarctic Zone (Indian)", "lat_range": (-50.0, -40.0), "lon_range": (20.0, 120.0)},
+    {"title": "Antarctic Zone",              "lat_range": (-65.0, -55.0), "lon_range": None},
+]
 
 
 class ObservationData:
@@ -54,13 +66,28 @@ class ObservationData:
     ORGANIC_CARBON = {}
 
     @classmethod
+    def configure(cls, config):
+        """Inject the per-run visualise_config and (re)load observation refs.
+
+        Must be called once with the run's config before any get_* accessor;
+        there is no ambient config discovery.
+        """
+        cls._config = config
+        cls._loaded = False
+        cls._ensure_loaded()
+
+    @classmethod
     def _ensure_loaded(cls):
-        """Load observation data from config if not already loaded."""
+        """Populate the observation reference tables from the injected config."""
         if cls._loaded:
             return
 
-        # Load config
-        cls._config = ConfigLoader.load_config()
+        if cls._config is None:
+            raise RuntimeError(
+                "ObservationData is not configured; call "
+                "ObservationData.configure(config) with the per-run visualise_config "
+                "before reading observation references."
+            )
         obs_config = cls._config.get('observations', {})
 
         # Load global ecosystem observations
@@ -215,50 +242,17 @@ class ObservationData:
 
 
 class ConfigLoader:
-    """Handles loading and managing visualization configuration."""
+    """Loads the per-run visualization config (delegates to config_utils)."""
 
     @staticmethod
-    def load_config(config_path: Optional[pathlib.Path] = None) -> Dict[str, Any]:
+    def load_config(run_dir=None, config_path=None) -> Dict[str, Any]:
+        """Parse the per-run visualise_config.
+
+        Provide ``run_dir`` (resolved from its setUpData) or an explicit
+        ``config_path``. There is no environment-variable or cwd discovery, so a
+        misconfigured run fails loudly rather than guessing the grid/obs.
         """
-        Load configuration from visualise_config.toml.
-
-        Args:
-            config_path: Optional explicit path to config file.
-                        If None, searches in standard locations.
-
-        Returns:
-            Configuration dictionary, or empty dict if not found.
-        """
-        if config_path is None:
-            # Try environment variable first (set by shell script)
-            import os
-            config_path_str = os.environ.get("VISUALISE_CONFIG", "")
-            if config_path_str:
-                config_path = pathlib.Path(config_path_str)
-                if config_path.exists() and config_path.is_file():
-                    with open(config_path, "rb") as f:
-                        return tomllib.load(f)
-
-            # Try current directory
-            config_path = pathlib.Path("visualise_config.toml")
-            if config_path.exists():
-                with open(config_path, "rb") as f:
-                    return tomllib.load(f)
-
-            # Try script directory's parent (for scripts in subdirectories)
-            script_dir = pathlib.Path(__file__).parent
-            config_path = script_dir / "visualise_config.toml"
-            if config_path.exists():
-                with open(config_path, "rb") as f:
-                    return tomllib.load(f)
-        else:
-            # Use provided path
-            if config_path.exists():
-                with open(config_path, "rb") as f:
-                    return tomllib.load(f)
-
-        # Return empty config as fallback
-        return {}
+        return config_utils.load_config(run_dir=run_dir, config_path=config_path)
 
 
 class DataFileLoader:

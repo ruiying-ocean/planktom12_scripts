@@ -188,8 +188,9 @@ def main():
     args = parser.parse_args()
     output_dir = Path(args.output_dir)
 
-    # Initialize plotter with mask for preprocessing
-    plotter = OceanMapPlotter()
+    # Initialize plotter with mask for preprocessing (basin mask resolved from
+    # model 1's setUpData visualise_config; no ambient lookup)
+    plotter = OceanMapPlotter(config_dir=Path(args.model_dir1) / args.model1)
 
     # Generate diagnostics difference map (cflx, tchl, ppint, exp)
     print(f"Generating diagnostics difference map ({args.model1} - {args.model2})...")

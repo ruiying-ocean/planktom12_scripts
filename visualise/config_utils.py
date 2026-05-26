@@ -1,53 +1,24 @@
-"""Lightweight helpers for reading grid and observation paths from visualise_config.toml.
+"""Helpers for reading grid and observation paths from a run's visualise_config.toml.
 
-Kept dependency-free (stdlib only) so modules that must not pull in the heavy
-plotting stack (cartopy/gsw/matplotlib via map_utils) can still resolve the
-per-run mask/mesh and observation paths. See map_utils.py for the plotting code
-that uses it.
+Stdlib-only so modules that must not pull in the heavy plotting stack
+(cartopy/gsw/matplotlib via map_utils) can still resolve the per-run mask/mesh and
+observation paths. See map_utils.py for the plotting code that uses it.
 
-The active config is selected per-run via $VISUALISE_CONFIG (NEMO3.6 vs NEMO5);
-there is no NEMO-version default, so a misconfigured run fails loudly instead of
-silently using the wrong grid or wrong-grid obs.
+The active config is selected per-run from the run's ``setUpData_*.dat``
+(``visualise_config:``), the same way setUpRun.sh resolves it (NEMO3.6 vs NEMO5).
+There is no NEMO-version default and no environment-variable or cwd discovery:
+callers resolve the config from a run directory (``load_config`` /
+``load_config_for_runs``) and thread the parsed dict explicitly into the accessor
+helpers below. A misconfigured run therefore fails loudly instead of silently
+using the wrong grid or wrong-grid obs.
 """
 
-import os
 from pathlib import Path
 
 try:
     import tomllib
 except ModuleNotFoundError:
     import tomli as tomllib
-
-
-def _find_visualise_config():
-    """Locate visualise_config.toml: $VISUALISE_CONFIG, then cwd, then this dir."""
-    env = os.environ.get("VISUALISE_CONFIG", "")
-    candidates = []
-    if env:
-        candidates.append(Path(env))
-    candidates.append(Path("visualise_config.toml"))
-    candidates.append(Path(__file__).parent / "visualise_config.toml")
-    for p in candidates:
-        if p.is_file():
-            return p
-    return None
-
-
-def _load_files():
-    """Return (config_path, [files] table) from the active visualise_config.toml.
-
-    Raises FileNotFoundError if no config is found — there is no NEMO-version
-    default, so a misconfigured run fails loudly rather than guessing the grid/obs.
-    """
-    cfg = _find_visualise_config()
-    if cfg is None:
-        raise FileNotFoundError(
-            "visualise_config.toml not found (checked $VISUALISE_CONFIG, cwd, and "
-            f"{Path(__file__).parent}). Grid mask/mesh and observation paths come "
-            "from its [files] section; there is no NEMO-version default."
-        )
-    with open(cfg, "rb") as f:
-        return cfg, tomllib.load(f).get("files", {})
 
 
 # Runs created before visualise_config: was added to setUpData are all NEMO3.6
@@ -81,8 +52,32 @@ def resolve_run_config(run_dir):
     return p if p.is_absolute() else Path(__file__).parent / value
 
 
+def load_config(run_dir=None, *, config_path=None):
+    """Parse the visualise_config for a single run.
+
+    Provide exactly one of ``run_dir`` (resolved from its setUpData via
+    resolve_run_config) or ``config_path`` (an explicit file). There is no
+    ambient discovery, so a missing config fails loudly rather than guessing.
+    """
+    if config_path is not None:
+        p = Path(config_path)
+    elif run_dir is not None:
+        p = resolve_run_config(run_dir)
+        if p is None:
+            raise FileNotFoundError(
+                f"no setUpData_*.dat in {run_dir}; cannot resolve visualise_config "
+                "(grid mask/mesh and observation paths come from it)."
+            )
+    else:
+        raise TypeError("load_config requires run_dir or config_path")
+    if not p.is_file():
+        raise FileNotFoundError(f"visualise_config not found: {p}")
+    with open(p, "rb") as f:
+        return tomllib.load(f)
+
+
 def load_config_for_runs(run_dirs):
-    """Load the one shared visualise config for a set of model runs (no env vars).
+    """Load the one shared visualise config for a set of model runs.
 
     Each run's config is taken from its setUpData (resolve_run_config); a
     multi-model comparison shares one grid, so every run must name the same
@@ -116,33 +111,37 @@ def load_config_for_runs(run_dirs):
         return tomllib.load(f)
 
 
-def get_mask_paths():
-    """Return (basin_mask, mesh_mask) from visualise_config.toml [files].
+# ---------------------------------------------------------------------------
+# Accessors -- all take the parsed config dict (from load_config*) explicitly.
+# ---------------------------------------------------------------------------
 
-    The grid is set per-run via the selected config (e.g. NEMO3.6 vs NEMO5);
-    there is no NEMO-version default.
-    """
-    cfg, files = _load_files()
+def _files(config):
+    return config.get("files", {})
+
+
+def get_basin_mask_path(config):
+    """basin_mask path from a loaded config's [files]."""
     try:
-        return files["basin_mask"], files["mesh_mask"]
-    except KeyError as exc:
+        return _files(config)["basin_mask"]
+    except KeyError:
         raise KeyError(
-            f"{cfg} is missing [files].{exc.args[0]}; grid mask/mesh paths must be "
-            "set per-run (no NEMO-version default)."
+            "visualise_config [files].basin_mask is missing; the grid mask path "
+            "must be set per-run (no NEMO-version default)."
         ) from None
 
 
-def get_basin_mask_path():
-    """basin_mask path from visualise_config.toml [files]."""
-    return get_mask_paths()[0]
+def get_mesh_mask_path(config):
+    """mesh_mask path from a loaded config's [files]."""
+    try:
+        return _files(config)["mesh_mask"]
+    except KeyError:
+        raise KeyError(
+            "visualise_config [files].mesh_mask is missing; the grid mesh path "
+            "must be set per-run (no NEMO-version default)."
+        ) from None
 
 
-def get_mesh_mask_path():
-    """mesh_mask path from visualise_config.toml [files]."""
-    return get_mask_paths()[1]
-
-
-def get_obs_dir(override=None):
+def get_obs_dir(config, override=None):
     """Base observations directory: ``override`` if given, else [files].obs_dir.
 
     ``override`` is a script's ``--obs-dir`` (None when not passed), letting the
@@ -150,34 +149,31 @@ def get_obs_dir(override=None):
     """
     if override:
         return str(override)
-    cfg, files = _load_files()
     try:
-        return files["obs_dir"]
+        return _files(config)["obs_dir"]
     except KeyError:
         raise KeyError(
-            f"{cfg} is missing [files].obs_dir; set it per-run or pass --obs-dir."
+            "visualise_config [files].obs_dir is missing; set it per-run or pass "
+            "--obs-dir."
         ) from None
 
 
-def get_obs_filenames():
+def get_obs_filenames(config):
     """Mapping {logical_name: path-relative-to-obs_dir} from [files.obs]."""
-    cfg, files = _load_files()
-    obs = files.get("obs", {})
+    obs = _files(config).get("obs", {})
     if not obs:
-        raise KeyError(
-            f"{cfg} is missing the [files.obs] table of observation files."
-        )
+        raise KeyError("visualise_config is missing the [files.obs] table.")
     return obs
 
 
-def get_obs_path(key, obs_dir=None):
+def get_obs_path(config, key, override_dir=None):
     """Absolute path to observation file ``key`` (from [files.obs]).
 
-    The directory is ``obs_dir`` if given (a script's --obs-dir) else the config's
-    [files].obs_dir; the filename is [files.obs][key]. Raises KeyError on an
-    unknown key so a typo fails loudly rather than silently skipping an obs panel.
+    The directory is ``override_dir`` if given (a script's --obs-dir) else the
+    config's [files].obs_dir; the filename is [files.obs][key]. Raises KeyError on
+    an unknown key so a typo fails loudly rather than silently skipping a panel.
     """
-    names = get_obs_filenames()
+    names = get_obs_filenames(config)
     try:
         rel = names[key]
     except KeyError:
@@ -185,4 +181,4 @@ def get_obs_path(key, obs_dir=None):
             f"unknown observation key '{key}'; [files.obs] defines: "
             f"{', '.join(sorted(names))}"
         ) from None
-    return str(Path(get_obs_dir(obs_dir)) / rel)
+    return str(Path(get_obs_dir(config, override_dir)) / rel)

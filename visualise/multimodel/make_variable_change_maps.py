@@ -44,6 +44,7 @@ import os
 # Import map utilities from parent directory
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from map_utils import OceanMapPlotter, get_variable_metadata, PHYTOS, ZOOS
+from nemo_files import nemo_file, nemo_glob
 from logging_utils import print_header, print_info, print_warning, print_error, print_success
 
 # Import configuration
@@ -247,7 +248,7 @@ def load_period_mean_streaming(model_dir, model_id, start_year, end_year,
     n_years = 0
 
     for year in range(start_year, end_year + 1):
-        nc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_{file_type}.nc"
+        nc_file = nemo_file(run_dir, year, file_type)
 
         if not nc_file.exists():
             continue
@@ -292,7 +293,7 @@ def get_nav_coords_and_mask(models, file_type):
     """
     for model in models:
         run_dir = Path(model['model_dir']) / model['name']
-        data_files = sorted(run_dir.glob(f"ORCA2_1m_*_{file_type}.nc"))
+        data_files = nemo_glob(run_dir, file_type)
 
         if data_files:
             with xr.open_dataset(data_files[0]) as ds:

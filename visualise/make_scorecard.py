@@ -19,7 +19,8 @@ import pandas as pd
 import xarray as xr
 from scipy.spatial import cKDTree
 
-from config_utils import get_mesh_mask_path, get_obs_dir, get_obs_path
+from config_utils import load_config, get_mesh_mask_path, get_obs_dir, get_obs_path
+from nemo_files import nemo_file
 
 
 # ── Variable definitions ────────────────────────────────────────────────
@@ -196,12 +197,11 @@ def _compare(mod, obs):
 
 # ── POC flux scoring (point-obs vs 3-D model field) ─────────────────────
 POC_CSV = Path("/gpfs/home/vhf24tbu/Observations/Global_POC_Database_21022025.csv")
-MESH_MASK = Path(get_mesh_mask_path())  # from visualise_config.toml [files].mesh_mask
 # mol/m²/s  →  mg C/m²/day
 EXP_FACTOR = 12.011 * 1000 * 86400
 
 
-def score_poc(diad_ds, mesh_mask_path=MESH_MASK, poc_csv=POC_CSV,
+def score_poc(diad_ds, mesh_mask_path, poc_csv=POC_CSV,
               depth_max=2000.0):
     """
     Compare model EXP (sinking POC flux, mol/m²/s) against the POC database.
@@ -296,12 +296,13 @@ def main():
     args = parser.parse_args()
 
     model_run_dir = Path(args.model_run_dir).expanduser()
-    obs_dir = Path(get_obs_dir(args.obs_dir)).expanduser()
     run_dir = model_run_dir / args.run_name
+    config = load_config(run_dir=run_dir)
+    obs_dir = Path(get_obs_dir(config, args.obs_dir)).expanduser()
+    mesh_mask = Path(get_mesh_mask_path(config))
 
-    date_str = f"{args.year}0101_{args.year}1231"
-    ptrc_file = run_dir / f"ORCA2_1m_{date_str}_ptrc_T.nc"
-    diad_file = run_dir / f"ORCA2_1m_{date_str}_diad_T.nc"
+    ptrc_file = nemo_file(run_dir, args.year, "ptrc_T")
+    diad_file = nemo_file(run_dir, args.year, "diad_T")
 
     for fpath, label in [(ptrc_file, "ptrc_T"), (diad_file, "diad_T")]:
         if not fpath.exists():
@@ -315,7 +316,7 @@ def main():
     # ── Compute & collect rows ──────────────────────────────────────────
     rows = []  # list of (label, r2, rmse, bias, mscore, unit)
     for var in VARIABLES:
-        obs_path = Path(get_obs_path(var["obs_key"], obs_dir))
+        obs_path = Path(get_obs_path(config, var["obs_key"], obs_dir))
         if not obs_path.exists():
             print(f"Warning: obs file not found for {var['name']}: {obs_path}",
                   file=sys.stderr)
@@ -366,8 +367,8 @@ def main():
             rows.append((var["name"], r2, rmse, bias, mscore, var["unit"]))
 
     # ── POC flux vs database ────────────────────────────────────────────
-    if POC_CSV.exists() and MESH_MASK.exists():
-        r2, rmse, bias, mscore = score_poc(diad_ds)
+    if POC_CSV.exists() and mesh_mask.exists():
+        r2, rmse, bias, mscore = score_poc(diad_ds, mesh_mask_path=mesh_mask)
         rows.append(("POC flux", r2, rmse, bias, mscore, "log10(mg/m²/d)"))
     else:
         print("Warning: POC CSV or mesh_mask not found — skipping POC score",

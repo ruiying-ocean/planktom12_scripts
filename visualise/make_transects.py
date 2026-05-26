@@ -27,7 +27,8 @@ from preprocess_data import (
     load_observations,
     get_nav_coordinates
 )
-from config_utils import get_obs_dir
+from config_utils import load_config, get_obs_dir
+from nemo_files import nemo_file
 
 # Import shared transect utilities
 from transect_utils import get_longitude_transect, get_central_latitude
@@ -334,9 +335,8 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Construct file paths
-    date_str = f"{args.year}0101_{args.year}1231"
-    ptrc_file = run_dir / f"ORCA2_1m_{date_str}_ptrc_T.nc"
-    grid_t_file = run_dir / f"ORCA2_1m_{date_str}_grid_T.nc"
+    ptrc_file = nemo_file(run_dir, args.year, "ptrc_T")
+    grid_t_file = nemo_file(run_dir, args.year, "grid_T")
 
     # Check files exist
     if not ptrc_file.exists():
@@ -347,7 +347,8 @@ def main():
     print(f"Processing year: {args.year}")
 
     # Initialize plotter
-    plotter = OceanMapPlotter(mask_path=args.mask_path)
+    config = load_config(run_dir=run_dir)
+    plotter = OceanMapPlotter(mask_path=args.mask_path, config_dir=run_dir)
 
     # Get navigation coordinates
     try:
@@ -375,8 +376,8 @@ def main():
 
     # Load observational datasets (including O2)
     nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
-    obs_dir = Path(get_obs_dir(args.obs_dir))
-    obs_datasets = load_observations(obs_dir, nutrients=['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU'])
+    obs_dir = Path(get_obs_dir(config, args.obs_dir))
+    obs_datasets = load_observations(config, obs_dir, nutrients=nutrients)
 
     # Generate transects
     print("\n=== Generating Transects ===\n")

@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 import gsw
 import argparse
 
-from config_utils import get_obs_dir, get_obs_path
+from config_utils import load_config, get_obs_dir, get_obs_path
+from nemo_files import nemo_file
 
 
 def get_ocn_mask(path, domcfg):
@@ -93,11 +94,11 @@ land_mask_2d = None
 land_mask_3d = None
 
 
-def load_reference_data(obs_dir, mask_dir):
+def load_reference_data(config, obs_dir, mask_dir):
     """Load observational data and masks"""
-    woa_data = xr.open_dataset(get_obs_path('woa', obs_dir), decode_times=False)
-    glodap_data = xr.open_dataset(get_obs_path('glodap', obs_dir))
-    huang2022 = xr.open_dataset(get_obs_path('fe', obs_dir))
+    woa_data = xr.open_dataset(get_obs_path(config, 'woa', obs_dir), decode_times=False)
+    glodap_data = xr.open_dataset(get_obs_path(config, 'glodap', obs_dir))
+    huang2022 = xr.open_dataset(get_obs_path(config, 'fe', obs_dir))
     # nmol/L -> mol/L
     huang2022['fe'] = huang2022['fe'] * 1E-9
 
@@ -203,8 +204,8 @@ def process_and_convert_data(ptrcT_path, gridT_path, land_mask_3d):
     return converted_data
 
 def get_model_data(dir, model_id, year, land_mask_3d):
-    ptrcT_path = f"{dir}/{model_id}/ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc"
-    gridT_path = f"{dir}/{model_id}/ORCA2_1m_{year}0101_{year}1231_grid_T.nc"
+    ptrcT_path = nemo_file(Path(dir) / model_id, year, "ptrc_T")
+    gridT_path = nemo_file(Path(dir) / model_id, year, "grid_T")
 
     return process_and_convert_data(ptrcT_path, gridT_path, land_mask_3d)
 
@@ -224,6 +225,7 @@ VAR_INFO = {
 
 
 def plot_vertical_profiles(
+    config,
     model_ids,
     year,
     variables,
@@ -251,7 +253,7 @@ def plot_vertical_profiles(
     """
     model_dir = Path(model_dir).expanduser()
     output_dir = Path(output_dir).expanduser()
-    obs_dir = Path(get_obs_dir(obs_dir)).expanduser()
+    obs_dir = Path(get_obs_dir(config, obs_dir)).expanduser()
     mask_dir = Path(mask_dir).expanduser() if mask_dir else DEFAULT_MASK_DIR
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -259,7 +261,7 @@ def plot_vertical_profiles(
     # Load reference data
     print("  Loading reference data for vertical profiles...")
     woa_data, glodap_data, huang2022, ocn_mask, area, volume, land_mask_2d, land_mask_3d = \
-        load_reference_data(obs_dir, mask_dir)
+        load_reference_data(config, obs_dir, mask_dir)
 
     basins = ['atl', 'ind', 'pac', 'arc', 'so', 'global']
     output_files = []
@@ -395,7 +397,8 @@ Examples:
     # Convert to Paths
     model_dir = Path(args.model_dir).expanduser()
     output_dir = Path(args.output_dir).expanduser()
-    obs_dir = Path(get_obs_dir(args.obs_dir)).expanduser()
+    config = load_config(run_dir=model_dir / args.model_ids[0])
+    obs_dir = Path(get_obs_dir(config, args.obs_dir)).expanduser()
     mask_dir = Path(args.mask_dir).expanduser()
 
     # Create output directory if needed
@@ -404,7 +407,7 @@ Examples:
     # Load reference data
     print("Loading reference data...")
     woa_data, glodap_data, huang2022, ocn_mask, area, volume, land_mask_2d, land_mask_3d = \
-        load_reference_data(obs_dir, mask_dir)
+        load_reference_data(config, obs_dir, mask_dir)
 
     # Create figure
     fig, axs = plt.subplots(2, 3, tight_layout=True, figsize=(6, 6), sharey=True)

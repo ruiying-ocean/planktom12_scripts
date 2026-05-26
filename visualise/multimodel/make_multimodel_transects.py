@@ -27,35 +27,9 @@ from map_utils import (
     PHYTO_NAMES, ZOO_NAMES
 )
 from config_utils import load_config_for_runs
+from nemo_files import nemo_file
+from transect_utils import get_longitude_transect, get_central_latitude
 from logging_utils import print_header, print_info, print_warning, print_error, print_success
-
-
-def get_longitude_transect(data, nav_lon, target_lon, lat_values):
-    """
-    Extract data along a specific longitude transect.
-
-    Args:
-        data: xarray.DataArray to extract from
-        nav_lon: 2D longitude array
-        target_lon: Target longitude in degrees
-        lat_values: Latitude values for the y dimension
-
-    Returns:
-        Data along the longitude transect
-    """
-    lon_diff = np.abs(nav_lon - target_lon)
-    x_indices = lon_diff.argmin(dim='x')
-    transect_data = data.isel(x=x_indices)
-    transect_data['y'] = lat_values
-    transect_data = transect_data.sortby('y')
-    return transect_data
-
-
-def get_central_latitude(nav_lat):
-    """Extract latitude from the central meridian of a 2D nav_lat array"""
-    mid_x = nav_lat.shape[1] // 2
-    central_lat = nav_lat[:, mid_x]
-    return central_lat
 
 
 def load_transect_data(model_dir, model_id, year, variable, plotter):
@@ -73,7 +47,7 @@ def load_transect_data(model_dir, model_id, year, variable, plotter):
         xarray.DataArray with depth-resolved data
     """
     run_dir = Path(model_dir) / model_id
-    ptrc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc"
+    ptrc_file = nemo_file(run_dir, year, "ptrc_T")
 
     if not ptrc_file.exists():
         print_warning(f"File not found: {ptrc_file}")
@@ -142,8 +116,8 @@ def load_aou_transect_data(model_dir, model_id, year, plotter):
     from map_utils import calculate_aou_3d
 
     run_dir = Path(model_dir) / model_id
-    ptrc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc"
-    grid_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_grid_T.nc"
+    ptrc_file = nemo_file(run_dir, year, "ptrc_T")
+    grid_file = nemo_file(run_dir, year, "grid_T")
 
     if not ptrc_file.exists():
         print_warning(f"ptrc_T file not found for AOU: {ptrc_file}")
@@ -211,7 +185,7 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
     nav_lon, nav_lat = None, None
     for model in models:
         run_dir = Path(model['model_dir']) / model['name']
-        ptrc_file = run_dir / f"ORCA2_1m_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
+        ptrc_file = nemo_file(run_dir, model['year'], "ptrc_T")
         if ptrc_file.exists():
             ds = xr.open_dataset(ptrc_file, decode_times=False)
             nav_lon = ds.nav_lon if 'nav_lon' in ds else ds.lon
@@ -321,7 +295,7 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
     nav_lon, nav_lat = None, None
     for model in models:
         run_dir = Path(model['model_dir']) / model['name']
-        ptrc_file = run_dir / f"ORCA2_1m_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
+        ptrc_file = nemo_file(run_dir, model['year'], "ptrc_T")
         if ptrc_file.exists():
             ds = xr.open_dataset(ptrc_file, decode_times=False)
             nav_lon = ds.nav_lon if 'nav_lon' in ds else ds.lon

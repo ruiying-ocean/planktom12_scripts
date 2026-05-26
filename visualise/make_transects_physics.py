@@ -20,7 +20,8 @@ import xarray as xr
 from scipy.interpolate import interp1d
 
 from logging_utils import print_warning
-from config_utils import get_obs_dir, get_obs_path
+from config_utils import load_config, get_obs_dir, get_obs_path
+from nemo_files import nemo_file
 
 
 # Basin longitude masks (applied to the ORCA2 2-D lon grid)
@@ -83,6 +84,7 @@ def _zonal_mean(data3d, lon2d, basin_mask_fn):
 
 
 def plot_physics_sections(
+    config,
     grid_t_file,
     obs_dir,
     output_dir,
@@ -103,10 +105,10 @@ def plot_physics_sections(
         year: Year string (used in filenames and titles)
     """
     grid_t_file = Path(grid_t_file)
-    obs_dir     = Path(get_obs_dir(obs_dir))   # --obs-dir override, else config obs_dir
+    obs_dir     = Path(get_obs_dir(config, obs_dir))   # --obs-dir override, else config obs_dir
     output_dir  = Path(output_dir)
 
-    woa_file = Path(get_obs_path('woa', obs_dir))
+    woa_file = Path(get_obs_path(config, 'woa', obs_dir))
     if not woa_file.exists():
         print_warning(f"woa_orca_bil.nc not found at {woa_file} — skipping physics sections")
         return
@@ -269,14 +271,14 @@ def main():
     )
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    date_str    = f"{args.year}0101_{args.year}1231"
-    grid_t_file = run_dir / f"ORCA2_1m_{date_str}_grid_T.nc"
+    grid_t_file = nemo_file(run_dir, args.year, "grid_T")
 
     if not grid_t_file.exists():
         print(f"Error: {grid_t_file} not found")
         sys.exit(1)
 
     plot_physics_sections(
+        config=load_config(run_dir=run_dir),
         grid_t_file=grid_t_file,
         obs_dir=args.obs_dir,
         output_dir=output_dir,

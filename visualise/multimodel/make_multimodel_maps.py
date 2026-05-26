@@ -24,6 +24,7 @@ import cartopy.feature as cfeature
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from map_utils import OceanMapPlotter, get_variable_metadata
 from config_utils import load_config_for_runs
+from nemo_files import nemo_file
 from logging_utils import print_header, print_info, print_warning, print_error, print_success
 
 
@@ -55,8 +56,7 @@ def load_model_data(model_dir, model_id, year, var_name, plotter):
     else:
         file_type = 'ptrc_T'
 
-    # Files should always use ORCA2_1m prefix
-    nc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_{file_type}.nc"
+    nc_file = nemo_file(run_dir, year, file_type)
 
     if not nc_file.exists():
         print_warning(f"File not found: {nc_file}")
@@ -111,8 +111,8 @@ def load_aou_data(model_dir, model_id, year, plotter):
         plotter: OceanMapPlotter instance for preprocessing
     """
     run_dir = Path(model_dir) / model_id
-    ptrc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc"
-    grid_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_grid_T.nc"
+    ptrc_file = nemo_file(run_dir, year, "ptrc_T")
+    grid_file = nemo_file(run_dir, year, "grid_T")
 
     if not ptrc_file.exists():
         print_warning(f"ptrc_T file not found for AOU: {ptrc_file}")
@@ -198,7 +198,7 @@ def plot_multimodel_maps(models, output_dir, config):
     nav_lon, nav_lat = None, None
     for model in models:
         run_dir = Path(model['model_dir']) / model['name']
-        ptrc_file = run_dir / f"ORCA2_1m_{model['year']}0101_{model['year']}1231_ptrc_T.nc"
+        ptrc_file = nemo_file(run_dir, model['year'], "ptrc_T")
         if ptrc_file.exists():
             ds = xr.open_dataset(ptrc_file)
             nav_lon = ds.nav_lon if 'nav_lon' in ds else ds.lon

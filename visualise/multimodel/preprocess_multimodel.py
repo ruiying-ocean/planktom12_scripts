@@ -12,6 +12,7 @@ from typing import List, Dict, Optional
 # Import from parent visualise directory
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from map_utils import OceanMapPlotter
+from nemo_files import nemo_file
 
 
 def load_multimodel_data(
@@ -42,7 +43,7 @@ def load_multimodel_data(
         year = model['year']
 
         run_dir = Path(model_dir) / model_name
-        nc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_{file_type}.nc"
+        nc_file = nemo_file(run_dir, year, file_type)
 
         if not nc_file.exists():
             print(f"Warning: File not found: {nc_file}")
@@ -116,7 +117,7 @@ def load_transect_variable(
         year = model['year']
 
         run_dir = Path(model_dir) / model_name
-        ptrc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc"
+        ptrc_file = nemo_file(run_dir, year, "ptrc_T")
 
         if not ptrc_file.exists():
             print(f"Warning: File not found: {ptrc_file}")
@@ -174,7 +175,7 @@ def get_nav_coordinates(models: List[Dict]) -> tuple:
         year = model['year']
 
         run_dir = Path(model_dir) / model_name
-        ptrc_file = run_dir / f"ORCA2_1m_{year}0101_{year}1231_ptrc_T.nc"
+        ptrc_file = nemo_file(run_dir, year, "ptrc_T")
 
         if ptrc_file.exists():
             try:
