@@ -173,18 +173,36 @@ rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/restart.nc
 
 ok "Old single-file restarts cleaned"
 
-# Update the active run namelist to use other_years.
+# Active namelist for the spinup graft's FIRST year -- version-dependent because
+# daymod.F90 (day_rst) handles nn_rstctl=2 differently between versions:
+#   NEMO3.6: nn_rstctl=2 has NO nit000 check and OVERRIDES nit000 = restart_kt+1,
+#            so other_years works directly for a graft (historical, intended path).
+#   NEMO5:   nn_rstctl=2 ENFORCES nit000 == restart_kt+1 (check is `nrstdt /= 0`)
+#            and no longer auto-resets nit000, so a graft on other_years aborts
+#            ("problem with nit000 for the restart"). It must boot on first_year
+#            (nn_rstctl=0, no check, fresh clock + namelist nn_date0); the resubmit
+#            job auto-promotes to other_years after year 1 writes a local restart.
 rm -f ${MODEL_RUN_DIR}/${MODEL_ID}/${CONTROL_NAMELIST}
-ln -s ${CONTROL_NAMELIST}_other_years ${MODEL_RUN_DIR}/${MODEL_ID}/${CONTROL_NAMELIST}
-ok "${CONTROL_NAMELIST} → ${CONTROL_NAMELIST}_other_years"
+if [ "$NEMO_VERSION" = "NEMO5" ]; then
+    ln -s ${CONTROL_NAMELIST}_first_year ${MODEL_RUN_DIR}/${MODEL_ID}/${CONTROL_NAMELIST}
+    ok "${CONTROL_NAMELIST} → ${CONTROL_NAMELIST}_first_year (NEMO5: nn_rstctl=0 for graft)"
+else
+    ln -s ${CONTROL_NAMELIST}_other_years ${MODEL_RUN_DIR}/${MODEL_ID}/${CONTROL_NAMELIST}
+    ok "${CONTROL_NAMELIST} → ${CONTROL_NAMELIST}_other_years"
+fi
 
 ## copy EMP to new run directory (only needed when nn_fwb=2)
+## NEMO5 stores the freshwater-budget state (a_fwb / emp_corr) in the ocean
+## restart, not in an EMPave*.dat text file (see sbcfwb.F90 iom_rstput/iom_get),
+## so NEMO5 never writes one and none is needed here -- skip regardless of nn_fwb.
 NN_FWB=$(grep -E "^\s*nn_fwb\s*=" ${MODEL_RUN_DIR}/${MODEL_ID}/${CONTROL_NAMELIST}_other_years 2>/dev/null | head -1 | awk -F'=' '{print $2}' | awk '{print $1}')
 if [ -z "$NN_FWB" ]; then
     NN_FWB=2  # default in NEMO
 fi
 
-if [ "$NN_FWB" -eq 2 ]; then
+if [ "$NEMO_VERSION" = "NEMO5" ]; then
+    skip "EMP file not needed (NEMO5 carries fwb in the ocean restart)"
+elif [ "$NN_FWB" -eq 2 ]; then
     EMP_SOURCE="${SPIN_DIR}/EMPave_$((FIRST_YEAR_TRANSIENT - 1)).dat"
     EMP_TARGET="${MODEL_RUN_DIR}/${MODEL_ID}/EMPave_$((FIRST_YEAR_TRANSIENT - 1)).dat"
     EMP_OLD="${MODEL_RUN_DIR}/${MODEL_ID}/EMPave.old"
