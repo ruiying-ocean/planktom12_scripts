@@ -26,24 +26,8 @@ from map_utils import (
     PHYTOS, ZOOS,
     PHYTO_NAMES, ZOO_NAMES
 )
+from config_utils import load_config_for_runs
 from logging_utils import print_header, print_info, print_warning, print_error, print_success
-
-# Import configuration
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib
-
-
-def load_config():
-    """Load visualise_config.toml"""
-    script_dir = Path(__file__).parent
-    config_path = script_dir.parent / "visualise_config.toml"
-
-    if config_path.exists():
-        with open(config_path, "rb") as f:
-            return tomllib.load(f)
-    return None
 
 
 def get_longitude_transect(data, nav_lon, target_lon, lat_values):
@@ -221,7 +205,7 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
     fmt = config.get("figure", {}).get("format", "png") if config else "png"
 
     # Create OceanMapPlotter
-    plotter = OceanMapPlotter()
+    plotter = OceanMapPlotter(mask_path=config["files"]["basin_mask"])
 
     # Load navigation from first available model
     nav_lon, nav_lat = None, None
@@ -331,7 +315,7 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
     fmt = config.get("figure", {}).get("format", "png") if config else "png"
 
     # Create OceanMapPlotter
-    plotter = OceanMapPlotter()
+    plotter = OceanMapPlotter(mask_path=config["files"]["basin_mask"])
 
     # Load navigation from first available model
     nav_lon, nav_lat = None, None
@@ -430,9 +414,6 @@ def main():
     csv_file = Path(sys.argv[1])
     output_dir = Path(sys.argv[2])
 
-    # Load config
-    config = load_config()
-
     # Read models from CSV (columns: model_id, description, start_year, to_year, [location])
     # location column is optional - defaults to ~/scratch/ModelRuns if not provided
     import os
@@ -453,6 +434,10 @@ def main():
                     'year': row[3],      # to_year
                     'model_dir': model_dir   # location (or default)
                 })
+
+    # Resolve the shared grid/obs config from the models' setUpData (no env vars;
+    # fails loudly if missing or if models disagree -- a comparison shares one grid).
+    config = load_config_for_runs([Path(m['model_dir']) / m['name'] for m in models])
 
     print_header(f"Generating transect comparisons for {len(models)} models")
 

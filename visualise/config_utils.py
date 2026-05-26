@@ -50,6 +50,64 @@ def _load_files():
         return cfg, tomllib.load(f).get("files", {})
 
 
+def resolve_run_config(run_dir):
+    """Resolve the visualise_config path for a model run from its setUpData.
+
+    Reads ``visualise_config:`` from ``<run_dir>/setUpData_*.dat`` and resolves it
+    the way setUpRun.sh does: an absolute path is used as-is, else it is taken
+    relative to this visualise/ directory. Returns an absolute Path, or None if no
+    setUpData carrying the field is present. There is no NEMO-version default.
+    """
+    run_dir = Path(run_dir)
+    dats = sorted(run_dir.glob("setUpData_*.dat"))
+    if not dats:
+        return None
+    value = ""
+    with open(dats[0]) as f:
+        for line in f:
+            if line.strip().startswith("visualise_config:"):
+                value = line.split(":", 1)[1].strip()
+                break
+    if not value:
+        return None
+    p = Path(value)
+    return p if p.is_absolute() else Path(__file__).parent / value
+
+
+def load_config_for_runs(run_dirs):
+    """Load the one shared visualise config for a set of model runs (no env vars).
+
+    Each run's config is taken from its setUpData (resolve_run_config); a
+    multi-model comparison shares one grid, so every run must name the same
+    config. Returns the parsed config dict. Raises FileNotFoundError if no run
+    carries the field and ValueError on a mismatch -- there is no NEMO-version
+    default, so a misconfigured comparison fails loudly rather than guessing.
+    """
+    resolved = {}
+    for d in run_dirs:
+        p = resolve_run_config(d)
+        if p is not None:
+            resolved[Path(d).name] = p
+
+    if not resolved:
+        raise FileNotFoundError(
+            "no setUpData_*.dat with a visualise_config: line found for any run; "
+            "grid/obs paths are per-run (there is no NEMO-version default)."
+        )
+    if len({str(p) for p in resolved.values()}) > 1:
+        details = ", ".join(f"{n}={p.name}" for n, p in resolved.items())
+        raise ValueError(
+            f"runs name different visualise_config files ({details}); a comparison "
+            "shares one grid. Align visualise_config: in their setUpData."
+        )
+
+    cfg = next(iter(resolved.values()))
+    if not cfg.is_file():
+        raise FileNotFoundError(f"visualise_config from setUpData not found: {cfg}")
+    with open(cfg, "rb") as f:
+        return tomllib.load(f)
+
+
 def get_mask_paths():
     """Return (basin_mask, mesh_mask) from visualise_config.toml [files].
 

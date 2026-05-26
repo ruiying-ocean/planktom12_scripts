@@ -23,24 +23,8 @@ import cartopy.feature as cfeature
 # Import map utilities from parent directory
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from map_utils import OceanMapPlotter, get_variable_metadata
+from config_utils import load_config_for_runs
 from logging_utils import print_header, print_info, print_warning, print_error, print_success
-
-# Import configuration
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib
-
-
-def load_config():
-    """Load visualise_config.toml"""
-    script_dir = Path(__file__).parent
-    config_path = script_dir.parent / "visualise_config.toml"
-
-    if config_path.exists():
-        with open(config_path, "rb") as f:
-            return tomllib.load(f)
-    return None
 
 
 def load_model_data(model_dir, model_id, year, var_name, plotter):
@@ -194,8 +178,8 @@ def plot_multimodel_maps(models, output_dir, config):
     dpi = config.get("figure", {}).get("dpi", 300) if config else 300
     fmt = config.get("figure", {}).get("format", "png") if config else "png"
 
-    # Create OceanMapPlotter for data preprocessing
-    plotter = OceanMapPlotter()
+    # Create OceanMapPlotter for data preprocessing (mask from the resolved config)
+    plotter = OceanMapPlotter(mask_path=config["files"]["basin_mask"])
 
     # Define variable groups - get metadata from map_utils for consistency
     # Use derived variables (with underscore) for integrated/processed values
@@ -360,9 +344,6 @@ def main():
     csv_file = Path(sys.argv[1])
     output_dir = Path(sys.argv[2])
 
-    # Load config
-    config = load_config()
-
     # Read models from CSV (columns: model_id, description, start_year, to_year, [location])
     # location column is optional - defaults to ~/scratch/ModelRuns if not provided
     import os
@@ -383,6 +364,10 @@ def main():
                     'year': row[3],      # to_year
                     'model_dir': model_dir   # location (or default)
                 })
+
+    # Resolve the shared grid/obs config from the models' setUpData (no env vars;
+    # fails loudly if missing or if models disagree -- a comparison shares one grid).
+    config = load_config_for_runs([Path(m['model_dir']) / m['name'] for m in models])
 
     print_header(f"Generating spatial comparison maps for {len(models)} models")
     plot_multimodel_maps(models, output_dir, config)

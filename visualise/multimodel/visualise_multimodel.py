@@ -15,30 +15,29 @@ import sys
 import csv
 from pathlib import Path
 
-# Import configuration
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib
-
 # Import from parent visualise directory
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from map_utils import OceanMapPlotter
+from config_utils import load_config_for_runs
 from logging_utils import print_header, print_step, print_success, print_warning
 
 # Import multimodel-specific modules
 from preprocess_multimodel import get_nav_coordinates
 
 
-def load_config():
-    """Load visualise_config.toml"""
-    script_dir = Path(__file__).parent
-    config_path = script_dir.parent / "visualise_config.toml"
+def load_config(models):
+    """Load the shared visualise config from the models' setUpData (no env vars).
 
-    if config_path.exists():
-        with open(config_path, "rb") as f:
-            return tomllib.load(f)
-    return None
+    Used here only for orchestration thresholds (e.g. multimodel.max_models_for_spatial);
+    the maps/transects subprocesses resolve it themselves and fail loudly if it is
+    missing. Returns None on an unresolvable/mismatched config so timeseries can
+    still run -- there is no NEMO-version default.
+    """
+    run_dirs = [Path(m['model_dir']) / m['name'] for m in models]
+    try:
+        return load_config_for_runs(run_dirs)
+    except (FileNotFoundError, ValueError) as exc:
+        print_warning(f"Could not resolve visualise config: {exc}")
+        return None
 
 
 def parse_models_csv(csv_path):
@@ -161,8 +160,8 @@ def main():
     shutil.copy(csv_path, output_dir / 'modelsToPlot.csv')
     print()
 
-    # Load configuration
-    config = load_config()
+    # Load configuration (resolved per-run from each model's setUpData)
+    config = load_config(models)
 
     # ========================================================================
     # STEP 1: Timeseries Comparison
