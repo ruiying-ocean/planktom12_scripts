@@ -37,6 +37,25 @@ from logging_utils import print_header, print_step, print_success, print_warning
 from config_utils import load_config, get_obs_dir, get_obs_path
 from nemo_files import nemo_file
 
+import traceback
+from contextlib import contextmanager
+
+
+@contextmanager
+def _step(name, failures):
+    """Run one visualization step, recording (not raising) any failure.
+
+    Lets the rest of the suite still run and surfaces what broke in the
+    end-of-run summary, so a failed step is loud rather than a silently missing
+    plot.
+    """
+    try:
+        yield
+    except Exception as e:
+        print_warning(f"step '{name}' FAILED: {e}")
+        traceback.print_exc()
+        failures.append((name, str(e) or repr(e)))
+
 
 def main():
     """Main entry point for complete model visualization."""
@@ -119,6 +138,9 @@ def main():
     print(f"  Data dir:    {run_dir}")
     print(f"  Output dir:  {output_dir}")
     print()
+
+    # Step failures are recorded here and reported loudly at the end.
+    failures = []
 
     # ========================================================================
     # STEP 1: Data Preprocessing (load once, use everywhere)
@@ -277,16 +299,17 @@ def main():
     # STEP 2b: AMOC Streamfunction
     # ========================================================================
     if not args.skip_amoc:
-        moc_file = run_dir / "MOC" / f"moc_{args.year}.nc"
-        if moc_file.exists():
-            print_step(1, 1, "AMOC streamfunction")
-            plot_amoc_streamfunction(
-                moc_path=moc_file,
-                output_path=output_dir / f"{args.run_name}_{args.year}_moc_streamfunction.png"
-            )
-            print_success("AMOC streamfunction complete\n")
-        else:
-            print_warning(f"MOC file not found ({moc_file}), skipping AMOC streamfunction")
+        with _step("AMOC streamfunction", failures):
+            moc_file = run_dir / "MOC" / f"moc_{args.year}.nc"
+            if moc_file.exists():
+                print_step(1, 1, "AMOC streamfunction")
+                plot_amoc_streamfunction(
+                    moc_path=moc_file,
+                    output_path=output_dir / f"{args.run_name}_{args.year}_moc_streamfunction.png"
+                )
+                print_success("AMOC streamfunction complete\n")
+            else:
+                print_warning(f"MOC file not found ({moc_file}), skipping AMOC streamfunction")
 
     # ========================================================================
     # STEP 3: Generate Transects
@@ -295,7 +318,7 @@ def main():
         print_header("Step 3: Generating Vertical Transects")
 
         # Get navigation coordinates
-        try:
+        with _step("Transects", failures):
             nav_lon, nav_lat = get_nav_coordinates(ptrc_file)
 
             # 3.1 Nutrient transects
@@ -338,24 +361,21 @@ def main():
 
             print_success("Transects complete\n")
 
-        except ValueError as e:
-            print_warning(f"{e}")
-            print(f"  Skipping transects\n")
-
     # ========================================================================
     # STEP 3b: Physical Sections (T/S zonal-mean, Atlantic & Pacific)
     # ========================================================================
     if not args.skip_physics_sections and compute_aou:  # grid_T must exist
-        print_header("Step 3b: Generating Physical Sections (T/S)")
-        plot_physics_sections(
-            config=config,
-            grid_t_file=grid_t_file,
-            obs_dir=args.obs_dir,
-            output_dir=output_dir,
-            run_name=args.run_name,
-            year=args.year,
-        )
-        print_success("Physical sections complete\n")
+        with _step("Physical sections", failures):
+            print_header("Step 3b: Generating Physical Sections (T/S)")
+            plot_physics_sections(
+                config=config,
+                grid_t_file=grid_t_file,
+                obs_dir=args.obs_dir,
+                output_dir=output_dir,
+                run_name=args.run_name,
+                year=args.year,
+            )
+            print_success("Physical sections complete\n")
 
     # ========================================================================
     # STEP 4: Generate Vertical Profiles
@@ -366,7 +386,7 @@ def main():
         # Standard nutrient variables for vertical profiles
         profile_vars = ['no3', 'po4', 'si', 'o2', 'fe', 'alk', 'dic']
 
-        try:
+        with _step("Vertical profiles", failures):
             plot_vertical_profiles(
                 config=config,
                 model_ids=[args.run_name],
@@ -379,14 +399,16 @@ def main():
                 run_name=args.run_name
             )
             print_success("Vertical profiles complete\n")
-        except Exception as e:
-            print_warning(f"Could not generate vertical profiles: {e}")
-            print(f"  Skipping vertical profiles\n")
 
     # ========================================================================
     # Summary
     # ========================================================================
-    print_header("Visualization Complete!")
+    if failures:
+        print_header(f"Visualization finished with {len(failures)} FAILED step(s)")
+        for name, err in failures:
+            print_warning(f"  ✗ {name}: {err}")
+    else:
+        print_header("Visualization Complete!")
     print(f"  Output directory: {output_dir}")
     print()
     print("Generated files:")
@@ -400,6 +422,11 @@ def main():
         print("  (No files generated - check options)")
 
     print()
+
+    # Non-zero exit when a step failed, so callers/CI don't read a partial suite
+    # as success.
+    if failures:
+        sys.exit(1)
 
 
 if __name__ == '__main__':
