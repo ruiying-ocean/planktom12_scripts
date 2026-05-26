@@ -420,7 +420,9 @@ class FigureCreator:
 
         for i, (var_name, color, title, unit, obs_range, obs_line) in enumerate(plot_configs):
             is_bottom_row = i >= (layout['rows'] - 1) * layout['cols']
-            if var_name in data and data[var_name] is not None and len(data[var_name]) > 0 and not np.all(data[var_name] == -1):
+            if (var_name in data and data[var_name] is not None and len(data[var_name]) > 0
+                    and not np.all(data[var_name] == -1)
+                    and np.any(np.isfinite(np.asarray(data[var_name], dtype=float)))):
                 year = data["year"]
                 y = data[var_name]
                 n = min(len(year), len(y))
