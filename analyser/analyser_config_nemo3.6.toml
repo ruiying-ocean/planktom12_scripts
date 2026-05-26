@@ -114,6 +114,14 @@ region_mask = "/gpfs/data/greenocean/software/resources/breakdown/clq_basin_mask
 reccap_mask = "/gpfs/data/greenocean/software/resources/breakdown/RECCAP2_region_masks_all_v20210412_ORCA.nc"
 ancillary_data = "/gpfs/data/greenocean/software/resources/breakdown/AncillaryData_v2.nc"
 
+[coordinates]
+# Candidate names for the lat/lon coordinate variables, in priority order; the
+# first name present in a given file is used. NEMO3.6 writes plain nav_lat/
+# nav_lon into every grid; see the nemo5.0 config for the suffixed-coordinate
+# case this list exists to handle.
+lat_names = [ "nav_lat" ]
+lon_names = [ "nav_lon" ]
+
 [[surface]]
 variable = "Cflx"
 units = "PgCarbonPerYr"

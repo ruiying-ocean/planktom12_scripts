@@ -111,6 +111,12 @@ class BreakdownConfig:
     mesh_mask: str = ""
     ancillary_data: str = ""
 
+    # Candidate names for the lat/lon coordinate variables, in priority order.
+    # NEMO5/XIOS suffixes grid_T coordinates (nav_lat_grid_T) while BGC files
+    # keep plain nav_lat/nav_lon; listing both lets one config read every file.
+    lat_names: List[str] = None
+    lon_names: List[str] = None
+
     surface_vars: List[SurfaceVariable] = None
     level_vars: List[LevelVariable] = None
     volume_vars: List[VolumeVariable] = None
@@ -122,6 +128,10 @@ class BreakdownConfig:
 
     def __post_init__(self):
         """Initialize empty lists if None."""
+        if self.lat_names is None:
+            self.lat_names = ['nav_lat']
+        if self.lon_names is None:
+            self.lon_names = ['nav_lon']
         if self.surface_vars is None:
             self.surface_vars = []
         if self.level_vars is None:
@@ -168,6 +178,11 @@ def parse_toml_config(file_path: str) -> BreakdownConfig:
         config.reccap_mask = data['files'].get('reccap_mask', '')
         config.mesh_mask = data['files'].get('mesh_mask', '')
         config.ancillary_data = data['files'].get('ancillary_data', '')
+
+    # Parse coordinate variable name candidates (fall back to the 3.6 names)
+    if 'coordinates' in data:
+        config.lat_names = data['coordinates'].get('lat_names', ['nav_lat'])
+        config.lon_names = data['coordinates'].get('lon_names', ['nav_lon'])
 
     # Parse surface variables
     for surf in data.get('surface', []):

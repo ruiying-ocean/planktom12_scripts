@@ -274,7 +274,8 @@ for year in range(year_from, year_to + 1):
         varSurface, nc_run_ids, nc_runFileNames,
         list_of_units, regions, landMask, volMask,
         mask_area, mask_vol, missing_val,
-        surfaceData, 'surface', region_mask_cache
+        surfaceData, 'surface', region_mask_cache,
+        config.lat_names, config.lon_names
     )
 
     log.info("Processing level variables...")
@@ -282,7 +283,8 @@ for year in range(year_from, year_to + 1):
         varLevel, nc_run_ids, nc_runFileNames,
         list_of_units, regions, landMask, volMask,
         mask_area, mask_vol, missing_val,
-        levelData, 'level', region_mask_cache
+        levelData, 'level', region_mask_cache,
+        config.lat_names, config.lon_names
     )
 
     log.info("Processing volume variables...")
@@ -290,7 +292,8 @@ for year in range(year_from, year_to + 1):
         varVolume, nc_run_ids, nc_runFileNames,
         list_of_units, regions, landMask, volMask,
         mask_area, mask_vol, missing_val,
-        volumeData, 'volume', region_mask_cache
+        volumeData, 'volume', region_mask_cache,
+        config.lat_names, config.lon_names
     )
 
     log.info("Processing integration variables...")
@@ -298,14 +301,16 @@ for year in range(year_from, year_to + 1):
         varInt, nc_run_ids, nc_runFileNames,
         list_of_units, regions, landMask, volMask,
         mask_area, mask_vol, missing_val,
-        integrateData, 'integration', region_mask_cache
+        integrateData, 'integration', region_mask_cache,
+        config.lat_names, config.lon_names
     )
 
     log.info("Processing average variables...")
     process_average_variables_special(
         varTotalAve, nc_run_ids, nc_runFileNames,
         list_of_units, regions, landMask, volMask,
-        mask_vol, missing_val, region_mask_cache
+        mask_vol, missing_val, region_mask_cache,
+        config.lat_names, config.lon_names
     )
 
     # 3.5 Compute AOU (derived variable requiring O2, temperature, salinity)
@@ -315,13 +320,13 @@ for year in range(year_from, year_to + 1):
         from analyser_io import find_variable_in_files, get_depth_coordinate
         # Find O2, votemper, vosaline in the loaded files
         found_o2, o2_data, lats, lons, _ = find_variable_in_files(
-            nc_run_ids[0], nc_runFileNames[0], 'O2'
+            nc_run_ids[0], nc_runFileNames[0], 'O2', config.lat_names, config.lon_names
         )
         found_temp, temp_data, _, _, _ = find_variable_in_files(
-            nc_run_ids[0], nc_runFileNames[0], 'votemper'
+            nc_run_ids[0], nc_runFileNames[0], 'votemper', config.lat_names, config.lon_names
         )
         found_sal, sal_data, _, _, _ = find_variable_in_files(
-            nc_run_ids[0], nc_runFileNames[0], 'vosaline'
+            nc_run_ids[0], nc_runFileNames[0], 'vosaline', config.lat_names, config.lon_names
         )
         # Get actual depth values from file
         depth_vals = get_depth_coordinate(nc_run_ids[0], nc_runFileNames[0])
@@ -354,10 +359,10 @@ for year in range(year_from, year_to + 1):
         from analyser_io import find_variable_in_files, get_depth_coordinate
         # Find EXP and mldr10_1 in the loaded files
         found_exp, exp_data, lats, lons, _ = find_variable_in_files(
-            nc_run_ids[0], nc_runFileNames[0], 'EXP'
+            nc_run_ids[0], nc_runFileNames[0], 'EXP', config.lat_names, config.lon_names
         )
         found_mld, mld_data, _, _, _ = find_variable_in_files(
-            nc_run_ids[0], nc_runFileNames[0], 'mldr10_1'
+            nc_run_ids[0], nc_runFileNames[0], 'mldr10_1', config.lat_names, config.lon_names
         )
         # Get actual depth values from file
         depth_vals = get_depth_coordinate(nc_run_ids[0], nc_runFileNames[0])

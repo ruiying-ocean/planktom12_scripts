@@ -159,7 +159,9 @@ def find_variable_in_files_xarray(
     xr_datasets: List,
     xr_filenames: List,
     var_name: str,
-    compute: bool = True
+    compute: bool = True,
+    lat_names: Optional[List[str]] = None,
+    lon_names: Optional[List[str]] = None
 ) -> Tuple[bool, Any, Any, Any, str]:
     """
     Search for a variable across multiple xarray datasets.
@@ -169,16 +171,35 @@ def find_variable_in_files_xarray(
         xr_filenames: List of corresponding filenames
         var_name: Variable name to find
         compute: If True, compute Dask array to NumPy. If False, return lazy array.
+        lat_names: Candidate names for the latitude coordinate, in priority
+            order. Defaults to ['nav_lat'] (the NEMO3.6 name).
+        lon_names: Candidate names for the longitude coordinate, in priority
+            order. Defaults to ['nav_lon'].
 
     Returns:
         Tuple of (found, data, lats, lons, filename)
     """
+    if lat_names is None:
+        lat_names = ['nav_lat']
+    if lon_names is None:
+        lon_names = ['nav_lon']
+
     for i, ds in enumerate(xr_datasets):
         try:
             if var_name in ds:
                 data = ds[var_name]
-                lats = ds['nav_lat']
-                lons = ds['nav_lon']
+                lat_name = next((n for n in lat_names if n in ds), None)
+                lon_name = next((n for n in lon_names if n in ds), None)
+                if lat_name is None or lon_name is None:
+                    missing = "latitude" if lat_name is None else "longitude"
+                    log.warning(
+                        f"'{var_name}' found in {xr_filenames[i]} but no {missing} "
+                        f"coordinate matched {lat_names if lat_name is None else lon_names}; "
+                        f"check the [coordinates] config section"
+                    )
+                    continue
+                lats = ds[lat_name]
+                lons = ds[lon_name]
 
                 # Convert to numpy if requested (for compatibility with existing code)
                 if compute:
@@ -195,7 +216,28 @@ def find_variable_in_files_xarray(
     return False, None, None, None, None
 
 
-def find_variable_in_files(nc_files: List, nc_filenames: List, var_name: str) -> Tuple[bool, Any, Any, Any, str]:
+def _read_first_present(nc_file, candidate_names: List[str]):
+    """
+    Read the first coordinate variable present from a list of candidate names.
+
+    NEMO5/XIOS suffixes grid_T coordinates (e.g. nav_lat_grid_T) while BGC
+    output (ptrc_T/diad_T) keeps plain nav_lat/nav_lon, so the name that holds
+    the lat/lon differs per file. Returns (name, data) for the first candidate
+    found, or (None, None) if none are present.
+    """
+    for name in candidate_names:
+        if name in nc_file.variables:
+            return name, nc_file.variables[name][:].data
+    return None, None
+
+
+def find_variable_in_files(
+    nc_files: List,
+    nc_filenames: List,
+    var_name: str,
+    lat_names: Optional[List[str]] = None,
+    lon_names: Optional[List[str]] = None
+) -> Tuple[bool, Any, Any, Any, str]:
     """
     Search for a variable across multiple NetCDF files.
 
@@ -203,20 +245,39 @@ def find_variable_in_files(nc_files: List, nc_filenames: List, var_name: str) ->
         nc_files: List of NetCDF Dataset objects to search
         nc_filenames: List of corresponding filenames
         var_name: Variable name to find
+        lat_names: Candidate names for the latitude coordinate, in priority
+            order. Defaults to ['nav_lat'] (the NEMO3.6 name).
+        lon_names: Candidate names for the longitude coordinate, in priority
+            order. Defaults to ['nav_lon'].
 
     Returns:
         Tuple of (found, data, lats, lons, filename)
     """
+    if lat_names is None:
+        lat_names = ['nav_lat']
+    if lon_names is None:
+        lon_names = ['nav_lon']
+
     for i, nc_file in enumerate(nc_files):
-        try:
-            data = nc_file.variables[var_name][:].data
-            lats = nc_file.variables['nav_lat'][:].data
-            lons = nc_file.variables['nav_lon'][:].data
-            log.info(f"{var_name} found in {nc_filenames[i]}")
-            return True, data, lats, lons, nc_filenames[i]
-        except KeyError:
+        if var_name not in nc_file.variables:
             # Variable not in this file, try next one
             continue
+        try:
+            data = nc_file.variables[var_name][:].data
+            _, lats = _read_first_present(nc_file, lat_names)
+            _, lons = _read_first_present(nc_file, lon_names)
+            if lats is None or lons is None:
+                # Data variable is present but its coordinates are not under any
+                # of the configured names — report, don't silently drop it.
+                missing = "latitude" if lats is None else "longitude"
+                log.warning(
+                    f"'{var_name}' found in {nc_filenames[i]} but no {missing} "
+                    f"coordinate matched {lat_names if lats is None else lon_names}; "
+                    f"check the [coordinates] config section"
+                )
+                continue
+            log.info(f"{var_name} found in {nc_filenames[i]}")
+            return True, data, lats, lons, nc_filenames[i]
         except (OSError, RuntimeError, ValueError, Exception) as e:
             # File corruption or data read error during variable access
             log.warning(f"Error reading variable '{var_name}' from {nc_filenames[i]}: {type(e).__name__}: {str(e)}")

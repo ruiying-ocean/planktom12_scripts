@@ -170,7 +170,9 @@ def process_variables(
     missingVal: float,
     processor_func: Callable,
     processor_type: str,
-    region_mask_cache: dict = None
+    region_mask_cache: dict = None,
+    lat_names: List[str] = None,
+    lon_names: List[str] = None
 ):
     """
     Unified function to process any type of variable.
@@ -211,7 +213,7 @@ def process_variables(
 
             # Find variable in NetCDF files
             found, data, val_lats, val_lons, filename = find_variable_in_files(
-                nc_run_ids[n], nc_filenames[n], var_name
+                nc_run_ids[n], nc_filenames[n], var_name, lat_names, lon_names
             )
 
             if not found:
@@ -475,7 +477,9 @@ def process_average_variables_special(
     volMask: np.ndarray,
     mask_vol: np.ndarray,
     missingVal: float,
-    region_mask_cache: dict = None
+    region_mask_cache: dict = None,
+    lat_names: List[str] = None,
+    lon_names: List[str] = None
 ):
     """
     Special processing for average variables that can sum multiple variables.
@@ -530,7 +534,7 @@ def process_average_variables_special(
             found = False
             for var_name in var_names:
                 found_var, data, val_lats, val_lons, filename = find_variable_in_files(
-                    nc_run_ids[n], nc_filenames[n], var_name
+                    nc_run_ids[n], nc_filenames[n], var_name, lat_names, lon_names
                 )
 
                 if found_var:

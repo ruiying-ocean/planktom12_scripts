@@ -115,6 +115,16 @@ region_mask = "/gpfs/data/greenocean/software/resources/breakdown/clq_basin_mask
 reccap_mask = "/gpfs/data/greenocean/software/resources/breakdown/RECCAP2_region_masks_all_v20210412_ORCA.nc"
 ancillary_data = "/gpfs/data/greenocean/software/resources/breakdown/AncillaryData_v2.nc"
 
+[coordinates]
+# Candidate names for the lat/lon coordinate variables, in priority order; the
+# first name present in a given file is used. NEMO5/XIOS writes several grid
+# definitions into grid_T and disambiguates the coordinates with per-grid
+# suffixes (nav_lat_grid_T), while the BGC output (ptrc_T/diad_T) keeps plain
+# nav_lat/nav_lon. Listing both lets a single config read grid_T (tos/sos/
+# mldr10_1) and the BGC files without a per-file rename.
+lat_names = [ "nav_lat", "nav_lat_grid_T" ]
+lon_names = [ "nav_lon", "nav_lon_grid_T" ]
+
 [[surface]]
 variable = "Cflx"
 units = "PgCarbonPerYr"
