@@ -50,13 +50,20 @@ def _load_files():
         return cfg, tomllib.load(f).get("files", {})
 
 
+# Runs created before visualise_config: was added to setUpData are all NEMO3.6
+# (the field arrived with NEMO5 dual-grid support), so old-style setUpData falls
+# back to the original 3.6 grid/obs config to stay visualisable.
+LEGACY_CONFIG_NAME = "visualise_config_nemo3.6.toml"
+
+
 def resolve_run_config(run_dir):
     """Resolve the visualise_config path for a model run from its setUpData.
 
     Reads ``visualise_config:`` from ``<run_dir>/setUpData_*.dat`` and resolves it
     the way setUpRun.sh does: an absolute path is used as-is, else it is taken
-    relative to this visualise/ directory. Returns an absolute Path, or None if no
-    setUpData carrying the field is present. There is no NEMO-version default.
+    relative to this visualise/ directory. An old-style setUpData that predates the
+    field falls back to the legacy NEMO3.6 config. Returns None only when no
+    setUpData is present at all.
     """
     run_dir = Path(run_dir)
     dats = sorted(run_dir.glob("setUpData_*.dat"))
@@ -69,7 +76,7 @@ def resolve_run_config(run_dir):
                 value = line.split(":", 1)[1].strip()
                 break
     if not value:
-        return None
+        value = LEGACY_CONFIG_NAME  # old-style setUpData: pre-field, so NEMO3.6
     p = Path(value)
     return p if p.is_absolute() else Path(__file__).parent / value
 
@@ -91,8 +98,9 @@ def load_config_for_runs(run_dirs):
 
     if not resolved:
         raise FileNotFoundError(
-            "no setUpData_*.dat with a visualise_config: line found for any run; "
-            "grid/obs paths are per-run (there is no NEMO-version default)."
+            "no setUpData_*.dat found in any run directory; cannot resolve the "
+            "grid/obs config (old-style setUpData without the visualise_config: "
+            "line falls back to NEMO3.6, but the file itself must be present)."
         )
     if len({str(p) for p in resolved.values()}) > 1:
         details = ", ".join(f"{n}={p.name}" for n, p in resolved.items())
