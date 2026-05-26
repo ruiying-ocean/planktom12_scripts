@@ -83,7 +83,17 @@ fi
 NEMO_VERSION=$(grep "^nemoVersion:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
 NEMO_CPUS=$(grep "^nemoCpus:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
 STEPS_PER_YEAR=$(grep "^stepsPerYear:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
-FIRST_YEAR_SPINUP=$(grep "^spinupStart:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
+# Epoch for the spinup source's restart-step counter. The counter is anchored to
+# the SOURCE run's own first model year, not the transient run's spinupStart: a
+# transient source (e.g. N502, yearStart 1948) resets nn_it000, so its restart
+# filenames count from its yearStart, while a coldstart-from-1750 spinup reports
+# yearStart == spinupStart. Read it from the source's own setUpData; fall back to
+# the transient run's spinupStart if the source file can't be parsed.
+SPINUP_SETUP_DATA=$(find "$SPIN_DIR" -maxdepth 1 -name "setUpData*.dat" | head -1)
+FIRST_YEAR_SPINUP=$(grep "^yearStart:" "$SPINUP_SETUP_DATA" 2>/dev/null | cut -d':' -f2)
+if [ -z "$FIRST_YEAR_SPINUP" ]; then
+    FIRST_YEAR_SPINUP=$(grep "^spinupStart:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
+fi
 ICE_RESTART_NAME=$(grep "^iceRestartName:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
 NEMO_CPUS=${NEMO_CPUS:-48}
 FIRST_YEAR_SPINUP=${FIRST_YEAR_SPINUP:-1750}
@@ -110,6 +120,7 @@ fi
 TIMESTEP=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
 
 echo -e "  ${DIM}First year:${RESET}    $FIRST_YEAR_TRANSIENT"
+echo -e "  ${DIM}Spinup epoch:${RESET}  $FIRST_YEAR_SPINUP (source's first model year)"
 echo -e "  ${DIM}Forcing:${RESET}       $FORCING ($FORCING_MODE)"
 echo -e "  ${DIM}Timestep:${RESET}      $TIMESTEP"
 
