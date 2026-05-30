@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=analyse        # Job name
-#SBATCH -p ht
-#SBATCH --qos=ht
+#SBATCH -p compute
 #SBATCH --output=job_%j.out          # Output file name (%j expands to jobID)
 #SBATCH --error=job_%j.err           # Error file name (%j expands to jobID)
 #SBATCH --time=20:00:00              # Run time (hh:mm:ss)
