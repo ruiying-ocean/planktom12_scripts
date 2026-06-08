@@ -1,12 +1,15 @@
 #!/bin/bash
-# Compress AFM-archived NetCDF files referenced by symlinks in a local model run dir.
+# Compress NetCDF output in a local model run dir, in place.
 # Usage: ./compress_nc.sh <model_id>
 #
-# Walks ~/scratch/ModelRuns/<model_id>/ for *.nc symlinks, resolves each target
-# (expected under /gpfs/afm/.../), runs nccopy -d 4 -s with the temp file on
-# local scratch (fast), then atomically swaps the compressed file into place on
-# AFM. The local symlink path is unchanged and ends up pointing at the smaller
-# file. Already-deflated files are skipped, so this script is safe to re-run.
+# Walks ~/scratch/ModelRuns/<model_id>/ for *.nc files and deflates each one
+# with nccopy -d 4 -s, writing to a temp file first and then atomically
+# swapping it into place. Two layouts are handled:
+#   - symlinks into the AFM archive (/gpfs/afm/.../software/runs/...): the
+#     target is compressed and the swap happens on AFM; the symlink is unchanged.
+#   - real local files (e.g. fresh NEMO output not yet archived): compressed
+#     in place on the run-dir filesystem.
+# Already-deflated files are skipped, so this script is safe to re-run.
 
 set -u
 
@@ -35,20 +38,24 @@ shopt -s nullglob
 for link in *.nc; do
 	case "$link" in
 		*restart*) continue ;;
+		*.tmp.nc) continue ;;   # leftover temp from an interrupted run
 	esac
-	if [ ! -L "$link" ]; then
-		echo "skip (not a symlink): $link"
+	if [ -L "$link" ]; then
+		target=$(readlink -f "$link")
+		if [ ! -f "$target" ]; then
+			echo "skip (broken symlink): $link -> $target"
+			continue
+		fi
+		case "$target" in
+			*/software/runs/*) ;;
+			*) echo "skip (not in archive): $link -> $target"; continue ;;
+		esac
+	elif [ -f "$link" ]; then
+		target="$link"   # real local file: compress in place
+	else
+		echo "skip (neither file nor symlink): $link"
 		continue
 	fi
-	target=$(readlink -f "$link")
-	if [ ! -f "$target" ]; then
-		echo "skip (broken symlink): $link -> $target"
-		continue
-	fi
-	case "$target" in
-		*/software/runs/*) ;;
-		*) echo "skip (not in archive): $link -> $target"; continue ;;
-	esac
 
 	if ncdump -hs "$target" 2>/dev/null | grep -q '_DeflateLevel = [1-9]'; then
 		echo "skip (already deflated): $link"
@@ -59,7 +66,7 @@ for link in *.nc; do
 	local_tmp="${link%.nc}.tmp.nc"
 	before=$(stat -c %s "$target")
 
-	# 1) Compress AFM file -> local scratch tmp (fast local write)
+	# 1) Compress source -> local tmp (fast local write)
 	if ! nccopy -d 4 -s "$target" "$local_tmp"; then
 		echo "FAILED nccopy: $link"
 		rm -f "$local_tmp"
@@ -67,26 +74,45 @@ for link in *.nc; do
 		continue
 	fi
 
-	# 2) Stage compressed file next to the original on AFM, then atomic rename
-	target_dir=$(dirname "$target")
-	target_name=$(basename "$target")
-	afm_tmp="$target_dir/.${target_name}.new"
-
-	if ! cp "$local_tmp" "$afm_tmp"; then
-		echo "FAILED cp to AFM: $link"
-		rm -f "$local_tmp" "$afm_tmp"
+	# Guard against a silently truncated/empty result before we destroy the original
+	if [ ! -s "$local_tmp" ]; then
+		echo "FAILED (empty output): $link"
+		rm -f "$local_tmp"
 		n_fail=$((n_fail + 1))
 		continue
 	fi
 
-	if ! mv -f "$afm_tmp" "$target"; then
-		echo "FAILED mv on AFM: $link"
-		rm -f "$local_tmp" "$afm_tmp"
-		n_fail=$((n_fail + 1))
-		continue
-	fi
+	# 2) Swap the compressed file into place
+	if [ -L "$link" ]; then
+		# Symlink target lives on AFM: stage next to the original, then atomic rename
+		target_dir=$(dirname "$target")
+		target_name=$(basename "$target")
+		afm_tmp="$target_dir/.${target_name}.new"
 
-	rm -f "$local_tmp"
+		if ! cp "$local_tmp" "$afm_tmp"; then
+			echo "FAILED cp to AFM: $link"
+			rm -f "$local_tmp" "$afm_tmp"
+			n_fail=$((n_fail + 1))
+			continue
+		fi
+
+		if ! mv -f "$afm_tmp" "$target"; then
+			echo "FAILED mv on AFM: $link"
+			rm -f "$local_tmp" "$afm_tmp"
+			n_fail=$((n_fail + 1))
+			continue
+		fi
+
+		rm -f "$local_tmp"
+	else
+		# Real local file: tmp is on the same filesystem, rename over it directly
+		if ! mv -f "$local_tmp" "$target"; then
+			echo "FAILED mv: $link"
+			rm -f "$local_tmp"
+			n_fail=$((n_fail + 1))
+			continue
+		fi
+	fi
 	after=$(stat -c %s "$target")
 	total_before=$((total_before + before))
 	total_after=$((total_after + after))
