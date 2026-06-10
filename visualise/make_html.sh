@@ -72,6 +72,33 @@ python3 "${scriptDir}/extract_setupdata.py" \
 # Read the summary content
 setupdata_summary=$(cat "${saveDir}/setupdata_summary.md")
 
+# Optional SO PFT section: older runs may not have SO PFT analyser columns or
+# figures, so only include this report block when the plot exists.
+so_pft_section="${saveDir}/so_pft_section.md"
+if [ -f "${saveDir}/${model_id}_ts_pfts_SO.${img_format}" ]; then
+    cat > "${so_pft_section}" <<EOF
+## SO Plankton Functional Types
+
+::: {.panel-tabset}
+
+## Normal
+
+![](${model_id}_ts_pfts_SO.${img_format})
+
+## Anomaly
+
+![](${model_id}_ts_pfts_SO_anom.${img_format})
+
+## Anomaly %
+
+![](${model_id}_ts_pfts_SO_anompct.${img_format})
+
+:::
+EOF
+else
+    : > "${so_pft_section}"
+fi
+
 # Copy template and custom.scss to save directory
 cp "${scriptDir}/template.qmd" "${saveDir}/temp_template.qmd"
 cp "${scriptDir}/custom.scss" "${saveDir}/"
@@ -85,9 +112,16 @@ sed -e "s/IDENTIFIER_PLACEHOLDER/${model_id}/g" \
     "${saveDir}/temp_template.qmd" > "${saveDir}/temp_with_vars.qmd"
 
 # Second pass - substitute setupdata summary using awk
-awk -v summary_file="${saveDir}/setupdata_summary.md" '
+awk -v summary_file="${saveDir}/setupdata_summary.md" \
+    -v so_pft_section_file="${so_pft_section}" '
 /\$\{SETUPDATA_SUMMARY\}/ {
     while ((getline line < summary_file) > 0) {
+        print line
+    }
+    next
+}
+/\$\{SO_PFT_SECTION\}/ {
+    while ((getline line < so_pft_section_file) > 0) {
         print line
     }
     next
@@ -102,6 +136,6 @@ cd "${saveDir}"
 quarto render "${model_id}.qmd" --output "${model_id}.html"
 
 # Clean up template files
-rm temp_template.qmd temp_with_vars.qmd "${model_id}.qmd" custom.scss setupdata_summary.md
+rm temp_template.qmd temp_with_vars.qmd "${model_id}.qmd" custom.scss setupdata_summary.md so_pft_section.md
 
 echo "✓ HTML report generated: ${saveDir}${model_id}.html"

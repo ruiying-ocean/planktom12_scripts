@@ -137,7 +137,11 @@ class ModelDataLoader:
         data.update(avg_data)
 
         int_df = self._read_analyser_file("int")
-        int_cols = ["BAC", "COC", "DIA", "FIX", "GEL", "CRU", "MES", "MIX", "PHA", "PIC", "PRO", "PTE"]
+        int_cols = [
+            "BAC", "COC", "DIA", "FIX", "GEL", "CRU", "MES", "MIX", "PHA", "PIC", "PRO", "PTE",
+            "BAC_SO", "COC_SO", "DIA_SO", "FIX_SO", "GEL_SO", "CRU_SO", "MES_SO", "MIX_SO",
+            "PHA_SO", "PIC_SO", "PRO_SO", "PTE_SO",
+        ]
         int_data = self._extract_arrays(int_df, int_cols)
         int_data["PHY"] = sum(int_data[col] for col in ["COC", "DIA", "FIX", "MIX", "PHA", "PIC"])
         int_data["ZOO"] = sum(int_data[col] for col in ["GEL", "CRU", "MES", "PRO", "PTE"])
@@ -463,6 +467,20 @@ class FigureCreator:
             data, self.config['plot_info']['ecosystem'],
             ObservationData.get_global(), 'global_summary', 'ts_global')
 
+    def create_so_pft_summary(self, data):
+        plot_info = self.config.get('plot_info', {}).get('pfts_so')
+        if not plot_info:
+            print("  ⚠ SO PFT plot config not found — skipping SO PFT summary")
+            return
+
+        if not any(var_name in data for var_name in plot_info):
+            print("  ⚠ No SO PFT columns found in analyser output — skipping SO PFT summary")
+            return
+
+        self._create_all_modes(
+            data, plot_info,
+            None, 'pft_so_summary', 'ts_pfts_SO')
+
     def create_pft_summary(self, data):
         plot_info = dict(self.config['plot_info']['pfts']['phytoplankton'])
         plot_info.update(self.config['plot_info']['pfts']['zooplankton'])
@@ -786,6 +804,7 @@ def main():
         creator.create_global_summary(data)
         creator.create_tchl_seasonal_regions()
         creator.create_pft_summary(data)
+        creator.create_so_pft_summary(data)
         creator.create_nutrient_summary(data)
         creator.create_physics_summary(data)
         creator.create_derived_summary(data)

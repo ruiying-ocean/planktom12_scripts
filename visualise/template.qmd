@@ -65,6 +65,8 @@ ${SETUPDATA_SUMMARY}
 
 :::
 
+${SO_PFT_SECTION}
+
 ## Nutrient Cycles
 
 ::: {.panel-tabset}
