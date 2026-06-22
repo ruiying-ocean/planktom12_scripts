@@ -18,10 +18,14 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 
 try:
-    import colormaps as cmps
-    PFT_CMAP = cmps.roma_r
+    import cmocean
+    PFT_CMAP = cmocean.cm.dense
 except ImportError:
-    PFT_CMAP = 'turbo'
+    try:
+        import colormaps as cmps
+        PFT_CMAP = cmps.roma_r
+    except ImportError:
+        PFT_CMAP = 'turbo'
 
 # Import our plotting utilities
 from map_utils import (
