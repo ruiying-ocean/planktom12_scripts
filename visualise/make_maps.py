@@ -898,6 +898,97 @@ def plot_surface_carbon(
     print(f"Saved: {output_path}")
 
 
+# Seasonal MLD panels: (label, month indices into the 12 monthly means, Jan=0).
+# DJF and JJA are the two solstice seasons; each panel spans deep winter mixing
+# in one hemisphere and shallow summer stratification in the other, so they
+# share a single colour scale.
+MLD_SEASONS = [
+    ('DJF (boreal winter)', [11, 0, 1]),
+    ('JJA (boreal summer)', [5, 6, 7]),
+]
+
+
+def plot_mld_seasonal(
+    plotter: OceanMapPlotter,
+    grid_t_file: Path,
+    output_path: Path,
+    run_name: str,
+    year: str,
+    vmax: float = 500.0,
+):
+    """
+    Create a two-panel seasonal Mixed Layer Depth map from monthly grid_T output.
+
+    MLD (mldr10_1) has a strong seasonal cycle, so an annual mean is of limited
+    use. Instead we show the DJF and JJA 3-month means (see ``MLD_SEASONS``).
+    Both panels share a single colour scale because each contains a deep-mixing
+    hemisphere and a shallow-stratified one.
+
+    Args:
+        plotter: OceanMapPlotter instance
+        grid_t_file: Path to monthly-mean grid_T NetCDF file (mldr10_1)
+        output_path: Where to save the figure
+        run_name: Model run name (used in titles)
+        year: Year string (used in titles)
+        vmax: Shared colour-scale max [m]
+    """
+    ds = xr.open_dataset(str(grid_t_file), decode_times=False)
+    if 'mldr10_1' not in ds:
+        print(f"Warning: mldr10_1 not in {grid_t_file}, skipping MLD map")
+        ds.close()
+        return
+
+    mld = ds['mldr10_1']
+    nmonths = mld.sizes.get('time_counter', 0) if 'time_counter' in mld.dims else 0
+    if nmonths >= 12:
+        season_fields = [
+            mld.isel(time_counter=idx).mean(dim='time_counter').squeeze()
+            for _, idx in MLD_SEASONS
+        ]
+    else:
+        # No monthly resolution (e.g. an annual mean): both panels show the same
+        # field; label them so the report doesn't imply a seasonal contrast.
+        print(f"Note: grid_T has {nmonths} time step(s), not 12 months; "
+              "seasonal MLD panels will be identical")
+        annual = mld.mean(dim='time_counter').squeeze() if nmonths else mld.squeeze()
+        season_fields = [annual, annual]
+
+    season_fields = [plotter.apply_mask(f, mask_2d=True) for f in season_fields]
+
+    try:
+        import cmocean
+        deep_cmap = cmocean.cm.deep
+    except ImportError:
+        deep_cmap = 'viridis'
+
+    fig, axs = plotter.create_subplot_grid(
+        nrows=1, ncols=2,
+        projection=ccrs.PlateCarree(),
+        figsize=(12, 4),
+    )
+
+    im = None
+    for ax, (label, _), data in zip(axs.flat, MLD_SEASONS, season_fields):
+        im = plotter.plot_variable(
+            ax=ax, data=data, cmap=deep_cmap,
+            vmin=0, vmax=vmax, add_colorbar=False,
+        )
+        ax.set_title(f"MLD — {label}\n{run_name} ({year})",
+                     fontsize=11, fontweight='bold')
+
+    plotter.add_shared_colorbar(
+        fig=fig, im=im, axs=axs,
+        label='MLD [m]', orientation='horizontal',
+        pad=0.075, fraction=0.05, extend='max',
+    )
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=300, bbox_inches='tight',
+                pil_kwargs={'optimize': True, 'compress_level': 9})
+    plt.close(fig)
+    print(f"Saved: {output_path}")
+
+
 def main():
     """Main entry point for map generation."""
     parser = argparse.ArgumentParser(
@@ -1177,6 +1268,19 @@ def main():
             run_name=args.run_name,
             year=args.year,
         )
+
+    # 9. Seasonal Mixed Layer Depth (DJF/JJA, model only)
+    if grid_t_file.exists():
+        print("9. Seasonal Mixed Layer Depth (DJF/JJA)...")
+        plot_mld_seasonal(
+            plotter=plotter,
+            grid_t_file=grid_t_file,
+            output_path=output_dir / f"{args.run_name}_{args.year}_mld.png",
+            run_name=args.run_name,
+            year=args.year,
+        )
+    else:
+        print(f"9. Skipping MLD map: grid_T file not found at {grid_t_file}")
 
     print("\n=== All maps generated successfully ===")
     print(f"Output directory: {output_dir}")

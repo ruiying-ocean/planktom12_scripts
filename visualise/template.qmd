@@ -211,6 +211,12 @@ ${SO_PFT_SECTION}
 
 ![](${identifier}_${end_year}_amoc_streamfunction.png)
 
+## Mixed Layer Depth
+
+Seasonal mixed layer depth (DJF and JJA 3-month means).
+
+![](${identifier}_${end_year}_mld.png)
+
 ## Vertical Transects
 
 ### Atlantic (35°W)
