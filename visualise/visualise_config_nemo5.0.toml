@@ -23,6 +23,9 @@ spco2    = "spco2_orca_bil.nc"          # surface pCO2 + air-sea CO2 flux
 chl_1deg = "OC-CCI/climatology/OC-CCI_climatology_1deg.nc"   # satellite chl, regular 1deg grid
 chl_orca = "OC-CCI/climatology/OC-CCI_climatology_orca2.nc"  # satellite chl on model grid (scorecard)
 so_chl   = "Johnson2013/SO_Chl_monthly_climatology.nc"       # Southern Ocean seasonal chl
+# Grid-independent 1deg climatology; lives at the shared Observations root (one
+# level above this grid's obs_dir), hence the ../ — same file as the 3.6 config.
+mld      = "../mld_dr003_ref10m_v2023.nc"  # de Boyer Montégut 2023 MLD climatology (Δσ=0.03, ref 10m), regular 1deg grid
 
 [figure]
 dpi = 300

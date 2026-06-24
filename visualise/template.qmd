@@ -213,7 +213,7 @@ ${SO_PFT_SECTION}
 
 ## Mixed Layer Depth
 
-Seasonal mixed layer depth (DJF and JJA 3-month means).
+Seasonal mixed layer depth (DJF and JJA 3-month means), model vs de Boyer Montégut 2023 climatology.
 
 ![](${identifier}_${end_year}_mld.png)
 
@@ -286,4 +286,5 @@ Basin-averaged vertical profiles comparing model output with observations.
 - **AMOC**: [RAPID/MOCHA array](https://rapid.ac.uk/) (Smeed et al., 2018)
 - **pCO₂**: [Global Carbon Budget 2022](https://essd.copernicus.org/articles/14/4811/2022/)
 - **Temperature & Salinity**: WOA18 (2005-2018 period)
+- **Mixed Layer Depth**: [de Boyer Montégut et al. (2004)](https://doi.org/10.1029/2004JC002378), 2023 update (Δσ=0.03 kg/m³, ref. 10 m)
 :::

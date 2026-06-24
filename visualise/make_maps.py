@@ -908,21 +908,45 @@ MLD_SEASONS = [
 ]
 
 
+def _mld_season_means(da: xr.DataArray, time_dim: str) -> list:
+    """3-month seasonal means of an MLD field over ``MLD_SEASONS``.
+
+    Falls back to repeating the time-mean field (with a note) when the source
+    lacks 12 monthly steps, so a coarse input still produces a labelled figure.
+    """
+    nmonths = da.sizes.get(time_dim, 0) if time_dim in da.dims else 0
+    if nmonths >= 12:
+        return [da.isel({time_dim: idx}).mean(dim=time_dim).squeeze()
+                for _, idx in MLD_SEASONS]
+    print(f"Note: MLD source has {nmonths} '{time_dim}' step(s), not 12 months; "
+          "seasonal panels will be identical")
+    mean = da.mean(dim=time_dim).squeeze() if nmonths else da.squeeze()
+    return [mean for _ in MLD_SEASONS]
+
+
 def plot_mld_seasonal(
     plotter: OceanMapPlotter,
     grid_t_file: Path,
     output_path: Path,
     run_name: str,
     year: str,
+    obs_mld_path: Path = None,
     vmax: float = 500.0,
 ):
     """
-    Create a two-panel seasonal Mixed Layer Depth map from monthly grid_T output.
+    Create a seasonal Mixed Layer Depth map (DJF and JJA 3-month means).
 
     MLD (mldr10_1) has a strong seasonal cycle, so an annual mean is of limited
-    use. Instead we show the DJF and JJA 3-month means (see ``MLD_SEASONS``).
-    Both panels share a single colour scale because each contains a deep-mixing
-    hemisphere and a shallow-stratified one.
+    use. Rows are the DJF and JJA seasons (see ``MLD_SEASONS``); the left column
+    is the model, and — when an observational climatology is supplied — the right
+    column is de Boyer Montégut. Each panel shares one colour scale because each
+    season contains a deep-mixing hemisphere and a shallow-stratified one.
+
+    The obs product (mld_dr003, regular 1° grid) is plotted on its own grid with
+    no ORCA mask and no difference panel — same handling as the satellite
+    chlorophyll comparison. Note the model writes mldr10_1 (Δσ=0.01 criterion)
+    while the obs uses Δσ=0.03, so the model MLD is biased shallow; the
+    side-by-side layout avoids over-reading that offset.
 
     Args:
         plotter: OceanMapPlotter instance
@@ -930,6 +954,7 @@ def plot_mld_seasonal(
         output_path: Where to save the figure
         run_name: Model run name (used in titles)
         year: Year string (used in titles)
+        obs_mld_path: Path to de Boyer Montégut climatology (None/missing -> model only)
         vmax: Shared colour-scale max [m]
     """
     ds = xr.open_dataset(str(grid_t_file), decode_times=False)
@@ -937,23 +962,22 @@ def plot_mld_seasonal(
         print(f"Warning: mldr10_1 not in {grid_t_file}, skipping MLD map")
         ds.close()
         return
+    model_seasons = _mld_season_means(ds['mldr10_1'], 'time_counter')
+    ds.close()
+    model_seasons = [plotter.apply_mask(f, mask_2d=True) for f in model_seasons]
 
-    mld = ds['mldr10_1']
-    nmonths = mld.sizes.get('time_counter', 0) if 'time_counter' in mld.dims else 0
-    if nmonths >= 12:
-        season_fields = [
-            mld.isel(time_counter=idx).mean(dim='time_counter').squeeze()
-            for _, idx in MLD_SEASONS
-        ]
-    else:
-        # No monthly resolution (e.g. an annual mean): both panels show the same
-        # field; label them so the report doesn't imply a seasonal contrast.
-        print(f"Note: grid_T has {nmonths} time step(s), not 12 months; "
-              "seasonal MLD panels will be identical")
-        annual = mld.mean(dim='time_counter').squeeze() if nmonths else mld.squeeze()
-        season_fields = [annual, annual]
-
-    season_fields = [plotter.apply_mask(f, mask_2d=True) for f in season_fields]
+    # Observations (de Boyer Montégut): regular 1° grid, already NaN over land —
+    # plot on its own grid without the ORCA mask, no difference (Chl-style).
+    obs_seasons = None
+    if obs_mld_path is not None and Path(obs_mld_path).exists():
+        obs_ds = xr.open_dataset(str(obs_mld_path), decode_times=False)
+        if 'mld_dr003' in obs_ds:
+            obs_seasons = _mld_season_means(obs_ds['mld_dr003'], 'time')
+        else:
+            print(f"Warning: mld_dr003 not in {obs_mld_path}; MLD obs column skipped")
+        obs_ds.close()
+    elif obs_mld_path is not None:
+        print(f"Note: MLD obs not found at {obs_mld_path}; plotting model only")
 
     try:
         import cmocean
@@ -961,25 +985,33 @@ def plot_mld_seasonal(
     except ImportError:
         deep_cmap = 'viridis'
 
+    ncols = 2 if obs_seasons is not None else 1
     fig, axs = plotter.create_subplot_grid(
-        nrows=1, ncols=2,
+        nrows=len(MLD_SEASONS), ncols=ncols,
         projection=ccrs.PlateCarree(),
-        figsize=(12, 4),
+        figsize=(6 * ncols, 3.2 * len(MLD_SEASONS)),
     )
 
     im = None
-    for ax, (label, _), data in zip(axs.flat, MLD_SEASONS, season_fields):
+    for row, (label, _) in enumerate(MLD_SEASONS):
         im = plotter.plot_variable(
-            ax=ax, data=data, cmap=deep_cmap,
+            ax=axs[row, 0], data=model_seasons[row], cmap=deep_cmap,
             vmin=0, vmax=vmax, add_colorbar=False,
         )
-        ax.set_title(f"MLD — {label}\n{run_name} ({year})",
-                     fontsize=11, fontweight='bold')
+        axs[row, 0].set_title(f"MLD {label} — Model", fontsize=11, fontweight='bold')
+        if obs_seasons is not None:
+            plotter.plot_variable(
+                ax=axs[row, 1], data=obs_seasons[row], cmap=deep_cmap,
+                vmin=0, vmax=vmax, add_colorbar=False,
+            )
+            axs[row, 1].set_title(f"MLD {label} — de Boyer Montégut 2023",
+                                  fontsize=11, fontweight='bold')
 
+    fig.suptitle(f"Mixed Layer Depth — {run_name} ({year})", fontsize=13)
     plotter.add_shared_colorbar(
         fig=fig, im=im, axs=axs,
         label='MLD [m]', orientation='horizontal',
-        pad=0.075, fraction=0.05, extend='max',
+        pad=0.05, fraction=0.05, extend='max',
     )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1269,15 +1301,21 @@ def main():
             year=args.year,
         )
 
-    # 9. Seasonal Mixed Layer Depth (DJF/JJA, model only)
+    # 9. Seasonal Mixed Layer Depth (DJF/JJA) vs de Boyer Montégut climatology
     if grid_t_file.exists():
         print("9. Seasonal Mixed Layer Depth (DJF/JJA)...")
+        try:
+            mld_obs_file = Path(get_obs_path(config, 'mld', obs_dir))
+        except KeyError:
+            # Older configs predate the 'mld' obs entry -> model-only map
+            mld_obs_file = None
         plot_mld_seasonal(
             plotter=plotter,
             grid_t_file=grid_t_file,
             output_path=output_dir / f"{args.run_name}_{args.year}_mld.png",
             run_name=args.run_name,
             year=args.year,
+            obs_mld_path=mld_obs_file,
         )
     else:
         print(f"9. Skipping MLD map: grid_T file not found at {grid_t_file}")
