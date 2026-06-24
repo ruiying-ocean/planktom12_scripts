@@ -21,35 +21,33 @@ def read_moc_file(path: str) -> xr.Dataset:
     return xr.open_dataset(path, decode_times=False)
 
 
-def extract_amoc_26n(moc_ds: xr.Dataset, y_index: int = 94) -> float:
+def extract_amoc_26n(moc_ds: xr.Dataset,
+                     lat_band: tuple = (24.0, 28.0),
+                     min_depth: float = 500.0) -> float:
     """
-    Extract AMOC strength at 26N (annual mean, max over depth).
+    Extract a RAPID-comparable AMOC strength index.
 
-    The AMOC strength is defined as the maximum of the Atlantic MOC
-    streamfunction over depth at approximately 26.5N, matching the
-    RAPID array latitude.
+    The index is the maximum of the Atlantic MOC streamfunction *below
+    ``min_depth``* (default 500 m), to exclude the shallow wind-driven
+    (Ekman) surface cell which can otherwise dominate a plain
+    max-over-depth. That depth-max is taken for each model row whose
+    latitude falls in ``lat_band`` (default 24-28N, centred on the RAPID
+    array at 26.5N) and then averaged across the band to reduce
+    single-gridpoint noise. Finally an annual (time) mean is taken.
 
     Args:
         moc_ds: MOC dataset from cdfmoc (from read_moc_file)
-        y_index: y-grid index corresponding to ~26.5N in ORCA2 (default 94)
+        lat_band: (south, north) latitude bounds in degrees N to average
+            over (default (24.0, 28.0), centred on RAPID's 26.5N)
+        min_depth: depths shallower than this (m) are excluded before the
+            max-over-depth, removing the surface Ekman cell (default 500)
 
     Returns:
-        AMOC strength in Sv (annual mean of max-over-depth at 26N)
+        AMOC strength in Sv (annual mean of the banded sub-surface max)
     """
     # cdfmoc output variable names vary by version
     # Common names: zomsfatl (Atlantic MOC), zomsfglo (Global MOC)
-    moc_var = None
-    for name in ['zomsfatl', 'zomsf_atl', 'moc_atl']:
-        if name in moc_ds:
-            moc_var = name
-            break
-
-    if moc_var is None:
-        # Fall back to first variable that looks like a streamfunction
-        for name in moc_ds.data_vars:
-            if 'msf' in name.lower() or 'moc' in name.lower():
-                moc_var = name
-                break
+    moc_var = _find_moc_variable(moc_ds, ['zomsfatl', 'zomsf_atl', 'moc_atl'])
 
     if moc_var is None:
         raise ValueError(
@@ -70,6 +68,8 @@ def extract_amoc_26n(moc_ds: xr.Dataset, y_index: int = 94) -> float:
         spatial_dims = [d for d in moc.dims if d not in ('time_counter', 'time')]
         if len(spatial_dims) >= 2:
             y_dim = spatial_dims[-2]
+    if y_dim is None:
+        raise ValueError("Cannot identify y-dimension in MOC dataset")
 
     depth_dim = None
     for dim in moc.dims:
@@ -81,17 +81,54 @@ def extract_amoc_26n(moc_ds: xr.Dataset, y_index: int = 94) -> float:
         if len(spatial_dims) >= 1:
             depth_dim = spatial_dims[-1]
 
-    # Select latitude index for 26N
-    if y_dim is not None:
-        moc_26n = moc.isel({y_dim: y_index})
-    else:
-        raise ValueError("Cannot identify y-dimension in MOC dataset")
+    # --- exclude the surface Ekman cell: keep only depths >= min_depth ---
+    if depth_dim is not None and depth_dim in moc.dims:
+        if depth_dim in moc_ds.variables or depth_dim in moc_ds.coords:
+            depth_vals = np.abs(np.asarray(moc_ds[depth_dim].values))
+            keep = np.where(depth_vals >= min_depth)[0]
+            if keep.size:
+                moc = moc.isel({depth_dim: keep})
+            else:
+                print(f"Warning: no levels below {min_depth} m; "
+                      f"using full column for AMOC")
+        else:
+            print(f"Warning: depth coordinate '{depth_dim}' has no values; "
+                  f"cannot exclude surface cell, using full column")
 
-    # Max over depth
-    if depth_dim is not None and depth_dim in moc_26n.dims:
-        amoc_ts = moc_26n.max(dim=depth_dim)
+    # --- select the latitude band (centred on RAPID 26.5N) ---
+    lat_y = None
+    if 'nav_lat' in moc_ds:
+        navlat = np.asarray(moc_ds['nav_lat'].values).squeeze()
+        if navlat.ndim == 2:
+            # latitude is ~zonally constant in the subtropics; collapse x
+            navlat = np.where(navlat == 0, np.nan, navlat)
+            lat_y = np.nanmean(navlat, axis=1)
+        elif navlat.ndim == 1:
+            lat_y = navlat
+
+    if lat_y is not None:
+        in_band = np.where((lat_y >= lat_band[0]) & (lat_y <= lat_band[1]))[0]
+        if in_band.size == 0:
+            # fall back to the single row nearest the band centre
+            centre = 0.5 * (lat_band[0] + lat_band[1])
+            in_band = np.array([int(np.nanargmin(np.abs(lat_y - centre)))])
+        moc_band = moc.isel({y_dim: in_band})
     else:
-        amoc_ts = moc_26n
+        # no latitude info: fall back to ORCA2 index for ~26.5N
+        print("Warning: nav_lat not found; falling back to y-index 94 (~26.5N)")
+        moc_band = moc.isel({y_dim: 94})
+
+    # Max over (sub-surface) depth at each latitude
+    if depth_dim is not None and depth_dim in moc_band.dims:
+        amoc_lat = moc_band.max(dim=depth_dim)
+    else:
+        amoc_lat = moc_band
+
+    # Average across the latitude band
+    if y_dim in amoc_lat.dims:
+        amoc_ts = amoc_lat.mean(dim=y_dim)
+    else:
+        amoc_ts = amoc_lat
 
     # Time average
     time_dim = None
@@ -99,13 +136,11 @@ def extract_amoc_26n(moc_ds: xr.Dataset, y_index: int = 94) -> float:
         if 'time' in dim:
             time_dim = dim
             break
-
     if time_dim is not None:
-        amoc_value = float(amoc_ts.mean(dim=time_dim).values)
-    else:
-        amoc_value = float(amoc_ts.values)
+        amoc_ts = amoc_ts.mean(dim=time_dim)
 
-    return amoc_value
+    # Collapse any remaining dim (the zonally-integrated x, size 1) to a scalar
+    return float(amoc_ts.mean().values)
 
 
 def _find_moc_variable(moc_ds: xr.Dataset, candidates: list):
