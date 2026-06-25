@@ -46,7 +46,15 @@ yearToRun=$((yearToRun+1))
 timestep=`awk '{printf "%.8d\n", $0}' time.step`
 mv time.step old.time.step
 
-if [ -f ORCA2_${timestep}_restart_0000.nc ]; then
+# Restart-output basenames: NEMO writes <cn_exp>_<step>_<basename>_<rank>.nc.
+# Read cn_*rst_out from the active namelists so the year rollover works whatever
+# the config's naming convention is (repo-standard "restart" vs e.g. "restart_out").
+# Defaults equal NEMO's own defaults, so behaviour is unchanged when these are unset.
+ocerst=$(grep -hoiP "cn_ocerst_out\s*=\s*['\"]\K[^'\"]+" namelist_cfg namelist_ref 2>/dev/null | head -1); ocerst=${ocerst:-restart}
+trcrst=$(grep -hoiP "cn_trcrst_out\s*=\s*['\"]\K[^'\"]+" namelist_top_cfg namelist_top_ref 2>/dev/null | head -1); trcrst=${trcrst:-restart_trc}
+icerst=$(grep -hoiP "cn_icerst_out\s*=\s*['\"]\K[^'\"]+" namelist_ice_cfg namelist_ice_ref 2>/dev/null | head -1); icerst=${icerst:-restart_ice}
+
+if [ -f ORCA2_${timestep}_${ocerst}_0000.nc ]; then
 	[ -f restart_trc.nc ] && mv restart_trc.nc restart_trc_first_year.nc
 	[ -f restart.nc ] && mv restart.nc restart_first_year.nc
 	[ -f ${ice_restart_name}.nc ] && mv ${ice_restart_name}.nc ${ice_restart_name}_first_year.nc
@@ -69,9 +77,9 @@ if [ -f ORCA2_${timestep}_restart_0000.nc ]; then
 	for (( i=0; i<$cpus; i++ )); do
 		proc=$(printf "%02d" $i)
 
-		ln -fs ORCA2_${timestep}_restart_00${proc}.nc restart_00${proc}.nc
-		ln -fs ORCA2_${timestep}_restart_ice_00${proc}.nc ${ice_restart_name}_00${proc}.nc
-		ln -fs ORCA2_${timestep}_restart_trc_00${proc}.nc restart_trc_00${proc}.nc
+		ln -fs ORCA2_${timestep}_${ocerst}_00${proc}.nc restart_00${proc}.nc
+		ln -fs ORCA2_${timestep}_${icerst}_00${proc}.nc ${ice_restart_name}_00${proc}.nc
+		ln -fs ORCA2_${timestep}_${trcrst}_00${proc}.nc restart_trc_00${proc}.nc
 	done
 
 	cp ocean.output ocean.output_${yearPrevious}

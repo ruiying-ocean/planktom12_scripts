@@ -100,7 +100,7 @@ shopt -s nullglob
 
 for family in "restart_" "restart_ice_" "restart_trc_"; do
     files=( "$DIR"/ORCA2_*_${family}[0-9][0-9][0-9][0-9].nc )
-    [[ -e "${files[0]}" ]] || continue
+    [[ ${#files[@]} -gt 0 ]] || continue
 
     # find first and latest steps
     sorted=($(printf '%s\n' "${files[@]}" | sort -V))
