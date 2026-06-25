@@ -27,6 +27,8 @@ def load_grid_t_for_aou(
     print(f"Loading grid_T dataset for AOU from {grid_t_file}...")
 
     grid_ds = xr.open_dataset(str(grid_t_file), decode_times=False)
+    # Direct open (no plotter here), so canonicalize NEMO5 inner dim/coord names.
+    grid_ds = OceanMapPlotter._canonicalize_dims(grid_ds)
 
     # Extract temperature and salinity
     temp = grid_ds['votemper']
@@ -189,8 +191,12 @@ def load_and_preprocess_diad(
     if compute_rls and grid_t_file is not None and grid_t_file.exists():
         if 'EXP' in diad_ds:
             print("Computing RLS...")
-            # Load MLD from grid_T
+            # Load MLD from grid_T. This is a direct open (not plotter.load_data),
+            # so canonicalize the NEMO5 inner dim/coord names here too -- otherwise
+            # mld keeps y_grid_T_2D_inner/x_grid_T_2D_inner and _rls broadcasts
+            # against the canonical-dim land mask. No-op for NEMO3.6.
             grid_ds = xr.open_dataset(str(grid_t_file), decode_times=False)
+            grid_ds = plotter._canonicalize_dims(grid_ds)
             mld = grid_ds['mldr10_1']
             if 'time_counter' in mld.dims:
                 mld = mld.mean(dim='time_counter').squeeze()

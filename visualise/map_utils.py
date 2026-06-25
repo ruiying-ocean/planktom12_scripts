@@ -92,7 +92,8 @@ class OceanMapPlotter:
             if 'z' in self.volume.dims:
                 self.volume = self.volume.rename({'z': 'deptht'})
 
-    def _canonicalize_dims(self, ds: xr.Dataset) -> xr.Dataset:
+    @staticmethod
+    def _canonicalize_dims(ds: xr.Dataset) -> xr.Dataset:
         """Map NEMO5/XIOS per-grid dim/coord names to canonical x/y/deptht/nav_lat.
 
         NEMO5 writes the BGC diagnostics on auto-generated 'inner' grids, giving

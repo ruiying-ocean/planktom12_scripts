@@ -958,6 +958,7 @@ def plot_mld_seasonal(
         vmax: Shared colour-scale max [m]
     """
     ds = xr.open_dataset(str(grid_t_file), decode_times=False)
+    ds = plotter._canonicalize_dims(ds)
     if 'mldr10_1' not in ds:
         print(f"Warning: mldr10_1 not in {grid_t_file}, skipping MLD map")
         ds.close()
