@@ -34,9 +34,6 @@ if [ ! -x "$CDFMOC" ]; then
 	exit 0
 fi
 
-# Load NetCDF library required by CDFtools
-module load netcdf/4.7.4/gcc
-
 # Extract year from grid_V filename (pattern: ORCA2_1m_YYYY0101_YYYY1231_grid_V.nc)
 year=$(echo "$grid_v_file" | sed -n 's/.*_\([0-9]\{4\}\)0101_.*/\1/p')
 if [ -z "$year" ]; then
@@ -59,6 +56,24 @@ if [ -n "$grid_t_file" ] && [ -f "$grid_t_file" ]; then
 	grid_t_file=$(cd "$(dirname "$grid_t_file")" && pwd)/$(basename "$grid_t_file")
 fi
 
+# NEMO5/XIOS (e.g. KRF12) names grid_V horizontal dims x_grid_V/y_grid_V, but
+# cdfmoc (NEMO3.6-era) requires literal x/y. vomecrty/depthv/time_counter already
+# match, and geometry comes from the mesh, so only those two dims need renaming.
+# Rename into a temp copy (its filename keeps the year so extraction still works).
+nemo5_tmp=""
+if ncdump -h "$grid_v_file" 2>/dev/null | grep -qE 'x_grid_V[[:space:]]*='; then
+	if command -v ncrename >/dev/null 2>&1; then
+		nemo5_tmp="${grid_v_file%.nc}_cdfren.nc"
+		cp "$grid_v_file" "$nemo5_tmp"
+		ncrename -d x_grid_V,x -d y_grid_V,y "$nemo5_tmp" >/dev/null 2>&1
+		grid_v_file="$nemo5_tmp"
+		echo "  NEMO5 grid_V detected: renamed x_grid_V/y_grid_V -> x/y"
+	else
+		echo "Warning: NEMO5 grid_V dims (x_grid_V) but ncrename/NCO not on PATH (try 'mamba activate') - skipping AMOC"
+		exit 0
+	fi
+fi
+
 # Create MOC directory and work from there
 mkdir -p MOC
 cd MOC
@@ -71,6 +86,11 @@ for name in mesh_hgr.nc mesh_zgr.nc mask.nc; do
 	[ ! -e "$name" ] && ln -sf "$MESH_MASK" "$name"
 done
 [ ! -e "new_maskglo.nc" ] && ln -sf "$MASKGLO" "new_maskglo.nc"
+
+# Load the system NetCDF lib for CDFtools. Done HERE -- after the conda-based
+# ncrename ran above -- so the system libs don't shadow conda's under ncrename
+# (matches the manual sequence that worked: rename in conda env, then cdfmoc).
+module load netcdf/4.7.4/gcc
 
 # Run cdfmoc (pass grid_T with -t if available)
 if [ -n "$grid_t_file" ] && [ -f "$grid_t_file" ]; then
@@ -86,3 +106,6 @@ if [ -f "moc.nc" ]; then
 else
 	echo "Warning: cdfmoc did not produce moc.nc"
 fi
+
+# Clean up the temporary renamed grid_V copy (NEMO5 path only)
+[ -n "$nemo5_tmp" ] && rm -f "$nemo5_tmp"
