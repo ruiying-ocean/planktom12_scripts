@@ -92,6 +92,70 @@ class OceanMapPlotter:
             if 'z' in self.volume.dims:
                 self.volume = self.volume.rename({'z': 'deptht'})
 
+    def _canonicalize_dims(self, ds: xr.Dataset) -> xr.Dataset:
+        """Map NEMO5/XIOS per-grid dim/coord names to canonical x/y/deptht/nav_lat.
+
+        NEMO5 writes the BGC diagnostics on auto-generated 'inner' grids, giving
+        dims like x_grid_T_3D_inner / y_grid_T_2D_inner, a vertical dim
+        grid_T_3D_inner, and coords nav_lat_grid_T_3D_inner etc. The volume/area
+        mask uses plain x/y/deptht/nav_lat, so the differing dim NAMES make xarray
+        broadcast a cartesian product in the volume-weighted integrals (the
+        multi-TiB blow-up). This renames them back to canonical names.
+
+        No-op for NEMO3.6 output, which already uses x/y/deptht/nav_lat.
+        """
+        import re
+
+        def canon(name) -> str:
+            name = str(name)
+            if name == 'x' or name.startswith('x_'):
+                return 'x'
+            if name == 'y' or name.startswith('y_'):
+                return 'y'
+            if name in ('z', 'deptht'):
+                return 'deptht'
+            # NEMO5 vertical dim of a 3D inner/halo grid, e.g. grid_T_3D_inner
+            if re.fullmatch(r'grid_[A-Za-z0-9]+_3D(_inner|_halo\d+)?', name):
+                return 'deptht'
+            return name
+
+        # Fast path: nothing to rename (NEMO3.6 / already-canonical files).
+        if all(canon(d) == str(d) for d in ds.dims):
+            return ds
+
+        def rename_dims(var):
+            ren = {d: canon(d) for d in var.dims if canon(d) != str(d)}
+            return var.rename(ren) if ren else var
+
+        # A dataset-level rename can't merge the separate *_2D_inner and
+        # *_3D_inner dims (same size, same physical grid) into one x/y. Rebuild
+        # from per-variable renames so equal-sized dims of the same canonical
+        # name coalesce.
+        data_vars = {n: rename_dims(ds[n]) for n in ds.data_vars}
+
+        coords = {}
+        seen = set()
+        for c in ds.coords:
+            cs = str(c)
+            base = 'nav_lat' if cs.startswith('nav_lat') else (
+                'nav_lon' if cs.startswith('nav_lon') else None)
+            if base is not None:
+                # Collapse the per-grid lat/lon copies to one nav_lat/nav_lon.
+                if base in seen or 'bnd' in cs or 'bound' in cs:
+                    continue
+                seen.add(base)
+                coords[base] = rename_dims(ds[c])
+            else:
+                coords[cs] = rename_dims(ds[c])
+
+        out = xr.Dataset(data_vars=data_vars, coords=coords, attrs=ds.attrs)
+        # Drop the now-redundant per-grid lat/lon copies that rode along on the
+        # data variables, leaving a single canonical nav_lat/nav_lon.
+        drop = [c for c in out.coords
+                if (str(c).startswith('nav_lat') or str(c).startswith('nav_lon'))
+                and str(c) not in ('nav_lat', 'nav_lon')]
+        return out.drop_vars(drop, errors='ignore')
+
     def load_data(self, filepath: str, variables: Optional[List[str]] = None,
                   volume: Optional[xr.DataArray] = None, chunks: dict = None) -> xr.Dataset:
         """
@@ -117,6 +181,11 @@ class OceanMapPlotter:
         # Rename back to 'deptht' for consistency with volume and nemo_func.py
         if 'z' in ds.dims:
             ds = ds.rename({'z': 'deptht'})
+
+        # Normalise NEMO5/XIOS per-grid 'inner' dim/coord names to canonical
+        # x/y/deptht/nav_lat so fields align with the volume/area mask. No-op
+        # for NEMO3.6 (already canonical) -- see _canonicalize_dims.
+        ds = self._canonicalize_dims(ds)
 
         # Determine file type
         if 'ptrc_T' in filepath:
