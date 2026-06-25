@@ -144,7 +144,7 @@ namelist_top_ref:/gpfs/home/vhf24tbu/scratch/NEMO3.6-TOM6/CONFIG/ORCA2_LIM_Plank
 
 # JRA55-do forcing namelists
 namelist_ref_jra_restart:/gpfs/home/vhf24tbu/EXP00/namelist_ref_jra55do
-namelist_ref_jra_coldstart:/gpfs/home/vhf24tbu/EXP00/namelist_ref_jra55do_start
+namelist_ref_jra_coldstart:/gpfs/home/vhf24tbu/EXP00/namelist_ref_jra55do_looping_start
 namelist_ref_jra_cycling:/gpfs/home/vhf24tbu/EXP00/namelist_ref_jra55do_looping
 
 # TOP config namelist
