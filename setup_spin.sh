@@ -107,12 +107,18 @@ else
     CONTROL_NAMELIST="namelist_ref"
 fi
 
-# Resolve the epoch used in ORCA2_<timestep> restart filenames. Some grafted
-# transient runs keep the upstream restart counter rather than resetting at
-# their own yearStart. Infer that counter from source output years when possible:
-# restart step S belongs to the start of output_year+1.
+# Resolve the epoch used in ORCA2_<timestep> restart filenames. Continued
+# runs keep the upstream restart counter rather than resetting at their own
+# yearStart, so prefer the restart's kt/ndastp metadata over filename maths.
 EPOCHS=()
 EPOCH_LABELS=()
+is_uint() {
+    case "$1" in
+        ''|*[!0-9]*) return 1 ;;
+        *) return 0 ;;
+    esac
+}
+
 add_epoch_candidate() {
     local epoch=$1
     local label=$2
@@ -129,21 +135,6 @@ add_epoch_candidate() {
     EPOCH_LABELS+=("$label")
 }
 
-record_epoch_score() {
-    local epoch=$1
-    local existing
-
-    for existing in "${!INFERRED_EPOCHS[@]}"; do
-        if [ "${INFERRED_EPOCHS[$existing]}" = "$epoch" ]; then
-            INFERRED_COUNTS[$existing]=$((INFERRED_COUNTS[$existing] + 1))
-            return
-        fi
-    done
-
-    INFERRED_EPOCHS+=("$epoch")
-    INFERRED_COUNTS+=(1)
-}
-
 format_timestep_for_epoch() {
     local epoch=$1
     local offset=$((FIRST_YEAR_TRANSIENT - epoch))
@@ -152,37 +143,52 @@ format_timestep_for_epoch() {
     printf "%08d" $((offset * STEPS_PER_YEAR))
 }
 
-FOUND_STEPS=$(ls "${SPIN_DIR}"/ORCA2_*_restart_0000.nc 2>/dev/null | sed 's/.*ORCA2_\([0-9]*\)_restart.*/\1/' | sort -u)
-SOURCE_OUTPUT_YEARS=$(find "$SPIN_DIR" -maxdepth 1 \( \
-    -name "ORCA2_*_[0-9][0-9][0-9][0-9]0101_[0-9][0-9][0-9][0-9]1231_*.nc" -o \
-    -name "ocean.output_[0-9][0-9][0-9][0-9]" -o \
-    -name "EMPave_[0-9][0-9][0-9][0-9].dat" \
-    \) 2>/dev/null | sed -n '
-        s/.*_\([0-9]\{4\}\)0101_[0-9]\{4\}1231_.*/\1/p
-        s/.*ocean\.output_\([0-9]\{4\}\)$/\1/p
-        s/.*EMPave_\([0-9]\{4\}\)\.dat$/\1/p
-    ' | sort -u)
+read_restart_scalar() {
+    local var=$1
+    local file=$2
 
-INFERRED_EPOCHS=()
-INFERRED_COUNTS=()
+    command -v ncdump >/dev/null 2>&1 || return
+    ncdump -v "$var" "$file" 2>/dev/null |
+        sed -n "s/^[[:space:]]*$var[[:space:]]*=[[:space:]]*\\([0-9][0-9]*\\).*/\\1/p" |
+        head -1
+}
+
+FOUND_STEPS=$(ls "${SPIN_DIR}"/ORCA2_*_restart_0000.nc 2>/dev/null | sed 's/.*ORCA2_\([0-9]*\)_restart.*/\1/' | sort -u)
+METADATA_EPOCH=""
 for step in $FOUND_STEPS; do
-    STEP_NUM=$((10#$step))
-    [ $((STEP_NUM % STEPS_PER_YEAR)) -eq 0 ] || continue
-    STEP_YEAR_OFFSET=$((STEP_NUM / STEPS_PER_YEAR))
-    for output_year in $SOURCE_OUTPUT_YEARS; do
-        record_epoch_score $((output_year + 1 - STEP_YEAR_OFFSET))
-    done
+    restart_file="${SPIN_DIR}/ORCA2_${step}_restart_0000.nc"
+    RESTART_KT=$(read_restart_scalar kt "$restart_file")
+    RESTART_NDASTP=$(read_restart_scalar ndastp "$restart_file")
+    is_uint "$RESTART_KT" || continue
+    is_uint "$RESTART_NDASTP" || continue
+    [ $((RESTART_KT % STEPS_PER_YEAR)) -eq 0 ] || continue
+    RESTART_YEAR=${RESTART_NDASTP:0:4}
+    METADATA_EPOCH=$((RESTART_YEAR + 1 - (RESTART_KT / STEPS_PER_YEAR)))
+    break
 done
 
 BEST_INFERRED_EPOCH=""
-BEST_INFERRED_COUNT=0
-for i in "${!INFERRED_EPOCHS[@]}"; do
-    if [ "${INFERRED_COUNTS[$i]}" -gt "$BEST_INFERRED_COUNT" ]; then
-        BEST_INFERRED_COUNT=${INFERRED_COUNTS[$i]}
-        BEST_INFERRED_EPOCH=${INFERRED_EPOCHS[$i]}
-    fi
-done
+if [ -z "$METADATA_EPOCH" ]; then
+    FIRST_SOURCE_OUTPUT_YEAR=$(find "$SPIN_DIR" -maxdepth 1 \( \
+        -name "ORCA2_*_[0-9][0-9][0-9][0-9]0101_[0-9][0-9][0-9][0-9]1231_*.nc" -o \
+        -name "ocean.output_[0-9][0-9][0-9][0-9]" -o \
+        -name "EMPave_[0-9][0-9][0-9][0-9].dat" \
+        \) 2>/dev/null | sed -n '
+            s/.*_\([0-9]\{4\}\)0101_[0-9]\{4\}1231_.*/\1/p
+            s/.*ocean\.output_\([0-9]\{4\}\)$/\1/p
+            s/.*EMPave_\([0-9]\{4\}\)\.dat$/\1/p
+        ' | sort -u | head -1)
+	FIRST_FOUND_STEP=$(printf '%s\n' $FOUND_STEPS | head -1)
+	if [ -n "$FIRST_SOURCE_OUTPUT_YEAR" ] && [ -n "$FIRST_FOUND_STEP" ]; then
+		STEP_NUM=$((10#$FIRST_FOUND_STEP))
+		if [ $((STEP_NUM % STEPS_PER_YEAR)) -eq 0 ]; then
+			STEP_YEAR_OFFSET=$((STEP_NUM / STEPS_PER_YEAR))
+			BEST_INFERRED_EPOCH=$((FIRST_SOURCE_OUTPUT_YEAR + 1 - STEP_YEAR_OFFSET))
+		fi
+	fi
+fi
 
+add_epoch_candidate "$METADATA_EPOCH" "restart metadata"
 add_epoch_candidate "$BEST_INFERRED_EPOCH" "inferred from source outputs"
 add_epoch_candidate "$SOURCE_YEAR_START" "source yearStart"
 add_epoch_candidate "1750" "default"
@@ -203,6 +209,25 @@ for i in "${!EPOCHS[@]}"; do
         break
     fi
 done
+
+if [ -z "$FIRST_YEAR_SPINUP" ]; then
+    TARGET_RESTART_YEAR=$((FIRST_YEAR_TRANSIENT - 1))
+    for step in $FOUND_STEPS; do
+        restart_file="${SPIN_DIR}/ORCA2_${step}_restart_0000.nc"
+        RESTART_KT=$(read_restart_scalar kt "$restart_file")
+        RESTART_NDASTP=$(read_restart_scalar ndastp "$restart_file")
+        is_uint "$RESTART_KT" || continue
+        is_uint "$RESTART_NDASTP" || continue
+        RESTART_YEAR=${RESTART_NDASTP:0:4}
+        if [ "$RESTART_YEAR" -eq "$TARGET_RESTART_YEAR" ]; then
+            FIRST_YEAR_SPINUP=$((RESTART_YEAR + 1 - (RESTART_KT / STEPS_PER_YEAR)))
+            SPINUP_EPOCH_SOURCE="restart metadata"
+            TIMESTEP=$step
+            EXPECTED_RESTART="$restart_file"
+            break
+        fi
+    done
+fi
 
 if [ -z "$FIRST_YEAR_SPINUP" ]; then
     FIRST_YEAR_SPINUP=${EPOCHS[0]:-1750}
@@ -384,6 +409,9 @@ fi
 SPINUP_RECORD="${MODEL_RUN_DIR}/${MODEL_ID}/spinup_info.txt"
 echo "Spinup Model ID: $SPINUP_MODEL_ID" > "$SPINUP_RECORD"
 echo "Spinup Year: $((FIRST_YEAR_TRANSIENT - 1))" >> "$SPINUP_RECORD"
+echo "Spinup Epoch: $FIRST_YEAR_SPINUP ($SPINUP_EPOCH_SOURCE)" >> "$SPINUP_RECORD"
+echo "Restart Timestep: $TIMESTEP" >> "$SPINUP_RECORD"
+echo "Source Restart: $EXPECTED_RESTART" >> "$SPINUP_RECORD"
 echo "Setup Date: $(date '+%Y-%m-%d %H:%M:%S')" >> "$SPINUP_RECORD"
 
 ok "Spinup record saved"

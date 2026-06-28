@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # parameters for tidying up
 yearFrom=$1
@@ -27,6 +27,22 @@ keepGrid_U=$(getparm keepGrid_U)
 keepGrid_W=$(getparm keepGrid_W)
 keepLimPhy=$(getparm keepLimPhy)
 keepGflux=$(getparm keepGflux); keepGflux=${keepGflux:-0}
+yearStart=${yearStart:-$(getparm yearStart)}
+yearEnd=${yearEnd:-$(getparm yearEnd)}
+spinupStart=${spinupStart:-$yearStart}
+spinupEnd=${spinupEnd:-$yearStart}
+spinupRestartKeepFrequency=${spinupRestartKeepFrequency:-1}
+spinupOutputKeepFrequency=${spinupOutputKeepFrequency:-1}
+runRestartKeepFrequency=${runRestartKeepFrequency:-1}
+runOutputKeepFrequency=${runOutputKeepFrequency:-1}
+keepGrid_T=${keepGrid_T:-0}
+keepDiad=${keepDiad:-0}
+keepPtrc=${keepPtrc:-0}
+keepIce=${keepIce:-0}
+keepGrid_V=${keepGrid_V:-0}
+keepGrid_U=${keepGrid_U:-0}
+keepGrid_W=${keepGrid_W:-0}
+keepLimPhy=${keepLimPhy:-0}
 
 # Echo parameters to tidy.log
 echo $spinupStart
@@ -70,6 +86,157 @@ compress_nc() {
 		echo "compress_nc FAILED on $f (original untouched)"
 		rm -f "$tmp"
 	fi
+}
+
+is_uint() {
+	case "$1" in
+		''|*[!0-9]*) return 1 ;;
+		*) return 0 ;;
+	esac
+}
+
+archive_output() {
+	local keep=$1
+	local file=$2
+
+	[[ $keep -eq 1 ]] || return 0
+	if [[ -f "$file" ]]; then
+		cp "$file" "$afm_dir$model_id"
+	else
+		echo "WARNING: output missing, not archived: $file"
+	fi
+}
+
+delete_local_output() {
+	local keep=$1
+	local file=$2
+	local afm_file="${afm_dir}${model_id}/$file"
+
+	if [[ -f "$afm_file" || $keep -eq 0 ]]; then
+		rm -f "$file"
+	fi
+}
+
+link_archived_output() {
+	local keep=$1
+	local file=$2
+	local afm_file="${afm_dir}${model_id}/$file"
+
+	[[ $keep -eq 1 ]] || return 0
+	if [[ -f "$afm_file" ]]; then
+		ln -sf "$afm_file" "$file"
+	else
+		echo "skip symlink, archive missing: $afm_file"
+	fi
+}
+
+read_restart_scalar() {
+	local var=$1
+	local file=$2
+
+	command -v ncdump >/dev/null 2>&1 || return
+	ncdump -v "$var" "$file" 2>/dev/null |
+		sed -n "s/^[[:space:]]*$var[[:space:]]*=[[:space:]]*\\([0-9][0-9]*\\).*/\\1/p" |
+		head -1
+}
+
+restart_year_from_file() {
+	local file=$1
+	local ndastp
+
+	ndastp=$(read_restart_scalar ndastp "$file")
+	is_uint "$ndastp" || return 1
+	echo "${ndastp:0:4}"
+}
+
+restart_step_from_file() {
+	basename "$1" | sed -n 's/^ORCA2_\([0-9][0-9]*\)_restart.*/\1/p'
+}
+
+find_restart_file_for_step() {
+	local step=$1
+	local file
+
+	for file in ORCA2_${step}_restart_0000.nc ORCA2_${step}_restart_out_0000.nc \
+		${afm_dir}${model_id}/ORCA2_${step}_restart_0000.nc \
+		${afm_dir}${model_id}/ORCA2_${step}_restart_out_0000.nc \
+		ORCA2_${step}_restart*_0000.nc ${afm_dir}${model_id}/ORCA2_${step}_restart*_0000.nc; do
+		[[ -f "$file" ]] && echo "$file" && return 0
+	done
+
+	return 1
+}
+
+restart_step_for_year() {
+	local target_year=$1
+	local file year step
+
+	for file in ORCA2_*_restart*_0000.nc; do
+		[[ -f "$file" ]] || continue
+		year=$(restart_year_from_file "$file") || continue
+		[[ "$year" = "$target_year" ]] || continue
+		step=$(restart_step_from_file "$file")
+		is_uint "$step" || continue
+		echo "$step"
+		return 0
+	done
+
+	return 1
+}
+
+restart_timestep_for_year() {
+	local year=$1
+	local step since points
+
+	if [[ -n "${restartTimestep:-}" && "$yearFrom" -eq "$yearTo" ]]; then
+		echo "$restartTimestep"
+		return 0
+	fi
+
+	step=$(restart_step_for_year "$year")
+	if is_uint "$step"; then
+		echo "$step"
+		return 0
+	fi
+
+	since=$(( year - yearStart + 1 ))
+	[[ $since -ge 0 ]] || return 1
+	points=$(( pointsPerYear * since ))
+	printf "%08d" "$points"
+}
+
+keep_restart_year() {
+	local year=$1
+	local since frequency
+
+	[[ "$year" -eq "$yearEnd" ]] && return 0
+	if [[ "$year" -lt "$spinupEnd" ]]; then
+		since=$(( year - spinupStart ))
+		frequency=$spinupRestartKeepFrequency
+	else
+		since=$(( year - spinupEnd ))
+		frequency=$runRestartKeepFrequency
+	fi
+
+	is_uint "$frequency" && [[ "$frequency" -gt 0 ]] || return 0
+	[[ $(( since % frequency )) -eq 0 ]]
+}
+
+keep_output_year() {
+	local year=$1
+	local since frequency
+
+	[[ "$year" -eq "$yearEnd" ]] && return 0
+	if [[ "$year" -lt "$spinupEnd" ]]; then
+		since=$(( year - spinupStart ))
+		frequency=$spinupOutputKeepFrequency
+	else
+		since=$(( year - spinupEnd ))
+		frequency=$runOutputKeepFrequency
+	fi
+
+	is_uint "$frequency" && [[ "$frequency" -gt 0 ]] || return 0
+	[[ $(( since % frequency )) -eq 0 ]]
 }
 
 model_id=$(basename "$PWD")
@@ -120,15 +287,15 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 	[[ $keepGflux -eq 1 ]]  && compress_nc "ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc"
 
 	echo "Copying output $y"
-	if [[ $keepGrid_T -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc $afm_dir$model_id; fi
-	if [[ $keepDiad -eq 1 ]];   then cp ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc $afm_dir$model_id; fi
-	if [[ $keepPtrc -eq 1 ]];   then cp ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc $afm_dir$model_id; fi
-	if [[ $keepIce -eq 1 ]];    then cp ORCA2_${freq}_${y}0101_${y}1231_icemod.nc $afm_dir$model_id; fi
-	if [[ $keepGrid_U -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc $afm_dir$model_id; fi
-	if [[ $keepGrid_V -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc $afm_dir$model_id; fi
-	if [[ $keepGrid_W -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc $afm_dir$model_id; fi
-	if [[ $keepLimPhy -eq 1 ]]; then cp ORCA2_${freq}_${y}0101_${y}1231_limphy.nc $afm_dir$model_id; fi
-	if [[ $keepGflux -eq 1 ]];  then cp ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc $afm_dir$model_id; fi
+	archive_output "$keepGrid_T" "ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc"
+	archive_output "$keepDiad"   "ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc"
+	archive_output "$keepPtrc"   "ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc"
+	archive_output "$keepIce"    "ORCA2_${freq}_${y}0101_${y}1231_icemod.nc"
+	archive_output "$keepGrid_U" "ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc"
+	archive_output "$keepGrid_V" "ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc"
+	archive_output "$keepGrid_W" "ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc"
+	archive_output "$keepLimPhy" "ORCA2_${freq}_${y}0101_${y}1231_limphy.nc"
+	archive_output "$keepGflux"  "ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc"
 
 	# Copy MOC file if it exists
 	if [[ -f MOC/moc_${y}.nc ]]; then
@@ -145,36 +312,41 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 	cp opa $afm_dir$model_id
 
 	echo "Deleting local data if it exists centrally"
-	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc || $keepGrid_T -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc; fi
-	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc || $keepDiad -eq 0 ]];   then rm -f ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc; fi
-	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc || $keepPtrc -eq 0 ]];   then rm -f ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc; fi
-	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_icemod.nc || $keepIce -eq 0 ]];    then rm -f ORCA2_${freq}_${y}0101_${y}1231_icemod.nc; fi
-	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc || $keepGrid_U -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc; fi
-	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc || $keepGrid_V -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc; fi
-	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc || $keepGrid_W -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc; fi
-	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_limphy.nc || $keepLimPhy -eq 0 ]]; then rm -f ORCA2_${freq}_${y}0101_${y}1231_limphy.nc; fi
-	if [[ -f $afm_dir$model_id/ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc || $keepGflux -eq 0 ]];  then rm -f ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc; fi
+	delete_local_output "$keepGrid_T" "ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc"
+	delete_local_output "$keepDiad"   "ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc"
+	delete_local_output "$keepPtrc"   "ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc"
+	delete_local_output "$keepIce"    "ORCA2_${freq}_${y}0101_${y}1231_icemod.nc"
+	delete_local_output "$keepGrid_U" "ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc"
+	delete_local_output "$keepGrid_V" "ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc"
+	delete_local_output "$keepGrid_W" "ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc"
+	delete_local_output "$keepLimPhy" "ORCA2_${freq}_${y}0101_${y}1231_limphy.nc"
+	delete_local_output "$keepGflux"  "ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc"
 
 	echo "Creating symlinks for copied data"
-	if [[ $keepGrid_T -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc; fi
-	if [[ $keepDiad -eq 1 ]];   then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc; fi
-	if [[ $keepPtrc -eq 1 ]];   then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc; fi
-	if [[ $keepIce -eq 1 ]];    then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_icemod.nc; fi
-	if [[ $keepGrid_U -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc; fi
-	if [[ $keepGrid_V -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc; fi
-	if [[ $keepGrid_W -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc; fi
-	if [[ $keepLimPhy -eq 1 ]]; then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_limphy.nc; fi
-	if [[ $keepGflux -eq 1 ]];  then ln -s ${afm_dir}${model_id}/ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc; fi
+	link_archived_output "$keepGrid_T" "ORCA2_${freq}_${y}0101_${y}1231_grid_T.nc"
+	link_archived_output "$keepDiad"   "ORCA2_${freq}_${y}0101_${y}1231_diad_T.nc"
+	link_archived_output "$keepPtrc"   "ORCA2_${freq}_${y}0101_${y}1231_ptrc_T.nc"
+	link_archived_output "$keepIce"    "ORCA2_${freq}_${y}0101_${y}1231_icemod.nc"
+	link_archived_output "$keepGrid_U" "ORCA2_${freq}_${y}0101_${y}1231_grid_U.nc"
+	link_archived_output "$keepGrid_V" "ORCA2_${freq}_${y}0101_${y}1231_grid_V.nc"
+	link_archived_output "$keepGrid_W" "ORCA2_${freq}_${y}0101_${y}1231_grid_W.nc"
+	link_archived_output "$keepLimPhy" "ORCA2_${freq}_${y}0101_${y}1231_limphy.nc"
+	link_archived_output "$keepGflux"  "ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc"
 
-	# Restart files: timestep is end of year (y-1) = start of year y
-	since=$(( y-yearStart ))
-	points=$(( pointsPerYear * since ))
-	printf -v timestep "%08d" $points
+	# Restart files are written at the end of output year y.
+	if ! timestep=$(restart_timestep_for_year "$y"); then
+		echo "WARNING: could not resolve restart timestep for year $y"
+		continue
+	fi
 
 	echo "Copying restart $y (timestep $timestep)"
-	cp ORCA2_*${timestep}_restart_*.nc $afm_dir$model_id
-	rm -f ORCA2_*${timestep}_restart_*.nc
-	ls -1 ${afm_dir}${model_id}/ORCA2_*${timestep}_restart_*.nc | awk '{print "ln -s "$1 }' | bash
+	if ls ORCA2_*${timestep}_restart_*.nc >/dev/null 2>&1; then
+		cp ORCA2_*${timestep}_restart_*.nc $afm_dir$model_id
+		rm -f ORCA2_*${timestep}_restart_*.nc
+		ls -1 ${afm_dir}${model_id}/ORCA2_*${timestep}_restart_*.nc | awk '{print "ln -s "$1 }' | bash
+	else
+		echo "WARNING: no restart files found for timestep $timestep"
+	fi
 done
 
 # Sort CSV files by year to ensure correct ordering
@@ -194,42 +366,26 @@ if [[ $yearTo -eq $yearEnd ]]; then
 	# leaves scratch symlinks pointing at AFM; this is where the selective-saving
 	# spec from setUpData is actually enforced.
 	echo "Pruning non-keep restart files (scratch + AFM)"
-	for (( yy=$yearStart; yy<=$yearEnd; yy++ )); do
-		if [[ $yy -lt $spinupEnd ]]; then
-			yy_since=$(( yy - spinupStart ))
-			yy_remainder=$(( yy_since % spinupRestartKeepFrequency ))
-		else
-			yy_since=$(( yy - spinupEnd ))
-			yy_remainder=$(( yy_since % runRestartKeepFrequency ))
+	RESTART_STEPS=$(ls ORCA2_*_restart*_0000.nc ${afm_dir}${model_id}/ORCA2_*_restart*_0000.nc 2>/dev/null | sed -n 's/.*ORCA2_\([0-9][0-9]*\)_restart.*/\1/p' | sort -u)
+	for yy_ts in $RESTART_STEPS; do
+		restart_file=$(find_restart_file_for_step "$yy_ts")
+		yy=$(restart_year_from_file "$restart_file")
+		if ! is_uint "$yy"; then
+			yy_num=$((10#$yy_ts))
+			[[ $((yy_num % pointsPerYear)) -eq 0 ]] || continue
+			yy=$(( yearStart + (yy_num / pointsPerYear) - 1 ))
 		fi
 
-		# Keep frequency-matching years and always preserve the final year
-		if [[ $yy_remainder -eq 0 || $yy -eq $yearEnd ]]; then
-			continue
-		fi
-
-		yy_offset=$(( yy - yearStart ))
-		yy_points=$(( pointsPerYear * yy_offset ))
-		printf -v yy_ts "%08d" $yy_points
+		keep_restart_year "$yy" && continue
 
 		echo "Removing restart year $yy (timestep $yy_ts)"
-		rm -f ${afm_dir}${model_id}/ORCA2_*${yy_ts}_restart_*.nc
-		rm -f ORCA2_*${yy_ts}_restart_*.nc
+		rm -f ${afm_dir}${model_id}/ORCA2_${yy_ts}_restart*.nc
+		rm -f ORCA2_${yy_ts}_restart*.nc
 	done
 
 	echo "Pruning non-keep output files (scratch + AFM)"
 	for (( yy=$yearStart; yy<=$yearEnd; yy++ )); do
-		if [[ $yy -lt $spinupEnd ]]; then
-			yy_since=$(( yy - spinupStart ))
-			yy_remainder=$(( yy_since % spinupOutputKeepFrequency ))
-		else
-			yy_since=$(( yy - spinupEnd ))
-			yy_remainder=$(( yy_since % runOutputKeepFrequency ))
-		fi
-
-		if [[ $yy_remainder -eq 0 || $yy -eq $yearEnd ]]; then
-			continue
-		fi
+		keep_output_year "$yy" && continue
 
 		echo "Removing output year $yy"
 		for ftype in grid_T diad_T ptrc_T icemod grid_U grid_V grid_W limphy gflux_T; do
@@ -258,4 +414,3 @@ if [[ $yearTo -eq $yearEnd ]]; then
 	# run script to create html file
 	./make_html.sh $model_id $modelOutputDir
 fi
-

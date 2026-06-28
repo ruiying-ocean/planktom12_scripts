@@ -67,7 +67,7 @@ if [ -f ORCA2_${timestep}_restart_0000.nc ]; then
 	cp planktom-ER.log planktom-ER_${yearPrevious}.log
 
 	# Submit tidy up routines
-	sbatch -J tidy --export=ALL,basedir=${basedir},modelDir=${modelDir},yearToTidy=${yearPrevious},Model=${Model} tidyup.job
+	sbatch -J tidy --export=ALL,basedir=${basedir},modelDir=${modelDir},yearToTidy=${yearPrevious},Model=${Model},restartTimestep=${timestep} tidyup.job
 
 	if [ -f submit.$yearToRun ]; then
 		sbatch -J s${simulation}${yearToRun} --export=ALL < submit.$yearToRun
