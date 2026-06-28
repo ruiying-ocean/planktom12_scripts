@@ -16,6 +16,21 @@ warn() { echo -e "  ${RED}✗${RESET} $1"; }
 info() { echo -e "  ${CYAN}→${RESET} $1"; }
 section() { echo -e "\n${BOLD}$1${RESET}"; }
 
+confirm_existing_model_dir() {
+	local dir=$1
+	local reply
+
+	echo ""
+	warn "Model directory already exists: $dir"
+	echo "  Continuing will reuse this directory and may update setup/config files and links."
+	printf 'Continue with existing model_id "%s"? [y/N] ' "$id"
+	read -r reply
+	case "$reply" in
+		y|Y|yes|YES) ;;
+		*) echo "aborted."; exit 1 ;;
+	esac
+}
+
 if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
 	echo "Usage: setUpRun <setUpData.dat> <Full Run ID> [SPINUP_MODEL_ID]"
 	exit 1
@@ -123,13 +138,18 @@ if [ ${basedir:0:1} == "~" ]; then
 fi
 
 modelDir=$basedir$id
-if [ ! -d $modelDir ]; then
-	mkdir $modelDir
+if [ -d "$modelDir" ]; then
+	confirm_existing_model_dir "$modelDir"
+elif [ -e "$modelDir" ]; then
+	warn "Model path exists but is not a directory: $modelDir"
+	exit 1
+else
+	mkdir "$modelDir"
 fi
 
 # Copy the setUpData file to the directory
-cp $setUpDatafile $modelDir
-cd $modelDir
+cp "$setUpDatafile" "$modelDir"
+cd "$modelDir"
 
 # Tidy-up parameters are no longer re-emitted to a tidy_parms file; tidyup.sh
 # reads them by name directly from the copied setUpData (single source of truth).
