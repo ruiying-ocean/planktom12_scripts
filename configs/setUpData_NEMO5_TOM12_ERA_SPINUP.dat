@@ -157,7 +157,8 @@ grid_def_nemo.xml:/gpfs/home/avd22gnu/scratch/nemo/KRF12/cfgs/ORCA2_ICE_PlankTOM
 field_def_nemo-ice.xml:/gpfs/home/avd22gnu/scratch/nemo/KRF12/cfgs/ORCA2_ICE_PlankTOM/EXP00/field_def_nemo-ice.xml
 field_def_nemo-oce.xml:/gpfs/home/avd22gnu/scratch/nemo/KRF12/cfgs/ORCA2_ICE_PlankTOM/EXP00/field_def_nemo-oce.xml
 field_def_nemo-planktom.xml:/gpfs/home/avd22gnu/scratch/nemo/KRF12/cfgs/ORCA2_ICE_PlankTOM/EXP00/field_def_nemo-planktom.xml
-file_def_nemo.xml:/gpfs/home/avd22gnu/scratch/nemo/KRF12/cfgs/ORCA2_ICE_PlankTOM/EXP00/file_def_nemo.xml
+# file_def_nemo.xml:/gpfs/home/avd22gnu/scratch/nemo/KRF12/cfgs/ORCA2_ICE_PlankTOM/EXP00/file_def_nemo.xml
+file_def_nemo.xml:/gpfs/home/vhf24tbu/EXP00/NEMO5/file_def_nemo.xml
 
 
 # ========== ANALYSIS / VISUALISATION CONFIG ==========

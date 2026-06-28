@@ -1,12 +1,11 @@
 #!/bin/sh
-#SBATCH -p ht
-#SBATCH --qos=ht
+#SBATCH -p compute
 #SBATCH -t 06:00:00
 #SBATCH --job-name=tidyup
 #SBATCH -o tidy-%j.log
 #SBATCH -e tidy-%j.log  
 #SBATCH --mem 64G
-
+#SBATCH --exclude=compute086
 echo "Tidying up: " $modelDir $yearToTidy $Model
 
 module add gcc netcdf/4.7.4/parallel/gcc-openmpi hdf5/1.10.6/gcc-openmpi mpi/openmpi/4.0.3/gcc/ib perl
