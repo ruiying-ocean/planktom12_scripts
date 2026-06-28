@@ -83,20 +83,10 @@ fi
 NEMO_VERSION=$(grep "^nemoVersion:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
 NEMO_CPUS=$(grep "^nemoCpus:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
 STEPS_PER_YEAR=$(grep "^stepsPerYear:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
-# Epoch for the spinup source's restart-step counter. The counter is anchored to
-# the SOURCE run's own first model year, not the transient run's spinupStart: a
-# transient source (e.g. N502, yearStart 1948) resets nn_it000, so its restart
-# filenames count from its yearStart, while a coldstart-from-1750 spinup reports
-# yearStart == spinupStart. Read it from the source's own setUpData; fall back to
-# the transient run's spinupStart if the source file can't be parsed.
 SPINUP_SETUP_DATA=$(find "$SPIN_DIR" -maxdepth 1 -name "setUpData*.dat" | head -1)
-FIRST_YEAR_SPINUP=$(grep "^yearStart:" "$SPINUP_SETUP_DATA" 2>/dev/null | cut -d':' -f2)
-if [ -z "$FIRST_YEAR_SPINUP" ]; then
-    FIRST_YEAR_SPINUP=$(grep "^spinupStart:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
-fi
+SOURCE_YEAR_START=$(grep "^yearStart:" "$SPINUP_SETUP_DATA" 2>/dev/null | cut -d':' -f2)
 ICE_RESTART_NAME=$(grep "^iceRestartName:" "$TRANSIENT_SETUP_DATA" | cut -d':' -f2)
 NEMO_CPUS=${NEMO_CPUS:-48}
-FIRST_YEAR_SPINUP=${FIRST_YEAR_SPINUP:-1750}
 if [ -z "$STEPS_PER_YEAR" ]; then
     if [ "$NEMO_VERSION" = "NEMO5" ]; then
         STEPS_PER_YEAR=5840
@@ -117,25 +107,162 @@ else
     CONTROL_NAMELIST="namelist_ref"
 fi
 
-TIMESTEP=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
+# Resolve the epoch used in ORCA2_<timestep> restart filenames. Some grafted
+# transient runs keep the upstream restart counter rather than resetting at
+# their own yearStart. Infer that counter from source output years when possible:
+# restart step S belongs to the start of output_year+1.
+EPOCHS=()
+EPOCH_LABELS=()
+add_epoch_candidate() {
+    local epoch=$1
+    local label=$2
+    local existing
+
+    [ -n "$epoch" ] || return
+    case "$epoch" in
+        *[!0-9]*) return ;;
+    esac
+    for existing in "${EPOCHS[@]}"; do
+        [ "$existing" = "$epoch" ] && return
+    done
+    EPOCHS+=("$epoch")
+    EPOCH_LABELS+=("$label")
+}
+
+record_epoch_score() {
+    local epoch=$1
+    local existing
+
+    for existing in "${!INFERRED_EPOCHS[@]}"; do
+        if [ "${INFERRED_EPOCHS[$existing]}" = "$epoch" ]; then
+            INFERRED_COUNTS[$existing]=$((INFERRED_COUNTS[$existing] + 1))
+            return
+        fi
+    done
+
+    INFERRED_EPOCHS+=("$epoch")
+    INFERRED_COUNTS+=(1)
+}
+
+format_timestep_for_epoch() {
+    local epoch=$1
+    local offset=$((FIRST_YEAR_TRANSIENT - epoch))
+
+    [ "$offset" -ge 0 ] || return 1
+    printf "%08d" $((offset * STEPS_PER_YEAR))
+}
+
+FOUND_STEPS=$(ls "${SPIN_DIR}"/ORCA2_*_restart_0000.nc 2>/dev/null | sed 's/.*ORCA2_\([0-9]*\)_restart.*/\1/' | sort -u)
+SOURCE_OUTPUT_YEARS=$(find "$SPIN_DIR" -maxdepth 1 \( \
+    -name "ORCA2_*_[0-9][0-9][0-9][0-9]0101_[0-9][0-9][0-9][0-9]1231_*.nc" -o \
+    -name "ocean.output_[0-9][0-9][0-9][0-9]" -o \
+    -name "EMPave_[0-9][0-9][0-9][0-9].dat" \
+    \) 2>/dev/null | sed -n '
+        s/.*_\([0-9]\{4\}\)0101_[0-9]\{4\}1231_.*/\1/p
+        s/.*ocean\.output_\([0-9]\{4\}\)$/\1/p
+        s/.*EMPave_\([0-9]\{4\}\)\.dat$/\1/p
+    ' | sort -u)
+
+INFERRED_EPOCHS=()
+INFERRED_COUNTS=()
+for step in $FOUND_STEPS; do
+    STEP_NUM=$((10#$step))
+    [ $((STEP_NUM % STEPS_PER_YEAR)) -eq 0 ] || continue
+    STEP_YEAR_OFFSET=$((STEP_NUM / STEPS_PER_YEAR))
+    for output_year in $SOURCE_OUTPUT_YEARS; do
+        record_epoch_score $((output_year + 1 - STEP_YEAR_OFFSET))
+    done
+done
+
+BEST_INFERRED_EPOCH=""
+BEST_INFERRED_COUNT=0
+for i in "${!INFERRED_EPOCHS[@]}"; do
+    if [ "${INFERRED_COUNTS[$i]}" -gt "$BEST_INFERRED_COUNT" ]; then
+        BEST_INFERRED_COUNT=${INFERRED_COUNTS[$i]}
+        BEST_INFERRED_EPOCH=${INFERRED_EPOCHS[$i]}
+    fi
+done
+
+add_epoch_candidate "$BEST_INFERRED_EPOCH" "inferred from source outputs"
+add_epoch_candidate "$SOURCE_YEAR_START" "source yearStart"
+add_epoch_candidate "1750" "default"
+
+FIRST_YEAR_SPINUP=""
+SPINUP_EPOCH_SOURCE=""
+TIMESTEP=""
+EXPECTED_RESTART=""
+for i in "${!EPOCHS[@]}"; do
+    candidate_epoch=${EPOCHS[$i]}
+    candidate_timestep=$(format_timestep_for_epoch "$candidate_epoch") || continue
+    candidate_restart="${SPIN_DIR}/ORCA2_${candidate_timestep}_restart_0000.nc"
+    if [ -f "$candidate_restart" ]; then
+        FIRST_YEAR_SPINUP=$candidate_epoch
+        SPINUP_EPOCH_SOURCE=${EPOCH_LABELS[$i]}
+        TIMESTEP=$candidate_timestep
+        EXPECTED_RESTART=$candidate_restart
+        break
+    fi
+done
+
+if [ -z "$FIRST_YEAR_SPINUP" ]; then
+    FIRST_YEAR_SPINUP=${EPOCHS[0]:-1750}
+    SPINUP_EPOCH_SOURCE=${EPOCH_LABELS[0]:-default}
+    TIMESTEP=$(format_timestep_for_epoch "$FIRST_YEAR_SPINUP")
+    EXPECTED_RESTART="${SPIN_DIR}/ORCA2_${TIMESTEP}_restart_0000.nc"
+fi
+
+if [ ! -f "$EXPECTED_RESTART" ]; then
+    # If none of the candidate epochs matched exactly, choose the epoch that
+    # makes the available restart years closest to the requested first year.
+    if [ -n "$FOUND_STEPS" ]; then
+        BEST_EPOCH=""
+        BEST_LABEL=""
+        BEST_SCORE=""
+        for i in "${!EPOCHS[@]}"; do
+            candidate_epoch=${EPOCHS[$i]}
+            for step in $FOUND_STEPS; do
+                STEP_NUM=$((10#$step))
+                YEAR=$(($STEP_NUM / $STEPS_PER_YEAR + candidate_epoch))
+                SCORE=$((YEAR - FIRST_YEAR_TRANSIENT))
+                [ "$SCORE" -lt 0 ] && SCORE=$((-SCORE))
+                if [ -z "$BEST_SCORE" ] || [ "$SCORE" -lt "$BEST_SCORE" ]; then
+                    BEST_SCORE=$SCORE
+                    BEST_EPOCH=$candidate_epoch
+                    BEST_LABEL=${EPOCH_LABELS[$i]}
+                fi
+            done
+        done
+        if [ -n "$BEST_EPOCH" ] && [ "$BEST_EPOCH" != "$FIRST_YEAR_SPINUP" ]; then
+            FIRST_YEAR_SPINUP=$BEST_EPOCH
+            SPINUP_EPOCH_SOURCE="$BEST_LABEL; nearest available restart"
+            TIMESTEP=$(format_timestep_for_epoch "$FIRST_YEAR_SPINUP")
+            EXPECTED_RESTART="${SPIN_DIR}/ORCA2_${TIMESTEP}_restart_0000.nc"
+        fi
+    fi
+fi
 
 echo -e "  ${DIM}First year:${RESET}    $FIRST_YEAR_TRANSIENT"
-echo -e "  ${DIM}Spinup epoch:${RESET}  $FIRST_YEAR_SPINUP (source's first model year)"
+echo -e "  ${DIM}Spinup epoch:${RESET}  $FIRST_YEAR_SPINUP ($SPINUP_EPOCH_SOURCE)"
 echo -e "  ${DIM}Forcing:${RESET}       $FORCING ($FORCING_MODE)"
 echo -e "  ${DIM}Timestep:${RESET}      $TIMESTEP"
 
 # Check if restart files exist for the expected timestep
-EXPECTED_RESTART="${SPIN_DIR}/ORCA2_${TIMESTEP}_restart_0000.nc"
 if [ ! -f "$EXPECTED_RESTART" ]; then
-    warn "Restart file not found for timestep $TIMESTEP (year $((FIRST_YEAR_TRANSIENT - 1)))"
+    warn "Restart file not found for timestep $TIMESTEP (needed to start year $FIRST_YEAR_TRANSIENT)"
     info "Searching for nearby restart files in $SPIN_DIR ..."
 
-    # Search for any restart files and extract unique timesteps
-    FOUND_STEPS=$(ls "${SPIN_DIR}"/ORCA2_*_restart_0000.nc 2>/dev/null | sed 's/.*ORCA2_\([0-9]*\)_restart.*/\1/' | sort -u)
     if [ -z "$FOUND_STEPS" ]; then
         warn "No restart files found in $SPIN_DIR"
         exit 1
     fi
+
+    echo ""
+    info "Tried restart-counter epochs:"
+    for i in "${!EPOCHS[@]}"; do
+        candidate_epoch=${EPOCHS[$i]}
+        candidate_timestep=$(format_timestep_for_epoch "$candidate_epoch") || candidate_timestep="before-epoch"
+        echo -e "    ${EPOCH_LABELS[$i]}: $candidate_epoch -> $candidate_timestep"
+    done
 
     # Show nearby timesteps (within ±1 year of expected)
     STEP_MINUS1=$(printf "%08d" $((($FIRST_YEAR_TRANSIENT - 1 - $FIRST_YEAR_SPINUP) * $STEPS_PER_YEAR)))
@@ -150,10 +277,10 @@ if [ ! -f "$EXPECTED_RESTART" ]; then
         if [ "$step" = "$STEP_MINUS1" ] || [ "$step" = "$STEP_PLUS1" ]; then
             MARKER=" ${YELLOW}← close to expected${RESET}"
         fi
-        echo -e "    $step  (year $YEAR)${MARKER}"
+        echo -e "    $step  (starts year $YEAR)${MARKER}"
     done
     echo ""
-    info "Expected timestep was $TIMESTEP (year $((FIRST_YEAR_TRANSIENT - 1)))"
+    info "Expected timestep was $TIMESTEP (starts year $FIRST_YEAR_TRANSIENT)"
     exit 1
 fi
 
