@@ -51,6 +51,74 @@ multimodel_palette = [
     "#17becf",  # Cyan
 ]
 
+[map.pfts]
+phytoplankton = ["PIC", "FIX", "COC", "DIA", "MIX", "PHA"]
+zooplankton = ["BAC", "PRO", "MES", "PTE", "CRU", "GEL"]
+
+[map.pft_names.phytoplankton]
+PIC = "Picophytoplankton"
+FIX = "Nitrogen Fixers"
+COC = "Coccolithophores"
+DIA = "Diatoms"
+MIX = "Mixotrophs"
+PHA = "Phaeocystis"
+
+[map.pft_names.zooplankton]
+BAC = "Bacteria"
+PRO = "Protozooplankton"
+MES = "Mesozooplankton"
+PTE = "Pteropods"
+CRU = "Macrozooplankton/Crustaceans"
+GEL = "Gelatinous Zooplankton"
+
+[map.biomass_ranges]
+"_PICINT" = [0.28, 0.52]
+"_FIXINT" = [0.008, 0.12]
+"_COCINT" = [0.001, 0.032]
+"_PHAINT" = [0.11, 0.69]
+"_DIAINT" = [0.013, 0.75]
+"_MIXINT" = [nan, nan]
+"_BACINT" = [0.25, 0.26]
+"_PROINT" = [0.10, 0.37]
+"_MESINT" = [0.21, 0.34]
+"_CRUINT" = [0.010, 0.64]
+"_PTEINT" = [0.048, 0.057]
+"_GELINT" = [0.1, 3.1]
+
+[map.variables.ecosystem]
+"_TChl" = {long_name = "Chl", units = "µg Chl L⁻¹", vmax = 1.2, depth_index = 0, cmap = "turbo"}
+Cflx = {long_name = "Surface Carbon Flux", units = "µmol m⁻² s⁻¹", vmax = 0.4, vmin = -0.2, cmap = "RdYlBu_r"}
+"_PPINT" = {long_name = "NPP", units = "g C m⁻² yr⁻¹", vmax = 400, cmap = "viridis"}
+"_EXP" = {long_name = "EXP", units = "g C m⁻² yr⁻¹", vmax = 80, depth_index = 10, cmap = "viridis"}
+dpco2 = {long_name = "dpCO2", units = "ppm", vmax = 100, vmin = -100, cmap = "RdYlBu_r"}
+"_SP" = {long_name = "Secondary Production", units = "g C m⁻³ yr⁻¹", vmax = 50, depth_index = 0, cmap = "viridis"}
+"_SPINT" = {long_name = "Sec Prod", units = "Tg C yr⁻¹", vmax = 10, cmap = "viridis"}
+"_RESIDUALINT" = {long_name = "Res Prod", units = "Tg C yr⁻¹", vmax = 5, cmap = "viridis"}
+"_eratio" = {long_name = "E-ratio", units = "dimensionless", vmax = 0.5, vmin = 0, cmap = "viridis"}
+"_Teff" = {long_name = "T_eff", units = "dimensionless", vmax = 0.5, vmin = 0, cmap = "viridis"}
+"_AOU" = {long_name = "AOU", units = "µmol L⁻¹", vmax = 150, vmin = -50, depth_index = 17, cmap = "RdBu_r"}
+"_DCM_depth" = {long_name = "DCM Depth", units = "m", vmax = 200, vmin = 0, cmap = "viridis"}
+"_rls" = {long_name = "Remineralization Length Scale", units = "m", vmax = 500, vmin = 0, cmap = "viridis"}
+
+[map.variables.nutrients]
+"_NO3" = {long_name = "Nitrate", units = "µmol L⁻¹", vmax = 30, cmap = "turbo"}
+"_PO4" = {long_name = "Phosphate", units = "µmol L⁻¹", vmax = 2.5, cmap = "turbo"}
+"_Si" = {long_name = "Silica", units = "µmol L⁻¹", vmax = 60, cmap = "turbo"}
+"_Fer" = {long_name = "Iron", units = "nmol L⁻¹", vmax = 1.5, cmap = "turbo"}
+"_O2" = {long_name = "Oxygen", units = "µmol L⁻¹", vmax = 250, vmin = 0, depth_index = 17, cmap = "turbo"}
+
+[map.variables.carbon_chemistry]
+"_ALK" = {long_name = "Alkalinity", units = "µmol L⁻¹", vmax = 2400, vmin = 2200, cmap = "RdYlBu_r"}
+"_DIC" = {long_name = "Dissolved Inorganic Carbon", units = "µmol L⁻¹", vmax = 2200, vmin = 1900, cmap = "RdYlBu_r"}
+
+[map.variables.physics]
+tos = {long_name = "Sea Surface Temperature", units = "°C", vmax = 30, cmap = "cmocean:thermal"}
+sos = {long_name = "Sea Surface Salinity", units = "PSU", vmax = 37, cmap = "cmocean:haline"}
+mldr10_1 = {long_name = "Mixed Layer Depth", units = "m", vmax = 500, cmap = "cmocean:deep"}
+rsntds = {long_name = "Solar Radiation", units = "W m⁻²", vmax = 300, vmin = 0, cmap = "cmocean:solar"}
+taum = {long_name = "Wind Stress", units = "N m⁻²", vmax = 0.2, vmin = 0, cmap = "cmocean:amp"}
+sowindsp = {long_name = "Wind Speed", units = "m s⁻¹", vmax = 15, vmin = 0, cmap = "cmocean:speed"}
+
 [layout]
 # Automatic layout using constrained_layout
 use_constrained_layout = true

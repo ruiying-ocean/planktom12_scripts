@@ -304,6 +304,8 @@ python generate_multimodel_html.py modelsToPlot.csv <output_dir>
 - `format`: Output format - "png" (lossless), "svg" (vector), or "jpg" (compressed)
 - Observational data ranges for validation
 - Color schemes and plot styles
+- Map metadata in `[map.*]`: PFT order/names, biomass ranges, map variable
+  labels, units, color scales, colormaps, and default depth indices
 
 **Example**:
 ```toml
@@ -314,6 +316,9 @@ format = "png"
 [observations.global]
 PPT = [51, 65]  # Primary production range [PgC/yr]
 EXP = [7.8, 12.2]  # Export production range [PgC/yr]
+
+[map.variables.nutrients]
+"_O2" = {long_name = "Oxygen", units = "μmol L⁻¹", vmax = 250, vmin = 0, depth_index = 17, cmap = "turbo"}
 ```
 
 ### Analyser Configuration

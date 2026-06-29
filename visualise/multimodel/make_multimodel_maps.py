@@ -179,7 +179,7 @@ def plot_multimodel_maps(models, output_dir, config):
     fmt = config.get("figure", {}).get("format", "png") if config else "png"
 
     # Create OceanMapPlotter for data preprocessing (mask from the resolved config)
-    plotter = OceanMapPlotter(mask_path=config["files"]["basin_mask"])
+    plotter = OceanMapPlotter(mask_path=config["files"]["basin_mask"], config=config)
 
     # Define variable groups - get metadata from map_utils for consistency
     # Use derived variables (with underscore) for integrated/processed values

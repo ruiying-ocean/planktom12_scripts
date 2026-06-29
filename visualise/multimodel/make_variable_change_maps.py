@@ -43,7 +43,12 @@ import os
 
 # Import map utilities from parent directory
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from map_utils import OceanMapPlotter, get_variable_metadata, PHYTOS, ZOOS
+from map_utils import (
+    OceanMapPlotter,
+    configure_map_metadata,
+    get_variable_metadata,
+    PHYTOS, ZOOS,
+)
 from nemo_files import nemo_file, nemo_glob
 from logging_utils import print_header, print_info, print_warning, print_error, print_success
 
@@ -558,6 +563,7 @@ Available variables:
 
     # Load config
     config = load_config()
+    configure_map_metadata(config)
 
     # Discover models
     models = discover_models(args.base_dir, args.pattern)

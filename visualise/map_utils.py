@@ -19,6 +19,7 @@ import matplotlib.colorbar
 import cartopy.crs as ccrs
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 from pathlib import Path
+from copy import deepcopy
 from typing import Optional, Dict, List, Tuple, Union
 import sys
 import gsw
@@ -42,7 +43,12 @@ class OceanMapPlotter:
     - Horizontal colorbars with proper units
     """
 
-    def __init__(self, mask_path: Optional[str] = None, config_dir=None):
+    def __init__(
+        self,
+        mask_path: Optional[str] = None,
+        config_dir=None,
+        config: Optional[Dict] = None,
+    ):
         """
         Initialize the map plotter with land/basin masks.
 
@@ -52,14 +58,24 @@ class OceanMapPlotter:
             config_dir: A model run directory whose setUpData selects the
                 visualise_config; used to resolve the basin mask when ``mask_path``
                 is not given. There is no ambient/env-var lookup.
+            config: Parsed visualise_config dict. When provided, map metadata and
+                the basin mask path are taken from this snapshot.
         """
+        if config is None and config_dir is not None:
+            try:
+                config = load_config(run_dir=config_dir)
+            except FileNotFoundError:
+                if mask_path is None:
+                    raise
+        if config is not None:
+            configure_map_metadata(config)
         if mask_path is None:
-            if config_dir is None:
+            if config is None:
                 raise ValueError(
-                    "OceanMapPlotter needs mask_path or config_dir to resolve the "
-                    "basin mask (no ambient visualise_config lookup)."
+                    "OceanMapPlotter needs mask_path, config, or config_dir to resolve "
+                    "the basin mask (no ambient visualise_config lookup)."
                 )
-            mask_path = get_basin_mask_path(load_config(run_dir=config_dir))
+            mask_path = get_basin_mask_path(config)
         self.mask_path = mask_path
         self.land_mask_2d = None
         self.land_mask_3d = None
@@ -884,17 +900,105 @@ PHYSICAL_VARS = {
 }
 
 
-def get_variable_metadata(var_name: str) -> Dict:
+_DEFAULT_PHYTOS = list(PHYTOS)
+_DEFAULT_ZOOS = list(ZOOS)
+_DEFAULT_PHYTO_NAMES = deepcopy(PHYTO_NAMES)
+_DEFAULT_ZOO_NAMES = deepcopy(ZOO_NAMES)
+_DEFAULT_BIOMASS_RANGES = deepcopy(BIOMASS_RANGES)
+
+MAP_VARIABLE_GROUPS = {
+    'ecosystem': ECOSYSTEM_VARS,
+    'nutrients': NUTRIENT_VARS,
+    'carbon_chemistry': CARBON_CHEMISTRY_VARS,
+    'physics': PHYSICAL_VARS,
+}
+_DEFAULT_MAP_VARIABLE_GROUPS = deepcopy(MAP_VARIABLE_GROUPS)
+
+
+def _replace_mapping(target: Dict, values: Dict) -> None:
+    """Replace a dict in place so imported references see config updates."""
+    target.clear()
+    target.update(values)
+
+
+def _normalise_range(value):
+    if isinstance(value, (list, tuple)) and len(value) == 2:
+        return tuple(value)
+    return value
+
+
+def _normalise_variable_metadata(entries: Dict) -> Dict:
+    normalised = {}
+    for var_name, metadata in entries.items():
+        item = dict(metadata)
+        if item.get('depth_index') is not None:
+            item['depth_index'] = int(item['depth_index'])
+        normalised[str(var_name)] = item
+    return normalised
+
+
+def _configured_values(defaults: Dict, overrides: Dict) -> Dict:
+    configured = deepcopy(defaults)
+    for key, value in (overrides or {}).items():
+        key = str(key)
+        base = configured.get(key, {})
+        configured[key] = {**base, **dict(value)}
+    return _normalise_variable_metadata(configured)
+
+
+def configure_map_metadata(config: Optional[Dict]) -> None:
+    """Apply [map] metadata from a loaded visualise_config.toml.
+
+    The exported lists/dicts are mutated in place so existing imports such as
+    ``from map_utils import PHYTOS`` continue to see the configured values.
+    Missing [map] tables fall back to the historical defaults in this module,
+    which keeps older run-directory config snapshots readable.
+    """
+    map_cfg = (config or {}).get('map', {})
+
+    pfts = map_cfg.get('pfts', {})
+    PHYTOS[:] = list(pfts.get('phytoplankton', _DEFAULT_PHYTOS))
+    ZOOS[:] = list(pfts.get('zooplankton', _DEFAULT_ZOOS))
+
+    names = map_cfg.get('pft_names', {})
+    phyto_names = {**_DEFAULT_PHYTO_NAMES, **names.get('phytoplankton', {})}
+    zoo_names = {**_DEFAULT_ZOO_NAMES, **names.get('zooplankton', {})}
+    _replace_mapping(PHYTO_NAMES, phyto_names)
+    _replace_mapping(ZOO_NAMES, zoo_names)
+
+    biomass_cfg = map_cfg.get('biomass_ranges', {})
+    biomass = {
+        str(k): _normalise_range(v)
+        for k, v in {**_DEFAULT_BIOMASS_RANGES, **biomass_cfg}.items()
+    }
+    _replace_mapping(BIOMASS_RANGES, biomass)
+
+    variable_cfg = map_cfg.get('variables', {})
+    for group_name, default_group in _DEFAULT_MAP_VARIABLE_GROUPS.items():
+        configured = _configured_values(default_group, variable_cfg.get(group_name, {}))
+        _replace_mapping(MAP_VARIABLE_GROUPS[group_name], configured)
+
+    for group_name, entries in variable_cfg.items():
+        if group_name not in MAP_VARIABLE_GROUPS:
+            MAP_VARIABLE_GROUPS[group_name] = _normalise_variable_metadata(entries)
+
+
+def get_variable_metadata(var_name: str, config: Optional[Dict] = None) -> Dict:
     """
     Get metadata for a variable.
 
     Args:
         var_name: Variable name
+        config: Optional parsed visualise_config.toml. When provided, [map]
+            metadata is applied before lookup.
 
     Returns:
         Dictionary with metadata (units, colormap, limits, etc.)
     """
-    for var_dict in [ECOSYSTEM_VARS, NUTRIENT_VARS, CARBON_CHEMISTRY_VARS, PHYSICAL_VARS]:
+    if config is not None:
+        configure_map_metadata(config)
+
+    for var_dict in MAP_VARIABLE_GROUPS.values():
         if var_name in var_dict:
             return var_dict[var_name]
 
@@ -1002,5 +1106,3 @@ def calculate_rls(
     )
 
     return result
-
-

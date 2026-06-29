@@ -179,7 +179,7 @@ def plot_multimodel_nutrient_transects(models, output_dir, config, max_depth=Non
     fmt = config.get("figure", {}).get("format", "png") if config else "png"
 
     # Create OceanMapPlotter
-    plotter = OceanMapPlotter(mask_path=config["files"]["basin_mask"])
+    plotter = OceanMapPlotter(mask_path=config["files"]["basin_mask"], config=config)
 
     # Load navigation from first available model
     nav_lon, nav_lat = None, None
@@ -289,7 +289,7 @@ def plot_multimodel_pft_transects(models, output_dir, config, max_depth=500.0):
     fmt = config.get("figure", {}).get("format", "png") if config else "png"
 
     # Create OceanMapPlotter
-    plotter = OceanMapPlotter(mask_path=config["files"]["basin_mask"])
+    plotter = OceanMapPlotter(mask_path=config["files"]["basin_mask"], config=config)
 
     # Load navigation from first available model
     nav_lon, nav_lat = None, None

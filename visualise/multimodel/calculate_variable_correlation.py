@@ -49,7 +49,7 @@ import os
 
 # Import map utilities from parent directory
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from map_utils import get_variable_metadata
+from map_utils import configure_map_metadata, get_variable_metadata
 from nemo_files import nemo_file, nemo_glob
 from logging_utils import print_header, print_info, print_warning, print_error, print_success
 
@@ -984,6 +984,7 @@ Modes:
 
     # Load config
     config = load_config()
+    configure_map_metadata(config)
 
     # Discover models
     models = discover_models(args.base_dir, args.pattern)
