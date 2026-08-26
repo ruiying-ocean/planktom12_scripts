@@ -22,6 +22,12 @@ run[Y] -> checkpoint[Y] -> run[Y+1]
 archive[final year] -> report
 ```
 
+Only the first year's slice is submitted initially. A five-minute `advance`
+job submits the next slice after the current checkpoint and preceding archive
+are complete. The queue is therefore bounded to two adjacent model years
+instead of containing the entire experiment up front; no user monitoring is
+required for it to continue.
+
 - `run_year.sh` runs NEMO and writes no scheduler state.
 - `checkpoint_year.sh` validates every restart rank, advances the active
   namelist, publishes restart files to AFM, and records the timestep.
@@ -30,8 +36,8 @@ archive[final year] -> report
 - `archive_year.sh` compresses and publishes the configured output types.
 - `report_run.sh` applies retention policy and creates the final plots and HTML
   report.
-- `submit_workflow.sh` submits these tasks with native Slurm `afterok`
-  dependencies.
+- `submit_workflow.sh` submits one rolling slice with native Slurm `afterok`
+  dependencies, then schedules its own small continuation job.
 
 The model chain waits only for checkpoints. The post-processing chain is
 serialized separately, preventing concurrent writes to analyser CSV files
@@ -59,7 +65,7 @@ spin-up restart:
    `.planktom_toolkit/`;
 5. writes the resolved, shell-quoted `run.env`;
 6. copies the workflow scripts into the run directory; and
-7. submits the configured year range.
+7. submits the first rolling slice of the configured year range.
 
 The code snapshot is deliberate: later edits to this repository do not change
 the analysis or report implementation attached to an existing run.
@@ -103,6 +109,9 @@ The final report job is submitted only when the selected range reaches the
 configured `yearEnd`. A range beginning after `yearStart` is accepted only when
 the preceding year's checkpoint and archive success markers exist, preventing
 an accidental continuation from stale restart state.
+
+Later years are submitted automatically. A normal full run therefore needs no
+manual chunk submission and does not flood `squeue` with hundreds of jobs.
 
 ## Monitoring
 
@@ -191,9 +200,9 @@ temporary restart files:
 test/test_slurm_workflow.sh
 ```
 
-It verifies shell syntax, dependency ordering, serialized post-processing,
-partial-range safety, restart publication, and idempotent NEMO5 checkpoint
-retries without requiring access to a Slurm cluster.
+It verifies shell syntax, bounded rolling submission, dependency ordering,
+serialized post-processing, partial-range safety, restart publication, and
+idempotent NEMO5 checkpoint retries without requiring access to a Slurm cluster.
 
 ## License
 

@@ -103,11 +103,17 @@ printf '0\n' > "$tmp_dir/counter"
 PATH="$fake_bin:$PATH" SBATCH_COUNTER="$tmp_dir/counter" SBATCH_LOG="$tmp_dir/sbatch.log" \
 	"$run_dir/submit_workflow.sh" "$run_dir" 2000 2001 compute >/dev/null
 
-[ "$(wc -l < "$tmp_dir/sbatch.log" | tr -d ' ')" -eq 9 ] || fail "expected nine submitted jobs"
+[ "$(wc -l < "$tmp_dir/sbatch.log" | tr -d ' ')" -eq 5 ] || fail "initial rolling slice should submit five jobs"
 grep -q -- '--dependency=afterok:1' "$tmp_dir/sbatch.log" || fail "checkpoint must depend on first run"
-grep -q -- '--dependency=afterok:2' "$tmp_dir/sbatch.log" || fail "second run must depend on first checkpoint"
-grep -q -- '--dependency=afterok:6:4' "$tmp_dir/sbatch.log" || fail "analysis jobs must be serialized"
-grep -q $'^2001\treport\t9\t8$' "$run_dir/state/jobs.tsv" || fail "report job was not recorded"
+grep -q $'^2001\tadvance\t5\t2$' "$run_dir/state/jobs.tsv" || fail "rolling advance job was not recorded"
+grep -q 'submit_workflow.sh.*2001.*2001.*compute.*4' "$tmp_dir/sbatch.log" || fail "advance job did not carry rolling state"
+
+# Simulate Slurm executing the small advance job after year 2000 checkpointing.
+PATH="$fake_bin:$PATH" SBATCH_COUNTER="$tmp_dir/counter" SBATCH_LOG="$tmp_dir/sbatch.log" \
+	"$run_dir/submit_workflow.sh" "$run_dir" 2001 2001 compute 4 >/dev/null
+[ "$(wc -l < "$tmp_dir/sbatch.log" | tr -d ' ')" -eq 10 ] || fail "second rolling slice should add five jobs"
+grep -q -- '--dependency=afterok:7:4' "$tmp_dir/sbatch.log" || fail "analysis must wait for the prior archive"
+grep -q $'^2001\treport\t10\t9$' "$run_dir/state/jobs.tsv" || fail "report job was not recorded"
 "$run_dir/status.sh" "$run_dir" >/dev/null
 
 # A partial range must stop after its final archive, without running the final report.
