@@ -3,14 +3,15 @@
 # Execute one model year inside a Slurm allocation.
 set -euo pipefail
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-# shellcheck source=workflow_common.sh
-. "$SCRIPT_DIR/workflow_common.sh"
-
 run_dir=${1:-}
+[ -n "$run_dir" ] || { echo "ERROR: usage: run_year.sh RUN_DIR YEAR ib|compute" >&2; exit 1; }
+[ -f "$run_dir/workflow_common.sh" ] || { echo "ERROR: workflow_common.sh not found in $run_dir" >&2; exit 1; }
+# shellcheck source=workflow_common.sh
+. "$run_dir/workflow_common.sh"
+
 year=${2:-}
 partition=${3:-}
-[ -n "$run_dir" ] && [ -n "$year" ] && [ -n "$partition" ] || \
+[ -n "$year" ] && [ -n "$partition" ] || \
 	workflow_die "usage: run_year.sh RUN_DIR YEAR ib|compute"
 
 load_run_env "$run_dir"

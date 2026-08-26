@@ -3,18 +3,16 @@
 # Queue one bounded slice of the year-by-year Slurm workflow.
 set -euo pipefail
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-# shellcheck source=workflow_common.sh
-. "$SCRIPT_DIR/workflow_common.sh"
-
 run_dir=${1:-}
+[ -n "$run_dir" ] || { echo "ERROR: usage: submit_workflow.sh RUN_DIR [START_YEAR [END_YEAR [auto|ib|compute]]]" >&2; exit 1; }
+[ -f "$run_dir/workflow_common.sh" ] || { echo "ERROR: workflow_common.sh not found in $run_dir" >&2; exit 1; }
+# shellcheck source=workflow_common.sh
+. "$run_dir/workflow_common.sh"
+
 start_year=${2:-}
 end_year=${3:-}
 partition=${4:-auto}
 previous_archive=${5:-}
-[ -n "$run_dir" ] || workflow_die \
-	"usage: submit_workflow.sh RUN_DIR [START_YEAR [END_YEAR [auto|ib|compute]]]"
-
 load_run_env "$run_dir"
 start_year=${start_year:-$yearStart}
 end_year=${end_year:-$yearEnd}

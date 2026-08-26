@@ -100,6 +100,17 @@ chmod +x "$fake_bin/sbatch" "$fake_bin/module" "$fake_bin/ncdump" "$fake_bin/ncc
 printf '0\n' > "$tmp_dir/counter"
 : > "$tmp_dir/sbatch.log"
 
+# Slurm relocates submitted scripts to /tmp/slurmd. Entry points must therefore
+# find shared code through their explicit run-directory argument.
+for script in run_year.sh checkpoint_year.sh analyse_year.sh archive_year.sh; do
+	relocated="$tmp_dir/slurm-$script"
+	cp -p "$run_dir/$script" "$relocated"
+	if "$relocated" "$run_dir" >/dev/null 2>"$tmp_dir/relocated.err"; then
+		fail "$script unexpectedly accepted a missing year argument"
+	fi
+	grep -q 'usage:' "$tmp_dir/relocated.err" || fail "$script could not load shared code after relocation"
+done
+
 PATH="$fake_bin:$PATH" SBATCH_COUNTER="$tmp_dir/counter" SBATCH_LOG="$tmp_dir/sbatch.log" \
 	"$run_dir/submit_workflow.sh" "$run_dir" 2000 2001 compute >/dev/null
 
@@ -109,8 +120,10 @@ grep -q $'^2001\tadvance\t5\t2$' "$run_dir/state/jobs.tsv" || fail "rolling adva
 grep -q 'submit_workflow.sh.*2001.*2001.*compute.*4' "$tmp_dir/sbatch.log" || fail "advance job did not carry rolling state"
 
 # Simulate Slurm executing the small advance job after year 2000 checkpointing.
+relocated_submit="$tmp_dir/slurm-submit_workflow.sh"
+cp -p "$run_dir/submit_workflow.sh" "$relocated_submit"
 PATH="$fake_bin:$PATH" SBATCH_COUNTER="$tmp_dir/counter" SBATCH_LOG="$tmp_dir/sbatch.log" \
-	"$run_dir/submit_workflow.sh" "$run_dir" 2001 2001 compute 4 >/dev/null
+	"$relocated_submit" "$run_dir" 2001 2001 compute 4 >/dev/null
 [ "$(wc -l < "$tmp_dir/sbatch.log" | tr -d ' ')" -eq 10 ] || fail "second rolling slice should add five jobs"
 grep -q -- '--dependency=afterok:7:4' "$tmp_dir/sbatch.log" || fail "analysis must wait for the prior archive"
 grep -q $'^2001\treport\t10\t9$' "$run_dir/state/jobs.tsv" || fail "report job was not recorded"
@@ -157,7 +170,9 @@ for rank in 0000 0001; do
 	done
 done
 
-SLURM_JOB_ID=99 "$checkpoint_dir/checkpoint_year.sh" "$checkpoint_dir" 2000 >/dev/null
+relocated_checkpoint="$tmp_dir/slurm-checkpoint_year.sh"
+cp -p "$checkpoint_dir/checkpoint_year.sh" "$relocated_checkpoint"
+SLURM_JOB_ID=99 "$relocated_checkpoint" "$checkpoint_dir" 2000 >/dev/null
 
 assert_file "$tmp_dir/archive/CHECKPOINT_RUN/ORCA2_00005475_restart_0000.nc"
 assert_symlink "$checkpoint_dir/ORCA2_00005475_restart_0000.nc"
@@ -167,7 +182,7 @@ assert_file "$checkpoint_dir/EMPave_2000.dat"
 assert_file "$checkpoint_dir/state/2000/checkpoint.ok"
 [ "$(<"$checkpoint_dir/state/2000/restart_step")" = 00005475 ] || fail "wrong restart timestep"
 
-SLURM_JOB_ID=100 "$checkpoint_dir/checkpoint_year.sh" "$checkpoint_dir" 2000 >/dev/null
+SLURM_JOB_ID=100 "$relocated_checkpoint" "$checkpoint_dir" 2000 >/dev/null
 assert_file "$checkpoint_dir/state/2000/checkpoint.ok"
 
 # NEMO5 checkpoint retries must reuse the recorded timestep and not advance the
@@ -203,14 +218,14 @@ for rank in 0000 0001; do
 	done
 done
 
-SLURM_JOB_ID=101 "$nemo5_dir/checkpoint_year.sh" "$nemo5_dir" 2000 >/dev/null
+SLURM_JOB_ID=101 "$relocated_checkpoint" "$nemo5_dir" 2000 >/dev/null
 grep -Eq 'nn_it000 *= *5841' "$nemo5_dir/namelist_cfg_other_years" || fail "wrong NEMO5 start step"
 grep -Eq 'nn_itend *= *11680' "$nemo5_dir/namelist_cfg_other_years" || fail "wrong NEMO5 end step"
 [ ! -e "$nemo5_dir/time.step" ] || fail "completed time.step was not rotated"
 assert_symlink "$nemo5_dir/restart_0000.nc"
 assert_symlink "$nemo5_dir/restart_ice_0001.nc"
 
-SLURM_JOB_ID=102 "$nemo5_dir/checkpoint_year.sh" "$nemo5_dir" 2000 >/dev/null
+SLURM_JOB_ID=102 "$relocated_checkpoint" "$nemo5_dir" 2000 >/dev/null
 grep -Eq 'nn_it000 *= *5841' "$nemo5_dir/namelist_cfg_other_years" || fail "retry advanced NEMO5 start step twice"
 grep -Eq 'nn_itend *= *11680' "$nemo5_dir/namelist_cfg_other_years" || fail "retry advanced NEMO5 end step twice"
 
@@ -226,15 +241,17 @@ sed \
 : > "$archive_task_dir/ORCA2_1m_20000101_20001231_grid_T.nc"
 : > "$archive_task_dir/ORCA2_1m_20000101_20001231_grid_U.nc"
 
+relocated_archive="$tmp_dir/slurm-archive_year.sh"
+cp -p "$archive_task_dir/archive_year.sh" "$relocated_archive"
 PATH="$fake_bin:$PATH" SLURM_JOB_ID=103 \
-	"$archive_task_dir/archive_year.sh" "$archive_task_dir" 2000 >/dev/null 2>&1
+	"$relocated_archive" "$archive_task_dir" 2000 >/dev/null 2>&1
 assert_file "$tmp_dir/archive/ARCHIVE_TASK_RUN/ORCA2_1m_20000101_20001231_grid_T.nc"
 assert_symlink "$archive_task_dir/ORCA2_1m_20000101_20001231_grid_T.nc"
 [ ! -e "$archive_task_dir/ORCA2_1m_20000101_20001231_grid_U.nc" ] || fail "discarded output was retained"
 assert_file "$archive_task_dir/state/2000/archive.ok"
 
 PATH="$fake_bin:$PATH" SLURM_JOB_ID=104 \
-	"$archive_task_dir/archive_year.sh" "$archive_task_dir" 2000 >/dev/null 2>&1
+	"$relocated_archive" "$archive_task_dir" 2000 >/dev/null 2>&1
 assert_symlink "$archive_task_dir/ORCA2_1m_20000101_20001231_grid_T.nc"
 
 echo "Slurm workflow tests passed"

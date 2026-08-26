@@ -3,12 +3,12 @@
 # Apply final retention and render the completed-run report.
 set -euo pipefail
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-# shellcheck source=workflow_common.sh
-. "$SCRIPT_DIR/workflow_common.sh"
-
 run_dir=${1:-}
-[ -n "$run_dir" ] || workflow_die "usage: report_run.sh RUN_DIR"
+[ -n "$run_dir" ] || { echo "ERROR: usage: report_run.sh RUN_DIR" >&2; exit 1; }
+[ -f "$run_dir/workflow_common.sh" ] || { echo "ERROR: workflow_common.sh not found in $run_dir" >&2; exit 1; }
+# shellcheck source=workflow_common.sh
+. "$run_dir/workflow_common.sh"
+
 load_run_env "$run_dir"
 activate_analysis_environment
 
