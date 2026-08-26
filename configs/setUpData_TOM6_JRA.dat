@@ -34,7 +34,7 @@ forcing_mode:transient
 # Forcing (NCEP or ERA or JRA)
 forcing:JRA
 
-# Tidyup options
+# Retention options
 spinupStart:1750
 spinupEnd:1930
 

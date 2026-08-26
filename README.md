@@ -1,507 +1,200 @@
-# PlankTom Toolkit
+# PlankTOM workflow toolkit
 
-A comprehensive workflow system for running NEMO-PlankTom ocean biogeochemistry models and generating visualizations and analyses.
+This repository prepares, runs, monitors, analyses, and archives NEMO–PlankTOM
+experiments on Slurm.
 
-## Overview
+Slurm owns workflow scheduling. Bash owns model staging, restart publication,
+and archival. Python is used only for NetCDF analysis and visualisation.
 
-This repository provides tools for:
-- Setting up and running NEMO-PlankTom model simulations
-- Extracting statistics from model output (analyser files)
-- Generating visualizations (time series, spatial maps, vertical profiles)
-- Comparing multiple model runs
-- Creating HTML reports
+Repository responsibilities are separated into `workflow/` (Slurm and shell
+operations), `analyser/` (scientific reduction), `visualise/` (plots and
+reports), and `configs/` (run inputs).
 
-## Directory Structure
+## Workflow
 
-```
-PlankTomRunner/
-├── analyser/           # Statistics extraction from NetCDF output
-├── visualise/          # Single model visualization tools
-│   └── multimodel/     # Multi-model comparison tools
-├── configs/            # Model setup configuration files
-├── setUpRun.sh         # Model run setup script
-├── setup_spin.sh       # Spin-up run setup script
-└── README.md
+Each model year is represented by explicit Slurm jobs:
+
+```text
+run[Y] -> checkpoint[Y] -> run[Y+1]
+                 |
+                 +-> analyse[Y] -> archive[Y] -> analyse[Y+1]
+
+archive[final year] -> report
 ```
 
-## Prerequisites
+- `run_year.sh` runs NEMO and writes no scheduler state.
+- `checkpoint_year.sh` validates every restart rank, advances the active
+  namelist, publishes restart files to AFM, and records the timestep.
+- `analyse_year.sh` computes AMOC and analyser statistics, then refreshes the
+  monitoring time series.
+- `archive_year.sh` compresses and publishes the configured output types.
+- `report_run.sh` applies retention policy and creates the final plots and HTML
+  report.
+- `submit_workflow.sh` submits these tasks with native Slurm `afterok`
+  dependencies.
 
-- Python 3.8+
-- Required Python packages: xarray, numpy, pandas, matplotlib, cartopy, netCDF4
-- NEMO ocean model
-- Quarto (for HTML report generation)
+The model chain waits only for checkpoints. The post-processing chain is
+serialized separately, preventing concurrent writes to analyser CSV files
+without delaying the next model year.
 
-## Quick Start
+## Starting a run
 
-### Single Model Workflow
-
-1. **Run the model** (generates NetCDF output in `~/scratch/ModelRuns/<model_id>/`)
-
-2. **Generate analyser statistics**:
-   ```bash
-   cd ~/scratch/ModelRuns/<model_id>/
-   # analyser_config.toml here is the run-dir symlink that setUpRun points at the
-   # grid-specific config chosen in setUpData (analyser_config_nemo5.0.toml or
-   # analyser_config_nemo3.6.toml). There is no version-neutral default config.
-   python /path/to/PlankTomRunner/analyser/analyser.py \
-       analyser_config.toml \
-       <start_year> <end_year>
-   ```
-
-3. **Create visualizations**:
-   ```bash
-   python visualise/make_timeseries.py <model_id> --model-run-dir ~/scratch/ModelRuns
-   ```
-
-4. **Generate HTML report**:
-   ```bash
-   ./visualise/make_html.sh <model_id>
-   # Or specify custom base directory:
-   # ./visualise/make_html.sh <model_id> ~/scratch/ModelRuns
-   ```
-
-### Multi-Model Comparison Workflow
-
-1. **Run multiple models** (each generates output in `~/scratch/ModelRuns/<model_id>/`)
-
-2. **Generate analyser files for each model**:
-   ```bash
-   cd ~/scratch/ModelRuns/TOM12_RY_SPE2/
-   python /path/to/PlankTomRunner/analyser/analyser.py \
-       analyser_config.toml 1750 1790
-
-   cd ~/scratch/ModelRuns/TOM12_RY_SPE5/
-   python /path/to/PlankTomRunner/analyser/analyser.py \
-       analyser_config.toml 1750 1790
-   ```
-
-3. **Create comparison configuration** (`modelsToPlot.csv`):
-   ```csv
-   model_id,description,start_year,to_year
-   TOM12_RY_SPE2,Control,1750,1790
-   TOM12_RY_SPE5,High Export,1750,1790
-   ```
-
-4. **Generate comparison report**:
-   ```bash
-   cd /path/to/output/directory
-   cp modelsToPlot.csv .
-   /path/to/PlankTomRunner/visualise/multimodel/multimodel.sh
-   ```
-
-## Detailed Documentation
-
-### Analyser Tools
-
-**Purpose**: Extract integrated statistics from model NetCDF output files.
-
-**Main Script**: `analyser/analyser.py`
-
-**Usage**:
 ```bash
-cd <model_output_directory>
-python /path/to/analyser/analyser.py <config_file.toml> <start_year> <end_year>
+./setUpRun.sh configs/setUpData_TOM6_JRA.dat TOM6_RY_EX01
 ```
 
-**Important**: The analyser script must be run from the model output directory where the NetCDF files are located (it looks for files in the current directory).
+An optional third argument initializes the run from another experiment's
+spin-up restart:
 
-**Output**: Creates CSV files in `<model_dir>/<model_id>/`:
-- `analyser.sur.annual.csv` - Surface variables (e.g., air-sea carbon flux)
-- `analyser.lev.annual.csv` - Level variables (e.g., export at 100m)
-- `analyser.vol.annual.csv` - Volume-integrated variables (e.g., primary production)
-- `analyser.ave.annual.csv` - Volume-averaged variables (e.g., nutrients)
-- `analyser.int.annual.csv` - Depth-integrated variables (e.g., phytoplankton biomass)
-- Monthly versions: `*.monthly.csv`
-
-**Configuration**: `analyser/analyser_config_nemo5.0.toml` or `analyser/analyser_config_nemo3.6.toml` (grid-specific; chosen per-run via `analyser_config:` in setUpData)
-
-### Single Model Visualization
-
-**Location**: `visualise/`
-
-#### Time Series Plots
-
-**Script**: `make_timeseries.py`
-
-**Usage**:
 ```bash
-python make_timeseries.py <model_id> --model-run-dir <model_dir>
+./setUpRun.sh configs/setUpData_TOM6_JRA.dat TOM6_RY_EX01 TOM6_RY_SPIN
 ```
 
-**Output**: Generates time series plots for:
-- Global carbon fluxes
-- Primary production and export
-- Nutrient concentrations
-- Plankton functional types
-- Physical variables (temperature, salinity)
+`setUpRun.sh`:
 
-**Output location**: `<model_dir>/monitor/<model_id>/`
+1. creates and validates the model directory;
+2. stages inputs, executable, XML, and namelists;
+3. copies the selected analyser and visualisation configuration;
+4. creates a detached snapshot of the repository's analysis code under
+   `.planktom_toolkit/`;
+5. writes the resolved, shell-quoted `run.env`;
+6. copies the workflow scripts into the run directory; and
+7. submits the configured year range.
 
-#### Spatial Maps
-
-**Script**: `make_maps.py`
-
-**Usage**:
-```bash
-python make_maps.py <run_name> <start_year> <end_year> \
-    --basedir <model_dir> \
-    --output-dir <output_dir> \
-    --obs-dir <observations_dir>
-```
-
-**Convenience wrapper**:
-```bash
-./annualMaps_python.sh <run_name> <year> [model_output_dir]
-```
-
-**Output**: Spatial maps for:
-- Nutrients (NO₃, PO₄, Si, Fe)
-- Ecosystem variables (chlorophyll, export, primary production)
-- Phytoplankton functional types (6 types)
-- Zooplankton functional types (6 types)
-- Model-observation comparisons (if observations provided)
-
-#### Vertical Profiles
-
-**Script**: `make_vertical_profiles.py`
-
-**Usage**:
-```bash
-# Single model
-python make_vertical_profiles.py <model_id> --year <year> --var <variable>
-
-# Compare multiple models
-python make_vertical_profiles.py <model_id1> <model_id2> --year <year> --var <variable>
-
-# With custom directories
-python make_vertical_profiles.py <model_id> --year <year> --var <variable> \
-    --model-dir <path> --output-dir <path>
-```
-
-**Arguments**:
-- One or more model IDs to compare
-- `--year`: Year to process
-- `--var`: Variable to plot (temp, sal, fe, no3, po4, si, o2, alk, dic)
-- `--model-dir`: Base directory for model output (default: `~/scratch/ModelRuns`)
-- `--output-dir`: Output directory (default: current directory)
-
-**Output**: Vertical depth profiles comparing model(s) with observations across 6 ocean basins (Atlantic, Indian, Pacific, Arctic, Southern Ocean, Global). Includes comparisons with WOA, GLODAP, and Huang2022 observational datasets.
-
-**Legacy Script**: `verticalDepth.py` (older single-model version, still available)
-
-#### Monthly Summaries
-
-**Script**: `make_monthly_plots.py`
-
-**Usage**:
-```bash
-python make_monthly_plots.py --model-id <model_id> --model-dir <model_dir>
-```
-
-**Output**: Monthly climatology plots for key variables.
-
-#### HTML Report
-
-**Script**: `make_html.sh`
-
-**Usage**:
-```bash
-./make_html.sh <model_id> [base_dir]
-```
-
-**Arguments**:
-- `model_id`: Model run identifier (required)
-- `base_dir`: Base directory for model output (optional, defaults to `~/scratch/ModelRuns`)
-
-**Example**:
-```bash
-./make_html.sh TOM12_RY_SPE2
-# Or with custom base directory:
-./make_html.sh TOM12_RY_SPE2 /custom/path/to/models
-```
-
-**Output**: Complete HTML report with all visualizations for a single model.
-
-**Note**: The script automatically detects the latest year from generated map files or analyser data.
-
-### Multi-Model Comparison
-
-**Location**: `visualise/multimodel/`
-
-#### Configuration File
-
-Create `modelsToPlot.csv` with model information:
-
-```csv
-model_id,description,start_year,to_year,location
-TOM12_RY_SPE2,Control,1750,1790,
-TOM12_RY_SPE5,High Export,1750,1790,
-```
-
-**Column descriptions**:
-- `model_id`: Model run identifier (must match directory name)
-- `description`: Short description for plots
-- `start_year`: First year to include in comparison
-- `to_year`: Last year to include in comparison
-- `location`: (Optional) Base directory for model output. Defaults to `~/scratch/ModelRuns` if empty or omitted.
-
-**Note**: The location column can be completely omitted:
-```csv
-model_id,description,start_year,to_year
-TOM12_RY_SPE2,Control,1750,1790
-TOM12_RY_SPE5,High Export,1750,1790
-```
-
-#### Complete Workflow
-
-**Script**: `multimodel.sh`
-
-**Usage**:
-```bash
-cd /path/to/output/directory
-cp modelsToPlot.csv .
-/path/to/PlankTomRunner/visualise/multimodel/multimodel.sh
-```
-
-**Output**: Generates complete comparison including:
-- Time series comparisons
-- Spatial map comparisons
-- Vertical transect comparisons (Atlantic 35°W, Pacific 170°W)
-- Interactive HTML report
-
-**Output location**: `<current_dir>/<model1>-<model2>/`
-
-#### Individual Components
-
-**Time series comparisons**:
-```bash
-python multimodel.py <save_dir>
-```
-
-**Spatial maps**:
-```bash
-python multimodel_maps.py modelsToPlot.csv <output_dir>
-```
-
-**Vertical transects**:
-```bash
-python multimodel_transects.py modelsToPlot.csv <output_dir>
-```
-
-**HTML report**:
-```bash
-python generate_multimodel_html.py modelsToPlot.csv <output_dir>
-```
+The code snapshot is deliberate: later edits to this repository do not change
+the analysis or report implementation attached to an existing run.
 
 ## Configuration
 
-### Visualization Configuration
+Existing `configs/setUpData_*.dat` files remain the user-facing configuration.
+They contain `name:value` records for:
 
-**File**: `visualise/visualise_config_nemo5.0.toml` or `visualise/visualise_config_nemo3.6.toml` (grid-specific; chosen per-run via `visualise_config:` in setUpData). Mask/mesh paths live in its `[files]` section — there is no NEMO-version default.
+- model version, executable, ranks, and years;
+- forcing and restart inputs;
+- namelist and XML sources;
+- output and restart retention frequencies; and
+- analyser and visualisation configurations.
 
-**Key settings**:
-- `dpi`: Figure resolution (default: 300)
-- `format`: Output format - "png" (lossless), "svg" (vector), or "jpg" (compressed)
-- Observational data ranges for validation
-- Color schemes and plot styles
-- Map metadata in `[map.*]`: PFT order/names, biomass ranges, map variable
-  labels, units, color scales, colormaps, and default depth indices
+Paths may contain additional `:` characters; setup splits each record only at
+the first colon.
 
-**Example**:
-```toml
-[figure]
-dpi = 300
-format = "png"
+The archive root defaults to:
 
-[observations.global]
-PPT = [51, 65]  # Primary production range [PgC/yr]
-EXP = [7.8, 12.2]  # Export production range [PgC/yr]
-
-[map.variables.nutrients]
-"_O2" = {long_name = "Oxygen", units = "μmol L⁻¹", vmax = 250, vmin = 0, depth_index = 17, cmap = "turbo"}
+```text
+/gpfs/afm/greenocean/software/runs
 ```
 
-### Analyser Configuration
+Set `archiveDir:` in a setup file to override it. `run.env` is generated output,
+not a configuration file to maintain by hand.
 
-**File**: `analyser/analyser_config_nemo5.0.toml` or `analyser/analyser_config_nemo3.6.toml` (grid-specific; chosen per-run via `analyser_config:` in setUpData)
+## Partition selection
 
-Defines which variables to extract and their spatial/temporal integration:
-- Surface variables
-- Level (depth) variables
-- Volume-integrated variables
-- Depth-integrated variables
-- Volume-averaged variables
+Setup submits with partition mode `auto`: it selects `compute` when the user
+already has at least two jobs in `ib`, otherwise `ib`.
 
-**Example**:
-```toml
-[[surface]]
-variable = "Cflx"
-units = "PgCarbonPerYr"
-lon_range = [-180, 180]
-lat_range = [-90, 90]
+To submit a selected range or force a partition from an already prepared run:
 
-[[level]]
-variable = "EXP"
-level = 10  # ~100m depth
-units = "PgCarbonPerYr"
-lon_range = [-180, 180]
-lat_range = [-90, 90]
-```
-
-## Model Setup
-
-### New Model Run
-
-**Script**: `setUpRun.sh`
-
-**Usage**:
 ```bash
-./setUpRun.sh <setup_file.dat> <Full Run ID>
+cd ~/scratch/ModelRuns/TOM6_RY_EX01
+./submit_workflow.sh "$PWD" 2000 2010 compute
 ```
 
-**Example**:
+The final report job is submitted only when the selected range reaches the
+configured `yearEnd`. A range beginning after `yearStart` is accepted only when
+the preceding year's checkpoint and archive success markers exist, preventing
+an accidental continuation from stale restart state.
+
+## Monitoring
+
+From any prepared run:
+
 ```bash
-./setUpRun.sh configs/setUpData_MT_JRA.dat TOM12_RY_SPE2
+./status.sh "$PWD"
 ```
 
-**Setup file format**: See `configs/setUpData_*.dat` examples in the repository.
+This displays:
 
-### Spin-up Run
+- the recorded task graph from `state/jobs.tsv`;
+- active Slurm state from `squeue`;
+- historical Slurm state from `sacct`; and
+- durable success markers under `state/<year>/<task>.ok`.
 
-**Script**: `setup_spin.sh`
+Task logs are stored under `logs/<year>/`. The active NEMO stdout and stderr
+remain `planktom-GR.log` and `planktom-ER.log`; checkpointing preserves a copy
+for each year.
 
-**Usage**:
+Slurm dependencies use `afterok`. A failed model year therefore prevents its
+checkpoint and later model years from starting. A failed analysis blocks later
+post-processing, while the model chain can continue from already validated
+checkpoints.
+
+## Run directory
+
+```text
+<run-id>/
+├── run.env
+├── setUpData_*.dat
+├── analyser_config.toml
+├── visualise_config.toml
+├── .planktom_toolkit/
+│   ├── analyser/
+│   ├── shared/
+│   └── visualise/
+├── state/
+│   ├── jobs.tsv
+│   └── <year>/
+│       ├── restart_step
+│       └── *.ok
+├── logs/<year>/
+├── MOC/
+└── ORCA2_*.nc
+```
+
+Retained output and restart files in the run directory become symlinks to the
+AFM archive only after a complete copy has been published.
+
+## Analysis and reports
+
+Annual analysis is normally submitted by `submit_workflow.sh`. A prepared task
+can also be submitted manually when repairing one year:
+
 ```bash
-./setup_spin.sh <setup_file.dat>
+sbatch --partition=compute \
+  ~/scratch/ModelRuns/TOM6_RY_EX01/analyse_year.sh \
+  ~/scratch/ModelRuns/TOM6_RY_EX01 2000
 ```
 
-## Output Locations
+Single-model monitoring output is written to:
 
-### Default Paths
-
-- **Model output**: `~/scratch/ModelRuns/<model_id>/`
-- **Single model reports**: `~/scratch/ModelRuns/monitor/<model_id>/`
-- **Multi-model reports**: Current directory when running `multimodel.sh`
-
-### Model Output Structure
-
-```
-~/scratch/ModelRuns/<model_id>/
-├── ORCA2_1m_YYYY0101_YYYY1231_diad_T.nc  # Diagnostic variables
-├── ORCA2_1m_YYYY0101_YYYY1231_ptrc_T.nc  # Tracer variables
-├── ORCA2_1m_YYYY0101_YYYY1231_grid_T.nc  # Physical variables
-├── analyser.sur.annual.csv               # Analyser files
-├── analyser.lev.annual.csv
-├── analyser.vol.annual.csv
-├── analyser.ave.annual.csv
-└── analyser.int.annual.csv
+```text
+~/scratch/ModelRuns/monitor/<run-id>/
 ```
 
-## Variables and Units
+Multi-model comparison tools remain under `visualise/multimodel/` and consume
+the analyser files produced by this workflow.
 
-### Key Output Variables
+## Requirements
 
-**Ecosystem**:
-- `TChl` - Total chlorophyll [µg/L]
-- `PPT` - Primary production [PgC/yr]
-- `EXP` - Export production at 100m [PgC/yr]
-- `Cflx` - Air-sea carbon flux [PgC/yr]
+- Slurm (`sbatch`, `squeue`, and `sacct`)
+- NEMO and optional XIOS executables
+- the site MPI, NetCDF, HDF5, Ferret, and CDFtools installations
+- the configured Mamba environment with NumPy, Xarray, pandas, Matplotlib,
+  Cartopy, netCDF4, SciPy, GSW, and related analysis packages
+- Quarto for HTML reports
 
-**Nutrients**:
-- `NO3` - Nitrate [µmol/L]
-- `PO4` - Phosphate [µmol/L]
-- `Si` - Silicate [µmol/L]
-- `Fer` - Iron [nmol/L]
+## Checks
 
-**Phytoplankton** (6 types):
-- `PIC` - Picophytoplankton
-- `FIX` - Nitrogen fixers
-- `COC` - Coccolithophores
-- `DIA` - Diatoms
-- `MIX` - Mixotrophs
-- `PHA` - Phaeocystis
+The shell workflow has a self-contained test using a fake `sbatch` command and
+temporary restart files:
 
-**Zooplankton** (6 types):
-- `BAC` - Bacteria
-- `PRO` - Protozooplankton
-- `MES` - Mesozooplankton
-- `PTE` - Pteropods
-- `CRU` - Crustaceans
-- `GEL` - Jellyfish
-
-### Unit Conversions
-
-The visualization tools automatically convert NetCDF variables to appropriate units:
-- Nutrients: mol/L → µmol/L (×10⁶)
-- Iron: mol/L → nmol/L (×10⁹)
-- Phosphate: mol/L → µmol/L with Redfield ratio (×10⁶/122)
-- Fluxes: mol/m²/s → gC/m²/yr (×31536000×12.01)
-- Production: mol/m³/s → PgC/yr (integrated over volume)
-
-## Observational Data
-
-For model-observation comparisons, observational data should be placed in:
-```
-/gpfs/home/vhf24tbu/Observations/
-├── woa_orca_bil.nc          # World Ocean Atlas (nutrients)
-├── fe_tagliabue_orca_bil.nc # Iron observations
-├── occci_chl_clim.nc        # Ocean Colour CCI chlorophyll
-└── ...
+```bash
+test/test_slurm_workflow.sh
 ```
 
-## Troubleshooting
-
-### Common Issues
-
-**1. "Variable not found" warnings in multimodel transects**
-- Fixed in latest version - now properly maps derived variables to base variables with unit conversion
-
-**2. Very low EXP values in spatial maps**
-- Fixed in latest version - now uses correct depth level (100m) instead of surface
-
-**3. Missing images in HTML reports**
-- Check `visualise_config.toml` format setting matches what's expected
-- Default is PNG format
-
-**4. "File not found" errors**
-- Verify model output files exist in expected location
-- Check NetCDF file naming convention: `ORCA2_1m_YYYY0101_YYYY1231_<type>.nc`
-- Can specify custom location in `modelsToPlot.csv` if needed
-
-**5. Empty or missing analyser files**
-- Ensure `analyser.py` completed successfully
-- Check analyser configuration in the run-dir `analyser_config.toml` (the per-run grid-specific config linked by setUpRun)
-- Verify NetCDF variables exist in model output
-
-### Getting Help
-
-1. Check script usage: `python <script>.py --help`
-2. Review configuration files in `visualise/` and `analyser/`
-3. Ensure all required Python packages are installed
-4. Verify model output files exist and follow naming conventions
-
-## Recent Improvements
-
-- **Nutrient transect fixes**: Properly handles derived variables with unit conversions
-- **Full depth nutrient transects**: Shows complete water column instead of just top 500m
-- **Correct EXP depth extraction**: Uses 100m depth instead of surface for export production
-- **Simplified CSV configuration**: Location column now optional with sensible defaults
-- **Image format fixes**: Corrected Quarto template to use PNG format
-
-## Contributing
-
-When making changes:
-1. Test with a small dataset first
-2. Update relevant documentation
-3. Write clear commit messages
-4. Consider backwards compatibility
-5. Update this README if adding new features
+It verifies shell syntax, dependency ordering, serialized post-processing,
+partial-range safety, restart publication, and idempotent NEMO5 checkpoint
+retries without requiring access to a Slurm cluster.
 
 ## License
 
-MIT License
-
-## Citation
-
-If using this code in publications, please cite:
-[Citation information to be added]
+MIT. See `LICENSE`.

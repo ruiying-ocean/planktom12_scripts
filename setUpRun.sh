@@ -70,20 +70,27 @@ if [[ "$setUpDatafile" = /* ]]; then
 else
 	dataFileFullPath=$(pwd)"/"$setUpDatafile
 fi
+[ -f "$dataFileFullPath" ] || { warn "Setup data not found: $dataFileFullPath"; exit 1; }
+dataFileFullPath="$(cd "$(dirname "$dataFileFullPath")" && pwd)/$(basename "$dataFileFullPath")"
+setUpDatafile=$dataFileFullPath
 
 while IFS= read -r line || [ -n "$line" ]; do
-	if [ ! ${line:0:1} == "#" ]; then
+	if [[ -n "$line" && ${line:0:1} != "#" ]]; then
 
 		# Pre-link processing
-		name=$(echo $line | awk -F':' '{print $1}')
-		val=$(echo $line | awk -F':' '{print $2}')
+		name=${line%%:*}
+		val=${line#*:}
 
 		if [[ $name != *"."* && $name != "namelist"* ]]; then
 			if [[ $name == "yearStart" ]]; then yearStart=$val; fi
 			if [[ $name == "yearEnd" ]]; then yearEnd=$val; fi
+			if [[ $name == "timestep" ]]; then timestep=$val; fi
+			if [[ $name == "stepsPerYear" ]]; then stepsPerYear=$val; fi
 			if [[ $name == "CO2" ]]; then CO2=$val; fi
 			if [[ $name == "forcing" ]]; then forcing=$val; fi
 			if [[ $name == "basedir" ]]; then basedir=$val; fi
+			if [[ $name == "archiveDir" ]]; then archiveDir=$val; fi
+			if [[ $name == "outputFrequency" ]]; then outputFrequency=$val; fi
 			if [[ $name == "EMPaveFile" ]]; then EMPaveFile=$val; fi
 			if [[ $name == "model" ]]; then Model=$val; fi
 			if [[ $name == "forcing_mode" ]]; then forcing_mode=$val; fi
@@ -94,7 +101,7 @@ while IFS= read -r line || [ -n "$line" ]; do
 			if [[ $name == "nemoCpus" ]]; then nemoCpus=$val; fi
 			if [[ $name == "xiosCpus" ]]; then xiosCpus=$val; fi
 			if [[ $name == "useXiosServer" ]]; then useXiosServer=$val; fi
-			# Tidy up parameters
+			# Retention parameters
 			if [[ $name == "spinupStart" ]]; then spinupStart=$val; fi
 			if [[ $name == "spinupEnd" ]]; then spinupEnd=$val; fi
 			if [[ $name == "spinupRestartKeepFrequency" ]]; then spinupRestartKeepFrequency=$val; fi
@@ -112,13 +119,30 @@ while IFS= read -r line || [ -n "$line" ]; do
 			if [[ $name == "keepGflux" ]]; then keepGflux=$val; fi
 		fi
 	fi
-done < $dataFileFullPath
+done < "$dataFileFullPath"
 
 prevYear=$(($yearStart-1))
 nemoVersion=${nemoVersion:-NEMO36}
 nemoCpus=${nemoCpus:-48}
 xiosCpus=${xiosCpus:-0}
 useXiosServer=${useXiosServer:-false}
+archiveDir=${archiveDir:-/gpfs/afm/greenocean/software/runs}
+outputFrequency=${outputFrequency:-1m}
+spinupStart=${spinupStart:-$yearStart}
+spinupEnd=${spinupEnd:-$yearStart}
+spinupRestartKeepFrequency=${spinupRestartKeepFrequency:-1}
+spinupOutputKeepFrequency=${spinupOutputKeepFrequency:-1}
+runRestartKeepFrequency=${runRestartKeepFrequency:-1}
+runOutputKeepFrequency=${runOutputKeepFrequency:-1}
+keepGrid_T=${keepGrid_T:-0}
+keepDiad=${keepDiad:-0}
+keepPtrc=${keepPtrc:-0}
+keepIce=${keepIce:-0}
+keepGrid_U=${keepGrid_U:-0}
+keepGrid_V=${keepGrid_V:-0}
+keepGrid_W=${keepGrid_W:-0}
+keepLimPhy=${keepLimPhy:-0}
+keepGflux=${keepGflux:-0}
 
 if [[ "$nemoVersion" == "NEMO5" ]]; then
 	executable=${executable:-nemo}
@@ -128,6 +152,10 @@ if [[ "$nemoVersion" == "NEMO5" ]]; then
 else
 	executable=${executable:-opa}
 	iceRestartName=${iceRestartName:-restart_ice_in}
+fi
+
+if [ -z "${stepsPerYear:-}" ]; then
+	if [[ "$nemoVersion" == "NEMO5" ]]; then stepsPerYear=5840; else stepsPerYear=5475; fi
 fi
 
 # ----- Move to or create model directory -----
@@ -151,8 +179,7 @@ fi
 cp "$setUpDatafile" "$modelDir"
 cd "$modelDir"
 
-# Tidy-up parameters are no longer re-emitted to a tidy_parms file; tidyup.sh
-# reads them by name directly from the copied setUpData (single source of truth).
+# Retention parameters are resolved once below into run.env for all workflow tasks.
 
 # ----- Create links -----
 rm -f opa nemo
@@ -160,11 +187,11 @@ rm -f opa nemo
 section "Links & Files"
 
 while IFS= read -r line || [ -n "$line" ]; do
-	if [ ! ${line:0:1} == "#" ]; then
+	if [[ -n "$line" && ${line:0:1} != "#" ]]; then
 
 		# Pre-link processing
-		name=$(echo $line | awk -F':' '{print $1}')
-		val=$(echo $line | awk -F':' '{print $2}')
+		name=${line%%:*}
+		val=${line#*:}
 
 		# Make links for all .nc and xml files
 		if [[ $name == *"."* && $name != "namelist"* && $name != *".xml" ]]; then
@@ -227,7 +254,7 @@ while IFS= read -r line || [ -n "$line" ]; do
 			ln -fs $name opa
 		fi
 	fi
-done < $dataFileFullPath
+done < "$dataFileFullPath"
 
 # Link EMP file (freshwater-budget seed for nn_fwb=2).
 # Only NEMO3.6 needs this. NEMO5 stores the fwb (a_fwb) in the ocean restart,
@@ -434,52 +461,44 @@ fi
 codePath=$( awk -F':' -v model="$Model" '$1 ~ "^(opa|nemo).*" model "$" {print $2; exit}' "$setUpDatafile" )
 codeVersion=$( echo "$codePath" | awk -F'/' '{print$(NF-5)}' )
 
-# ----- Create copies of files used for run -----
-# Get NEMO job files
-jobTemplate=nemo.job
-computeJobTemplate=nemo_compute.job
-if [[ "$nemoVersion" == "NEMO5" ]]; then
-	jobTemplate=nemo5.job
-	computeJobTemplate=nemo5_compute.job
+# ----- Create a detached toolkit and workflow snapshot for this run -----
+toolkitDir="$modelDir/.planktom_toolkit"
+if [ -d "$toolkitDir" ]; then
+	skip "Toolkit snapshot exists"
+else
+	mkdir -p "$toolkitDir"
+	cp -R "${SCRIPT_DIR}/analyser" "$toolkitDir/"
+	cp -R "${SCRIPT_DIR}/shared" "$toolkitDir/"
+	cp -R "${SCRIPT_DIR}/visualise" "$toolkitDir/"
+	cp -p "${SCRIPT_DIR}/compute_amoc.sh" "$toolkitDir/"
+	ok "Toolkit snapshot: $toolkitDir"
 fi
 
-if [ ! -f nemo.job ]; then
-	cp ${SCRIPT_DIR}/$jobTemplate nemo.job
-fi
-if [ ! -f nemo_compute.job ]; then
-	cp ${SCRIPT_DIR}/$computeJobTemplate nemo_compute.job
-fi
-
-# Get tidying up scripts
-ln -fs ${SCRIPT_DIR}/tidyup.sh tidyup.sh
-ln -fs ${SCRIPT_DIR}/tidyup.job tidyup.job
-ln -fs ${SCRIPT_DIR}/compute_amoc.sh compute_amoc.sh
-
-# Get analyser scripts
-for file in ${SCRIPT_DIR}/analyser/analyser*.py; do
-	ln -fs $file $(basename $file)
-done
-# Copy (not symlink) the selected analyser config under the canonical
-# (version-neutral) name, so the run keeps a snapshot of the exact parameters
-# it ran with -- like setUpData.dat. $analyserCfgPath was validated above.
+# The report renderer expects this canonical name beside make_html.sh. Keep the
+# original named configs too because config_utils resolves them from setUpData.
+cp "$visualiseCfgPath" "$toolkitDir/visualise/visualise_config.toml"
 cp "$analyserCfgPath" analyser_config.toml
-ln -fs ${SCRIPT_DIR}/shared shared
+cp "$visualiseCfgPath" visualise_config.toml
+
+workflowFiles="workflow_common.sh run_year.sh checkpoint_year.sh analyse_year.sh archive_year.sh report_run.sh submit_workflow.sh status.sh"
+for file in $workflowFiles; do
+	cp -p "${SCRIPT_DIR}/workflow/${file}" "$modelDir/${file}"
+done
+
+# Remove generated launchers from the former self-resubmitting architecture.
+# Existing custom submit.<year> files are deliberately left untouched.
+rm -f nemo.job nemo_compute.job nemo5.job nemo5_compute.job tidyup.job tidyup.sh
+for legacy_link in analyser*.py shared compute_amoc.sh; do
+	[ -L "$legacy_link" ] && rm -f "$legacy_link"
+done
+for source_file in "${SCRIPT_DIR}"/visualise/*; do
+	legacy_link=$(basename "$source_file")
+	[ -L "$legacy_link" ] && rm -f "$legacy_link"
+done
+
 if [ -f ${SCRIPT_DIR}/iodef_tom12piicc14.xml ]; then
 	cp ${SCRIPT_DIR}/iodef_tom12piicc14.xml .
 fi
-
-# Get visualise scripts and files (symlink code/assets; skip the .toml configs,
-# which are copied below so the run keeps its own snapshot).
-for file in ${SCRIPT_DIR}/visualise/*; do
-	case "$file" in
-		*.toml) continue ;;
-	esac
-	ln -fs $file $(basename $file)
-done
-
-# Copy (not symlink) the selected visualise config under the canonical
-# (version-neutral) name, so the run keeps a snapshot. Validated above.
-cp "$visualiseCfgPath" visualise_config.toml
 
 # Save parameters needed for creating html file
 echo $id $codeVersion $(date '+%d-%b-%Y') $yearStart $yearEnd ${CO2,,} $forcing ${forcing_mode,,} $TR $SR > html_parms
@@ -497,34 +516,39 @@ if [ -n "$spinupModelId" ]; then
 	fi
 fi
 
-# ----- Export parameters the nemo.job file will need -----
-yearToRun=$yearStart
+# ----- Write the resolved environment shared by every workflow task -----
+runId=$id
+MAMBA_EXE=${MAMBA_EXE:-/gpfs/home/vhf24tbu/miniforge3/bin/mamba}
+MAMBA_ROOT_PREFIX=${MAMBA_ROOT_PREFIX:-/gpfs/home/vhf24tbu/miniforge3}
+analysisEnv=${analysisEnv:-base}
+
+runEnvVars="runId yearStart yearEnd basedir modelDir simulation Model forcing_prefix forcing_mode nemoVersion executable iceRestartName nemoCpus xiosCpus useXiosServer timestep stepsPerYear spinupStart spinupEnd spinupRestartKeepFrequency spinupOutputKeepFrequency runRestartKeepFrequency runOutputKeepFrequency keepGrid_T keepDiad keepPtrc keepIce keepGrid_U keepGrid_V keepGrid_W keepLimPhy keepGflux archiveDir outputFrequency toolkitDir MAMBA_EXE MAMBA_ROOT_PREFIX analysisEnv"
+{
+	echo "# Generated by setUpRun.sh; source from trusted workflow scripts only."
+	for name in $runEnvVars; do
+		printf '%s=%q\n' "$name" "${!name}"
+	done
+} > run.env.tmp
+mv -f run.env.tmp run.env
+ok "Resolved workflow environment: run.env"
 
 section "Summary"
-echo -e "  ${DIM}Years:${RESET}           $yearToRun → $yearEnd"
+echo -e "  ${DIM}Years:${RESET}           $yearStart → $yearEnd"
 echo -e "  ${DIM}Model dir:${RESET}       $modelDir"
 echo -e "  ${DIM}Simulation:${RESET}      $simulation"
 echo -e "  ${DIM}Model:${RESET}           $Model"
 echo -e "  ${DIM}NEMO version:${RESET}    $nemoVersion"
 echo -e "  ${DIM}Forcing:${RESET}         ${forcing_prefix} / ${forcing_mode}"
-export yearToRun yearStart yearEnd basedir modelDir simulation Model forcing_prefix forcing_mode
-export nemoVersion executable iceRestartName nemoCpus xiosCpus useXiosServer
 
 echo ""
 read -p "Press any key to run it? (cntr+c otherwise)"
 
-# Auto-select job file: use compute if 2+ jobs already on ib
 section "Submitting Job"
-ib_jobs=$(squeue -p ib -u $USER -h 2>/dev/null | wc -l)
-if [ "$ib_jobs" -ge 2 ]; then
-	info "IB has $ib_jobs jobs → using compute partition"
-	sbatch -J${simulation}${yearToRun} < nemo_compute.job
-else
-	ok "Using ib partition ($ib_jobs jobs queued)"
-	sbatch -J${simulation}${yearToRun} < nemo.job
+if ! "$modelDir/submit_workflow.sh" "$modelDir" "$yearStart" "$yearEnd" auto; then
+	warn "Workflow submission failed; inspect state/jobs.tsv before retrying"
+	exit 1
 fi
-
-ok "Job submitted. Check: ${DIM}squeue -u \$USER${RESET}"
+ok "Workflow submitted. Check: ${DIM}$modelDir/status.sh $modelDir${RESET}"
 
 # ----- Save model details -----
 echo "$id [$(date '+%Y-%m-%d')]" >> "${HOME}/scratch/ModelRuns/modelRuns.org"

@@ -43,7 +43,7 @@ forcing_mode:transient
 # Forcing (NCEP or ERA)
 forcing:JRA
 
-# Tidyup options
+# Retention options
 # Period where we don't want to keep outputs/restarts
 spinupStart:1750
 spinupEnd:1930
@@ -68,7 +68,7 @@ keepGflux:0
 # Location of breakdown parameter file (if not specified, will use default)
 breakdown_parms:/gpfs/home/vhf24tbu/setUpRuns/HALI-DEV/breakdown/breakdown_config.toml
 
-# Base directory for saving model run data (clean up scripts will copy data to central area [specified in tidyup.sh])
+# Base directory for model runs (archive_year.sh publishes retained data to archiveDir)
 basedir:/gpfs/home/vhf24tbu/scratch/ModelRuns/
 
 # Location of file with compiler keys (for checking compiler keys match)

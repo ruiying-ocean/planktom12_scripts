@@ -35,7 +35,7 @@ forcing_mode:transient
 # JRA is used here because setUpRun.sh maps this branch to the jra namelist prefix.
 forcing:JRA
 
-# Tidyup options
+# Retention options
 spinupStart:1750
 spinupEnd:1930
 

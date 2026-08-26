@@ -14,7 +14,7 @@
 #   - model:DEV  -> model:NEMO5 + nemoVersion:NEMO5 + executable:nemo  (this repo's NEMO5 contract)
 #   - opa_DEV:   -> nemo_NEMO5: (executable key matched as nemo*<Model>)
 #   - forcing:ERA5 -> forcing:ERA (this repo routes the 'era' namelist/forcing prefix off "ERA")
-#   - added run-control + tidyup + analysis keys this pipeline requires
+#   - added run-control, retention, and analysis keys this workflow requires
 #   - basedir repointed to YOUR scratch (his pointed into his own ModelRuns/)
 #
 # -------------------------
@@ -46,7 +46,7 @@ CO2:VARIABLE
 forcing_mode:spinup
 forcing:ERA
 
-# ---- Tidyup ----
+# ---- Retention ----
 spinupStart:1750
 spinupEnd:1779
 spinupRestartKeepFrequency:9999
