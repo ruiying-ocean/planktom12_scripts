@@ -108,4 +108,6 @@ else
 fi
 
 # Clean up the temporary renamed grid_V copy (NEMO5 path only)
-[ -n "$nemo5_tmp" ] && rm -f "$nemo5_tmp"
+if [ -n "$nemo5_tmp" ]; then
+	rm -f "$nemo5_tmp"
+fi

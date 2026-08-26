@@ -144,6 +144,28 @@ if PATH="$fake_bin:$PATH" SBATCH_COUNTER="$tmp_dir/counter" SBATCH_LOG="$tmp_dir
 	fail "continuation started without the prior checkpoint/archive markers"
 fi
 
+# A successful NEMO3.6 AMOC calculation must not inherit the false status of
+# the NEMO5-only cleanup condition.
+amoc_dir="$tmp_dir/amoc"
+amoc_home="$tmp_dir/amoc-home"
+mkdir -p "$amoc_dir" "$amoc_home/src/CDFTOOLS/bin" "$amoc_home/masks"
+cat > "$amoc_home/src/CDFTOOLS/bin/cdfmoc" <<'EOF'
+#!/bin/sh
+: > moc.nc
+EOF
+chmod +x "$amoc_home/src/CDFTOOLS/bin/cdfmoc"
+: > "$amoc_home/masks/mesh_mask3_6.nc"
+: > "$amoc_home/masks/new_maskglo_TOM.nc"
+: > "$amoc_dir/ORCA2_1m_20000101_20001231_grid_V.nc"
+: > "$amoc_dir/ORCA2_1m_20000101_20001231_grid_T.nc"
+(
+	cd "$amoc_dir"
+	HOME="$amoc_home" PATH="$fake_bin:$PATH" "$REPO_DIR/compute_amoc.sh" \
+		ORCA2_1m_20000101_20001231_grid_V.nc \
+		ORCA2_1m_20000101_20001231_grid_T.nc >/dev/null
+)
+assert_file "$amoc_dir/MOC/moc_2000.nc"
+
 # Verify that checkpointing publishes every restart before the next run can start.
 checkpoint_dir="$tmp_dir/checkpoint"
 mkdir -p "$checkpoint_dir"
