@@ -50,6 +50,13 @@ if [ ! -f "$setUpDatafile" ]; then
 		setUpDatafile="${SCRIPT_DIR}/configs/$(basename $setUpDatafile)"
 	fi
 fi
+if [ ! -f "$setUpDatafile" ]; then
+	warn "setUpData file not found: $1 (also looked in ${SCRIPT_DIR}/configs/)"
+	exit 1
+fi
+# Absolute path: the script cd's into the model directory before the later
+# greps, so a relative path such as configs/setUpData_X.dat would stop resolving
+setUpDatafile=$(readlink -f "$setUpDatafile")
 
 # ----- Meta variables -----
 version=$(echo $id | awk -F'_' '{print $1}')
@@ -64,12 +71,7 @@ echo -e "${BOLD}│${RESET}  Config: ${DIM}$(basename $setUpDatafile)${RESET}"
 echo -e "${BOLD}└──────────────────────────────────────────┘${RESET}"
 
 # ----- Read setup data -----
-# Check if setUpDatafile is already an absolute path
-if [[ "$setUpDatafile" = /* ]]; then
-	dataFileFullPath=$setUpDatafile
-else
-	dataFileFullPath=$(pwd)"/"$setUpDatafile
-fi
+dataFileFullPath=$setUpDatafile
 
 while IFS= read -r line || [ -n "$line" ]; do
 	if [ ! ${line:0:1} == "#" ]; then
@@ -368,14 +370,14 @@ else
 fi
 
 # Check that files for LIMPHY are set correctly
-IODEF_PATH=$( grep "^iodef.xml:" $setUpDatafile | awk -F':' '{print $2}' )
-KP=$( grep "^keepLimPhy:" $setUpDatafile | awk -F':' '{print $NF}' )
+IODEF_PATH=$( grep "^iodef.xml:" "$setUpDatafile" | awk -F':' '{print $2}' )
+KP=$( grep "^keepLimPhy:" "$setUpDatafile" | awk -F':' '{print $NF}' )
 
 # Analyser/visualiser config selection (per-run; e.g. NEMO5 vs NEMO3.6 grid).
 # Filenames are resolved against analyser/ and visualise/; absolute paths are
 # used as-is. These MUST be set in setUpData -- there is no NEMO-version default.
-ANALYSER_CONFIG=$( grep "^analyser_config:" $setUpDatafile | awk -F':' '{print $2}' )
-VISUALISE_CONFIG=$( grep "^visualise_config:" $setUpDatafile | awk -F':' '{print $2}' )
+ANALYSER_CONFIG=$( grep "^analyser_config:" "$setUpDatafile" | awk -F':' '{print $2}' )
+VISUALISE_CONFIG=$( grep "^visualise_config:" "$setUpDatafile" | awk -F':' '{print $2}' )
 if [[ "$ANALYSER_CONFIG" = /* ]]; then
 	analyserCfgPath="$ANALYSER_CONFIG"
 else
@@ -391,14 +393,14 @@ err=0
 if [ "$LP" = ".true." ]; then
 	ok "LimPhy: ON"
 
-	if [ $KP != 1 ]; then
+	if [ "$KP" != 1 ]; then
 		warn "KEEP value for LimPhy not set to 1"
 		err=1
 	fi
 else
 	info "LimPhy: OFF"
 
-	if [ $KP != 0 ]; then
+	if [ "$KP" != 0 ]; then
 		warn "KEEP value for LimPhy not set to 0"
 		err=1
 	fi
