@@ -209,7 +209,8 @@ def main():
 
         # 2.4 Nutrient maps
         print_step(4, 6, "Nutrient distributions")
-        nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
+        # Only the nutrients this model carries (PlankTOM-SIMPLE has no PO4 or Si)
+        nutrients = [n for n in ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU'] if n in ptrc_ds]
 
         if not args.skip_observations:
             # Load observations for comparison
@@ -324,11 +325,11 @@ def main():
             # 3.1 Nutrient transects
             if not args.skip_observations:
                 print_step(1, 2, "Nutrient transects (Atlantic 35°W, Pacific 170°W)")
-                nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
+                nutrients = [n for n in ['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU'] if n in ptrc_ds]
                 obs_datasets = load_observations(
                     config,
                     obs_dir,
-                    nutrients=['_NO3', '_PO4', '_Si', '_Fer', '_O2', '_AOU']
+                    nutrients=nutrients
                 )
 
                 plot_basin_transects(
@@ -383,8 +384,11 @@ def main():
     if not args.skip_profiles:
         print_header("Step 4: Generating Vertical Profiles")
 
-        # Standard nutrient variables for vertical profiles
-        profile_vars = ['no3', 'po4', 'si', 'o2', 'fe', 'alk', 'dic']
+        # Standard nutrient variables for vertical profiles, keeping only the tracers
+        # this model carries (PlankTOM-SIMPLE has no PO4 or Si)
+        profile_tracers = {'no3': 'NO3', 'po4': 'PO4', 'si': 'Si', 'o2': 'O2',
+                           'fe': 'Fer', 'alk': 'Alkalini', 'dic': 'DIC'}
+        profile_vars = [v for v, tracer in profile_tracers.items() if tracer in ptrc_ds]
 
         with _step("Vertical profiles", failures):
             plot_vertical_profiles(

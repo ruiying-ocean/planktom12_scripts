@@ -37,6 +37,17 @@ class ModelDataLoader:
         return DataFileLoader.extract_columns(df, columns, skip_rows)
 
     @staticmethod
+    def _present(data, key):
+        """True if the column exists and is not the analyser's all -1 'variable not found' fill."""
+        return key in data and not np.all(data[key] == -1)
+
+    @classmethod
+    def _sum_present(cls, data, keys):
+        """Sum the columns in keys that are present (see _present); None if none are."""
+        parts = [data[k] for k in keys if cls._present(data, k)]
+        return sum(parts) if parts else None
+
+    @staticmethod
     def _compute_relative_change(values, baseline_years=10):
         """
         Compute relative change against the first-decade mean baseline.
@@ -68,24 +79,31 @@ class ModelDataLoader:
 
         volume_df = self._read_analyser_file("vol")
         volume_cols = ["PPT", "PPT_Trop", "proara", "prococ", "probsi", "GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE",
-                       "PPT_DIA", "PPT_MIX", "PPT_COC", "PPT_PIC", "PPT_PHA", "PPT_FIX"]
+                       "PPT_DIA", "PPT_MIX", "PPT_COC", "PPT_PIC", "PPT_PHA", "PPT_FIX",
+                       "PPT_PHY", "procal", "GRAZOO", "GRAZOOPHY"]  # PlankTOM-SIMPLE
         volume_data = self._extract_arrays(volume_df, volume_cols)
-        if "proara" in volume_data and "prococ" in volume_data:
-            volume_data["PROCACO3"] = volume_data["proara"] + volume_data["prococ"]
+        # CaCO3 production: aragonite + coccolithophore calcite (TOM12/TOM6),
+        # or the community calcite production procal (SIMPLE)
+        procaco3 = self._sum_present(volume_data, ["proara", "prococ", "procal"])
+        if procaco3 is not None:
+            volume_data["PROCACO3"] = procaco3
         if "PPT" in volume_data and "PPT_Trop" in volume_data:
             volume_data["PPT_ExtTrop"] = volume_data["PPT"] - volume_data["PPT_Trop"]
-        # SP (secondary production) = sum of all grazing terms
-        grazing_cols = ["GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE"]
-        if all(col in volume_data for col in grazing_cols):
-            volume_data["SP"] = sum(volume_data[col] for col in grazing_cols)
+        # SP (secondary production) = sum of the grazing terms this model has
+        # (TOM6 lacks GEL/CRU/PTE; SIMPLE has a single grazer, GRAZOO)
+        sp = self._sum_present(volume_data, ["GRAGEL", "GRACRU", "GRAMES", "GRAPRO", "GRAPTE", "GRAZOO"])
+        if sp is not None:
+            volume_data["SP"] = sp
             volume_data["SPT"] = volume_data["SP"]
         data.update(volume_data)
 
         level_df = self._read_analyser_file("lev")
         level_cols = ["EXP", "ExpARA", "ExpCO3", "sinksil", "EXP1000"]
         level_data = self._extract_arrays(level_df, level_cols)
-        if "ExpARA" in level_data and "ExpCO3" in level_data:
-            level_data["EXPCACO3"] = level_data["ExpARA"] + level_data["ExpCO3"]
+        # SIMPLE has no aragonite, so ExpARA is absent (or all -1) and CaCO3 export is ExpCO3
+        expcaco3 = self._sum_present(level_data, ["ExpARA", "ExpCO3"])
+        if expcaco3 is not None:
+            level_data["EXPCACO3"] = expcaco3
         if "sinksil" in level_data:
             level_data["SI_FLX"] = level_data["sinksil"]
         # Derived variables: Teff (transfer efficiency), e-ratio (export ratio), and recycle
@@ -102,12 +120,17 @@ class ModelDataLoader:
         # TL2: microzooplankton (PRO)
         # TL3: middle predators (MES + PTE)
         # FCE: top predators (GEL + CRU) / NPP — Food Chain Efficiency
-        if "GRAPRO" in volume_data and "PPT" in volume_data:
-            level_data["ratio_TL2"] = volume_data["GRAPRO"] / volume_data["PPT"]
-        if all(c in volume_data for c in ["GRAMES", "GRAPTE"]) and "PPT" in volume_data:
-            level_data["ratio_TL3"] = (volume_data["GRAMES"] + volume_data["GRAPTE"]) / volume_data["PPT"]
-        if all(c in volume_data for c in ["GRAGEL", "GRACRU"]) and "PPT" in volume_data:
-            level_data["FCE"] = (volume_data["GRAGEL"] + volume_data["GRACRU"]) / volume_data["PPT"]
+        # Grazers a model lacks (all -1 columns) are left out; SIMPLE's single grazer
+        # has no trophic-level split, so these ratios are not computed for it
+        tl2 = self._sum_present(volume_data, ["GRAPRO"])
+        tl3 = self._sum_present(volume_data, ["GRAMES", "GRAPTE"])
+        tl4 = self._sum_present(volume_data, ["GRAGEL", "GRACRU"])
+        if tl2 is not None and "PPT" in volume_data:
+            level_data["ratio_TL2"] = tl2 / volume_data["PPT"]
+        if tl3 is not None and "PPT" in volume_data:
+            level_data["ratio_TL3"] = tl3 / volume_data["PPT"]
+        if tl4 is not None and "PPT" in volume_data:
+            level_data["FCE"] = tl4 / volume_data["PPT"]
         data.update(level_data)
 
         average_df = self._read_analyser_file("ave")
@@ -141,11 +164,21 @@ class ModelDataLoader:
             "BAC", "COC", "DIA", "FIX", "GEL", "CRU", "MES", "MIX", "PHA", "PIC", "PRO", "PTE",
             "BAC_SO", "COC_SO", "DIA_SO", "FIX_SO", "GEL_SO", "CRU_SO", "MES_SO", "MIX_SO",
             "PHA_SO", "PIC_SO", "PRO_SO", "PTE_SO",
+            "PHY", "ZOO", "PHY_SO", "ZOO_SO",  # PlankTOM-SIMPLE
         ]
         int_data = self._extract_arrays(int_df, int_cols)
-        int_data["PHY"] = sum(int_data[col] for col in ["COC", "DIA", "FIX", "MIX", "PHA", "PIC"])
-        int_data["ZOO"] = sum(int_data[col] for col in ["GEL", "CRU", "MES", "PRO", "PTE"])
-        int_data["TOT"] = int_data["PHY"] + int_data["ZOO"]
+        # Totals: SIMPLE writes PHY/ZOO directly; otherwise sum the PFTs this model has
+        # (TOM6 CSVs carry all -1 columns for the PFTs it lacks, which must not be summed)
+        if not self._present(int_data, "PHY"):
+            phy = self._sum_present(int_data, ["COC", "DIA", "FIX", "MIX", "PHA", "PIC"])
+            if phy is not None:
+                int_data["PHY"] = phy
+        if not self._present(int_data, "ZOO"):
+            zoo = self._sum_present(int_data, ["GEL", "CRU", "MES", "PRO", "PTE"])
+            if zoo is not None:
+                int_data["ZOO"] = zoo
+        if self._present(int_data, "PHY") and self._present(int_data, "ZOO"):
+            int_data["TOT"] = int_data["PHY"] + int_data["ZOO"]
         data.update(int_data)
 
         # Organic carbon pools (POC, DOC, GOC, HOC)

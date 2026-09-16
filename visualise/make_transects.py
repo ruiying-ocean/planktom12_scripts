@@ -197,8 +197,10 @@ def plot_pft_transects(
     ]
 
     for basin_name, target_lon, lon_label in transects:
-        # Create 4x3 subplots for 12 PFTs
-        fig, axs = plt.subplots(4, 3, figsize=(12, 13), sharex=True, sharey=True)
+        # Up to 3 transects per row: 4x3 for the 12 TOM12 PFTs, 1x3 for PlankTOM-SIMPLE
+        nrows = max(-(-len(pfts) // 3), 1)
+        fig, axs = plt.subplots(nrows, 3, figsize=(12, 13 * nrows / 4), sharex=True, sharey=True,
+                                squeeze=False)
         fig.subplots_adjust(hspace=0.3, wspace=0.3)
 
         for i, pft in enumerate(pfts):
@@ -259,7 +261,7 @@ def plot_pft_transects(
                     ax.set_ylim(max_depth, 0)
                     if col == 0:
                         ax.set_ylabel('Depth (m)', fontsize=10)
-                    if row == 3:
+                    if row == nrows - 1:
                         ax.set_xlabel('Latitude (°N)', fontsize=10)
                     continue
 
@@ -286,10 +288,13 @@ def plot_pft_transects(
             else:
                 ax.set_ylabel('')
 
-            if row == 3:  # Bottom row (4 rows, so row 3 is the last)
+            if row == nrows - 1:  # Bottom row
                 ax.set_xlabel('Latitude (°N)', fontsize=10)
             else:
                 ax.set_xlabel('')
+
+        for ax in axs.flat[len(pfts):]:
+            ax.set_visible(False)
 
         # Save
         output_path = output_dir / f"{run_name}_{year}_transect_{basin_name.lower()}_pfts.png"

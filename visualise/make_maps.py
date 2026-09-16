@@ -135,11 +135,13 @@ def plot_pft_maps(
     # Calculate global vmax from all non-negligible PFTs
     global_vmax = max(vmax_values) if vmax_values else 1.0
 
-    # Create 2x3 subplot grid
+    # Up to 3 maps per row: 2x3 for the six TOM12 PFTs, 1x1 or 1x2 for PlankTOM-SIMPLE
+    ncols = min(3, max(len(pft_list), 1))
+    nrows = -(-max(len(pft_list), 1) // ncols)
     fig, axs = plotter.create_subplot_grid(
-        nrows=2, ncols=3,
+        nrows=nrows, ncols=ncols,
         projection=ccrs.PlateCarree(),
-        figsize=(10, 5)
+        figsize=(10 * ncols / 3, 2.5 * nrows)
     )
 
     # Second pass: plot each PFT using the global vmax
@@ -1149,6 +1151,7 @@ def main():
         # Load observational datasets using preprocessing module (including O2 and AOU)
         obs_dir = Path(get_obs_dir(config, args.obs_dir))
         nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2'] + (['_AOU'] if compute_aou else [])
+        nutrients = [n for n in nutrients if n in ptrc_ds]  # PlankTOM-SIMPLE: no PO4 or Si
         obs_datasets = load_observations(config, obs_dir, nutrients=nutrients)
 
         # Generate comparison plot
@@ -1196,6 +1199,7 @@ def main():
 
         # Create a simple model-only nutrient plot (including O2 and AOU)
         nutrients = ['_NO3', '_PO4', '_Si', '_Fer', '_O2'] + (['_AOU'] if compute_aou else [])
+        nutrients = [n for n in nutrients if n in ptrc_ds]  # PlankTOM-SIMPLE: no PO4 or Si
         # Use 3 columns, 2 rows for 6 nutrients
         fig, axs = plotter.create_subplot_grid(
             nrows=2, ncols=3,

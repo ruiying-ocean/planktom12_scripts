@@ -1,0 +1,285 @@
+# Configuration for ocean model visualization: PlankTOM-SIMPLE (NEMO3.6)
+#
+# PlankTOM-SIMPLE counterpart of visualise_config_nemo3.6.toml. [files], [figure],
+# [colors], [style], [multimodel] and the observation files are identical; the
+# plankton lists, panels and observation references follow the SIMPLE tracer set:
+#   - one phytoplankton (PHY), one zooplankton (ZOO), bacteria (BAC)
+#   - no PO4, Si, aragonite or HOC tracers
+# Pairs with analyser/analyser_config_nemo3.6_simple.toml, which writes the PHY,
+# ZOO, *_SO, PPT_PHY, procal and GRAZOO columns plotted here.
+
+[files]
+basin_mask = "/gpfs/data/greenocean/software/resources/breakdown/basin_mask.nc"
+mesh_mask = "/gpfs/data/greenocean/software/resources/breakdown/mesh_mask3_6_low_res.nc"
+obs_dir = "/gpfs/home/vhf24tbu/Observations"
+
+[files.obs]
+woa      = "woa_orca_bil.nc"            # WOA18 nutrients + T/S (no3 po4 si o2 temp sal aou)
+fe       = "Huang2022_orca.nc"          # dissolved iron (Huang 2022)
+glodap   = "glodap_orca_bil.nc"         # carbon (alk dic) + nutrients
+spco2    = "spco2_orca_bil.nc"          # surface pCO2 + air-sea CO2 flux
+chl_1deg = "OC-CCI/climatology/OC-CCI_climatology_1deg.nc"   # satellite chl, regular 1deg grid
+chl_orca = "OC-CCI/climatology/OC-CCI_climatology_orca2.nc"  # satellite chl on model grid (scorecard)
+so_chl   = "Johnson2013/SO_Chl_monthly_climatology.nc"       # Southern Ocean seasonal chl
+mld      = "mld_dr003_ref10m_v2023.nc"  # de Boyer Montégut 2023 MLD climatology (Δσ=0.03, ref 10m), regular 1deg grid
+
+[figure]
+dpi = 300
+style = "seaborn-v0_8-poster"
+format = "png"  # Options: png (lossless), svg (vector), jpg (compressed)
+
+[colors]
+palette = "tab10"  # Options: tab10, Set3, Paired, husl, etc.
+
+multimodel_palette = [
+    "#1f77b4",  # Blue
+    "#ff7f0e",  # Orange
+    "#2ca02c",  # Green
+    "#d62728",  # Red
+    "#9467bd",  # Purple
+    "#8c564b",  # Brown
+    "#e377c2",  # Pink
+    "#7f7f7f",  # Gray
+    "#bcbd22",  # Olive
+    "#17becf",  # Cyan
+]
+
+[map.pfts]
+phytoplankton = ["PHY"]
+zooplankton = ["BAC", "ZOO"]
+
+[map.pft_names.phytoplankton]
+PHY = "Phytoplankton"
+
+[map.pft_names.zooplankton]
+BAC = "Bacteria"
+ZOO = "Zooplankton"
+
+[map.biomass_ranges]
+"_BACINT" = [0.25, 0.26]
+
+[map.variables.ecosystem]
+"_TChl" = {long_name = "Chl", units = "µg Chl L⁻¹", vmax = 1.2, depth_index = 0, cmap = "turbo"}
+Cflx = {long_name = "Surface Carbon Flux", units = "µmol m⁻² s⁻¹", vmax = 0.4, vmin = -0.2, cmap = "RdYlBu_r"}
+"_PPINT" = {long_name = "NPP", units = "g C m⁻² yr⁻¹", vmax = 400, cmap = "viridis"}
+"_EXP" = {long_name = "EXP", units = "g C m⁻² yr⁻¹", vmax = 80, depth_index = 10, cmap = "viridis"}
+dpco2 = {long_name = "dpCO2", units = "ppm", vmax = 100, vmin = -100, cmap = "RdYlBu_r"}
+"_SP" = {long_name = "Secondary Production", units = "g C m⁻³ yr⁻¹", vmax = 50, depth_index = 0, cmap = "viridis"}
+"_SPINT" = {long_name = "Sec Prod", units = "Tg C yr⁻¹", vmax = 10, cmap = "viridis"}
+"_RESIDUALINT" = {long_name = "Res Prod", units = "Tg C yr⁻¹", vmax = 5, cmap = "viridis"}
+"_eratio" = {long_name = "E-ratio", units = "dimensionless", vmax = 0.5, vmin = 0, cmap = "viridis"}
+"_Teff" = {long_name = "T_eff", units = "dimensionless", vmax = 0.5, vmin = 0, cmap = "viridis"}
+"_AOU" = {long_name = "AOU", units = "µmol L⁻¹", vmax = 150, vmin = -50, depth_index = 17, cmap = "RdBu_r"}
+"_DCM_depth" = {long_name = "DCM Depth", units = "m", vmax = 200, vmin = 0, cmap = "viridis"}
+"_rls" = {long_name = "Remineralization Length Scale", units = "m", vmax = 500, vmin = 0, cmap = "viridis"}
+
+[map.variables.nutrients]
+"_NO3" = {long_name = "Nitrate", units = "µmol L⁻¹", vmax = 30, cmap = "turbo"}
+"_Fer" = {long_name = "Iron", units = "nmol L⁻¹", vmax = 1.5, cmap = "turbo"}
+"_O2" = {long_name = "Oxygen", units = "µmol L⁻¹", vmax = 250, vmin = 0, depth_index = 17, cmap = "turbo"}
+
+[map.variables.carbon_chemistry]
+"_ALK" = {long_name = "Alkalinity", units = "µmol L⁻¹", vmax = 2400, vmin = 2200, cmap = "RdYlBu_r"}
+"_DIC" = {long_name = "Dissolved Inorganic Carbon", units = "µmol L⁻¹", vmax = 2200, vmin = 1900, cmap = "RdYlBu_r"}
+
+[map.variables.physics]
+tos = {long_name = "Sea Surface Temperature", units = "°C", vmax = 30, cmap = "cmocean:thermal"}
+sos = {long_name = "Sea Surface Salinity", units = "PSU", vmax = 37, cmap = "cmocean:haline"}
+mldr10_1 = {long_name = "Mixed Layer Depth", units = "m", vmax = 500, cmap = "cmocean:deep"}
+rsntds = {long_name = "Solar Radiation", units = "W m⁻²", vmax = 300, vmin = 0, cmap = "cmocean:solar"}
+taum = {long_name = "Wind Stress", units = "N m⁻²", vmax = 0.2, vmin = 0, cmap = "cmocean:amp"}
+sowindsp = {long_name = "Wind Speed", units = "m s⁻¹", vmax = 15, vmin = 0, cmap = "cmocean:speed"}
+
+[layout]
+use_constrained_layout = true
+subplot_width = 2.5
+subplot_height = 2.0
+
+# Rows x cols sized to the SIMPLE panel counts below
+[layout.global_summary]
+rows = 3
+cols = 3
+
+[layout.pft_summary]
+rows = 1
+cols = 3
+
+[layout.pft_so_summary]
+rows = 1
+cols = 3
+
+[layout.nutrient_summary]
+rows = 2
+cols = 3
+
+[layout.physics_summary]
+rows = 2
+cols = 2
+
+[layout.derived_summary]
+rows = 2
+cols = 2
+
+[layout.trophic_summary]
+rows = 3
+cols = 3
+
+[layout.organic_carbon_summary]
+rows = 1
+cols = 3
+
+[layout.benthic_summary]
+rows = 2
+cols = 3
+
+[layout.ppt_by_pft_summary]
+rows = 1
+cols = 1
+
+[multimodel]
+figure_ratio = 2.5
+max_models = 8
+max_models_for_spatial = 3
+
+[style]
+linewidth = 1.0
+alpha = 0.9
+grid_linewidth = 0.5
+grid_color = "#cccccc"
+grid_linestyle = "--"
+
+[style.fonts]
+base = 8
+title = 10
+axis_label = 9
+tick_label = 7
+legend = 7
+figure_title = 12
+
+[style.axes]
+linewidth = 0.8
+tick_major_width = 0.8
+tick_major_size = 3
+
+[style.observations]
+range_color = "#6c757d"
+range_alpha = 0.1
+hatch_color = "k"
+hatch_alpha = 0.15
+hatch_pattern = "///"
+hatch_fill = false
+line_color = "k"
+line_linestyle = "--"
+line_alpha = 0.8
+line_linewidth = 1.5
+
+# Observation ranges (from literature)
+[observations.global]
+TChl = 0.2921  # OCCCI observation [μg Chl/L]
+PPT = [51, 65]  # Primary production [PgC/yr]
+EXP = [7.8, 12.2]  # Export at 100m [PgC/yr]
+PROCACO3 = [1.04, 3.34]  # CaCO3 production [PgC/yr]
+EXPCACO3 = [0.68, 0.9]  # CaCO3 export [PgC/yr]
+
+[observations.pfts]
+# MAREDAT gives per-PFT ranges only; there is no reference for the SIMPLE
+# phytoplankton or zooplankton totals, so only bacteria carries a range.
+BAC = [0.25, 0.26]  # Bacteria [PgC]
+
+[observations.nutrients]
+NO3 = 5.044  # Nitrate [μmol/L] - surface
+O2 = 168.3  # Oxygen [μmol/L] - at 300m depth
+Alkalini = 2296.80  # Alkalinity [μmol/kg] - GLODAPv2.2016b (cos-lat-weighted surface mean)
+DIC = 2021.67  # DIC [μmol/kg] - GLODAPv2.2016b (cos-lat-weighted surface mean)
+AOU = 110.68  # AOU [μmol/kg] - at 300m depth
+# Fer has no reliable global observations
+
+[observations.derived]
+ALK_DIC = 275.13  # ALK-DIC [μmol/kg] - GLODAPv2.2016b (2296.80 - 2021.67)
+
+[observations.benthic]
+bNO3 = 31.89  # Nitrate [μmol/L] - WOA18 2000-5000m cos-lat-weighted mean
+bO2 = 183.62  # Oxygen [μmol/L] - WOA18 2000-5000m cos-lat-weighted mean
+bDIC = 2277.37  # DIC [μmol/kg] - GLODAP 2000-5000m area-weighted mean
+bAlkalini = 2380.37  # Alkalinity [μmol/kg] - GLODAP 2000-5000m area-weighted mean
+bDOC = 39.98  # DOC [μmol/kg] - DOC_climatology.nc bathypelagic (>1000m) cos-lat-weighted mean (Panaïotis et al. 2025)
+
+# Plot titles and units (title = subplot heading, unit = y-axis label)
+[plot_info.ecosystem]
+Cflx = {title = "Air-Sea Carbon Flux", unit = "PgC/yr", color_index = 0}
+TChl = {title = "Surface Chlorophyll", unit = "μg Chl/L", color_index = 1}
+PPT = {title = "Primary Production", unit = "PgC/yr", color_index = 2}
+EXP = {title = "Export at 100m", unit = "PgC/yr", color_index = 3}
+EXP1000 = {title = "Export at 1000m", unit = "PgC/yr", color_index = 4}
+PROCACO3 = {title = "CaCO₃ Production", unit = "PgC/yr", color_index = 5}
+EXPCACO3 = {title = "CaCO₃ Export at 100m", unit = "PgC/yr", color_index = 6}
+PPT_Trop = {title = "Tropical NPP (30S-30N)", unit = "PgC/yr", color_index = 9}
+PPT_ExtTrop = {title = "Extratropical NPP", unit = "PgC/yr", color_index = 10}
+
+[plot_info.pfts.phytoplankton]
+PHY = {title = "Phytoplankton", unit = "PgC", color_index = 2}
+
+[plot_info.pfts.zooplankton]
+ZOO = {title = "Zooplankton", unit = "PgC", color_index = 1}
+BAC = {title = "Bacteria", unit = "PgC", color_index = 8}
+
+[plot_info.pfts_so]
+PHY_SO = {title = "SO Phytoplankton", unit = "PgC", color_index = 2}
+ZOO_SO = {title = "SO Zooplankton", unit = "PgC", color_index = 1}
+BAC_SO = {title = "SO Bacteria", unit = "PgC", color_index = 8}
+
+# Primary production by the single phytoplankton
+[plot_info.ppt_by_pft]
+PPT_PHY = {title = "PHY NPP", unit = "PgC/yr", color_index = 2}
+
+[plot_info.nutrients]
+NO3 = {title = "Surface Nitrate", unit = "μmol/L", color_index = 1}
+nFer = {title = "Surface Iron", unit = "nmol/L", color_index = 2, obs_key = "Fer"}
+O2 = {title = "Oxygen at 300m", unit = "μmol/L", color_index = 4}
+Alkalini = {title = "Surface Alkalinity", unit = "μmol/L", color_index = 5}
+DIC = {title = "Surface DIC", unit = "μmol/L", color_index = 6}
+AOU = {title = "AOU at 300m", unit = "μmol/L", color_index = 7}
+
+[plot_info.derived]
+eratio = {title = "Export Ratio (e-ratio)", unit = "Dimensionless", color_index = 2}
+Teff = {title = "Transfer Efficiency", unit = "Dimensionless", color_index = 3}
+rls = {title = "RLS", unit = "m", color_index = 4}
+ALK_DIC = {title = "ALK − DIC", unit = "μmol/L", color_index = 6}
+
+# create_trophic_summary reads every key below. SP is GRAZOO; the TL2/TL3/FCE
+# ingestion ratios need separate micro/meso/macro grazers and show as
+# "not available" for SIMPLE.
+[plot_info.trophic]
+SP = {title = "Secondary Production", unit = "PgC/yr", color_index = 0}
+recycle = {title = "Residual Production", unit = "PgC/yr", color_index = 1}
+spratio = {title = "SP/NPP", unit = "Dimensionless", color_index = 5}
+TA = {title = "Trophic Amplification", unit = "Dimensionless", color_index = 6}
+BA = {title = "Biomass Amplification", unit = "Dimensionless", color_index = 7}
+ratio_TL2 = {title = "TL2/NPP", unit = "Dimensionless", color_index = 7}
+ratio_TL3 = {title = "TL3/NPP", unit = "Dimensionless", color_index = 8}
+FCE = {title = "TL4/NPP", unit = "Dimensionless", color_index = 9}
+
+[plot_info.benthic]
+bNO3 = {title = "Deep Nitrate", unit = "μmol/L", color_index = 1}
+bFer = {title = "Deep Iron", unit = "nmol/L", color_index = 2}
+bO2 = {title = "Deep Oxygen", unit = "μmol/L", color_index = 4}
+bAlkalini = {title = "Deep Alkalinity", unit = "μmol/L", color_index = 5}
+bDIC = {title = "Deep DIC", unit = "μmol/L", color_index = 6}
+bDOC = {title = "Deep DOC", unit = "μmol/L", color_index = 7}
+
+[plot_info.organic_carbon]
+POC = {title = "POC", unit = "PgC", color_index = 0}
+DOC = {title = "DOC", unit = "PgC", color_index = 1}
+GOC = {title = "GOC", unit = "PgC", color_index = 2}
+
+[plot_info.physics]
+SST = {title = "Sea Surface Temperature", unit = "°C", color_index = 0}
+SSS = {title = "Sea Surface Salinity", unit = "PSU", color_index = 1}
+MLD = {title = "Mixed Layer Depth", unit = "m", color_index = 2}
+AMOC = {title = "AMOC at 26.5N", unit = "Sv", color_index = 3}
+
+[observations.physics]
+AMOC = [15.5, 18.5]  # RAPID array mean and range [Sv]
+
+[observations.organic_carbon]
+DOC = [47.0, 50.4]  # DOC inventory 0-200m [PgC] - derived from DOC_climatology.nc (Panaïotis et al. 2025)

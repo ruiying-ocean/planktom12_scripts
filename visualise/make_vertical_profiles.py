@@ -146,8 +146,9 @@ def process_and_convert_data(ptrcT_path, gridT_path, land_mask_3d):
     model_o2 = model_ptrcT['O2']
     model_dic = model_ptrcT['DIC']
     model_no3 = model_ptrcT['NO3']
-    model_po4 = model_ptrcT['PO4']
-    model_si = model_ptrcT['Si']
+    # PlankTOM-SIMPLE carries no PO4 or Si; those profiles are then skipped
+    model_po4 = model_ptrcT['PO4'] if 'PO4' in model_ptrcT else None
+    model_si = model_ptrcT['Si'] if 'Si' in model_ptrcT else None
     model_fer = model_ptrcT['Fer']
     model_temp = model_gridT['votemper']
     model_sal = model_gridT['vosaline']
@@ -160,8 +161,9 @@ def process_and_convert_data(ptrcT_path, gridT_path, land_mask_3d):
     model_o2_am = model_o2.mean(dim='time_counter').where(land_mask_3d == 1)
     model_dic_am = model_dic.mean(dim='time_counter').where(land_mask_3d == 1)
     model_no3_am = model_no3.mean(dim='time_counter').where(land_mask_3d == 1)
-    model_po4_am = (model_po4.mean(dim='time_counter').where(land_mask_3d == 1)) / 122  # Convert to P units
-    model_si_am = model_si.mean(dim='time_counter').where(land_mask_3d == 1)
+    model_po4_am = None if model_po4 is None else \
+        (model_po4.mean(dim='time_counter').where(land_mask_3d == 1)) / 122  # Convert to P units
+    model_si_am = None if model_si is None else model_si.mean(dim='time_counter').where(land_mask_3d == 1)
     model_temp_am = model_temp.mean(dim='time_counter').where(land_mask_3d == 1)
     model_sal_am = model_sal.mean(dim='time_counter').where(land_mask_3d == 1)
     model_bac_am = model_bac.mean(dim='time_counter').where(land_mask_3d == 1)
@@ -185,8 +187,8 @@ def process_and_convert_data(ptrcT_path, gridT_path, land_mask_3d):
         'alk': convert_unit(model_alk_am, model_rho),
         'dic': convert_unit(model_dic_am, model_rho),
         'no3': convert_unit(model_no3_am, model_rho),
-        'po4': convert_unit(model_po4_am, model_rho),
-        'si': convert_unit(model_si_am, model_rho),
+        'po4': None if model_po4_am is None else convert_unit(model_po4_am, model_rho),
+        'si': None if model_si_am is None else convert_unit(model_si_am, model_rho),
         'o2': convert_unit(model_o2_am, model_rho),
         'fe': model_fer_am,    # Iron (mol/L)
 
@@ -298,6 +300,9 @@ def plot_vertical_profiles(
                     str(model_dir),
                     mid, year, land_mask_3d
                 )
+                if data_model.get(var) is None:
+                    print(f"    {mid} has no {var} tracer, skipping it")
+                    continue
                 data_model[var].where(ocn_mask[basin] == 1).weighted(area) \
                     .mean(dim=['x','y']).plot(
                         ax=ax, label=mid, y='deptht'
