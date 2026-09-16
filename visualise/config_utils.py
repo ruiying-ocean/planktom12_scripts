@@ -80,10 +80,13 @@ def load_config_for_runs(run_dirs):
     """Load the one shared visualise config for a set of model runs.
 
     Each run's config is taken from its setUpData (resolve_run_config); a
-    multi-model comparison shares one grid, so every run must name the same
-    config. Returns the parsed config dict. Raises FileNotFoundError if no run
-    carries the field and ValueError on a mismatch -- there is no NEMO-version
-    default, so a misconfigured comparison fails loudly rather than guessing.
+    multi-model comparison shares one grid, so every run's config must have the
+    same [files] table (grid masks and observations). Runs may name different
+    files when only the model-specific tables differ (e.g. TOM12 or TOM6 against
+    PlankTOM-SIMPLE on NEMO3.6); the first run's config is then used. Returns the
+    parsed config dict. Raises FileNotFoundError if no run carries the field and
+    ValueError on a grid mismatch -- there is no NEMO-version default, so a
+    misconfigured comparison fails loudly rather than guessing.
     """
     resolved = {}
     for d in run_dirs:
@@ -97,18 +100,22 @@ def load_config_for_runs(run_dirs):
             "grid/obs config (old-style setUpData without the visualise_config: "
             "line falls back to NEMO3.6, but the file itself must be present)."
         )
-    if len({str(p) for p in resolved.values()}) > 1:
+    parsed = {}
+    for name, cfg in resolved.items():
+        if not cfg.is_file():
+            raise FileNotFoundError(f"visualise_config from setUpData not found: {cfg}")
+        with open(cfg, "rb") as f:
+            parsed[name] = tomllib.load(f)
+
+    first = next(iter(parsed.values()))
+    if any(_files(c) != _files(first) for c in parsed.values()):
         details = ", ".join(f"{n}={p.name}" for n, p in resolved.items())
         raise ValueError(
-            f"runs name different visualise_config files ({details}); a comparison "
-            "shares one grid. Align visualise_config: in their setUpData."
+            f"runs name visualise_config files with different [files] grids or "
+            f"observations ({details}); a comparison shares one grid. Align "
+            "visualise_config: in their setUpData."
         )
-
-    cfg = next(iter(resolved.values()))
-    if not cfg.is_file():
-        raise FileNotFoundError(f"visualise_config from setUpData not found: {cfg}")
-    with open(cfg, "rb") as f:
-        return tomllib.load(f)
+    return first
 
 
 # ---------------------------------------------------------------------------

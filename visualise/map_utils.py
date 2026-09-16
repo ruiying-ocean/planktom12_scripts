@@ -239,21 +239,23 @@ class OceanMapPlotter:
         """
         ds = ds.copy()
         if suffix == 'ptrc':
+            # PlankTOM-SIMPLE carries PHY and ZOO tracers itself; the totals below would
+            # collide with their _PHYINT/_ZOOINT integrals, so they are only built for
+            # multi-PFT models.
             # Total Phytoplankton Carbon - sum only PFTs present in dataset
             phyto_pfts = ['PIC', 'FIX', 'COC', 'DIA', 'MIX', 'PHA']
             present_phyto = [pft for pft in phyto_pfts if pft in ds]
-            if present_phyto:
+            if present_phyto and 'PHY' not in ds:
                 ds['_PHY'] = sum(ds[pft] for pft in present_phyto)
 
             # Total Zooplankton Carbon - sum only ZOOs present in dataset
             zoo_pfts = ['BAC', 'PRO', 'MES', 'PTE', 'CRU', 'GEL']
             present_zoo = [pft for pft in zoo_pfts if pft in ds]
-            if present_zoo:
+            if present_zoo and 'ZOO' not in ds:
                 ds['_ZOO'] = sum(ds[pft] for pft in present_zoo)
         elif suffix == 'diad':
             # Secondary production (grazing) - sum only grazing terms present in dataset
-            grazing_vars = ['GRAPRO', 'GRAMES', 'GRAPTE', 'GRACRU', 'GRAGEL']
-            present_grazing = [var for var in grazing_vars if var in ds]
+            present_grazing = [var for var in GRAZING_VARS if var in ds]
             if present_grazing:
                 ds['_SP'] = sum(ds[var] for var in present_grazing)
 
@@ -283,14 +285,20 @@ class OceanMapPlotter:
         """
         ds = ds.copy()
         if suffix == 'ptrc':
-            ## concentration conversion
-            ds['_NO3'] = 1e6 * ds['NO3']
-            ds['_PO4'] = 1e6 / 122 * ds['PO4']
-            ds['_Si'] = 1e6 * ds['Si']
-            ds['_Fer'] = 1e9 * ds['Fer']
-            ds['_O2'] = 1e6 * ds['O2']
-            ds['_ALK'] = 1e6 * ds['Alkalini']
-            ds['_DIC'] = 1e6 * ds['DIC']
+            ## concentration conversion; skip tracers the model does not carry
+            ## (PlankTOM-SIMPLE has no PO4 or Si)
+            conversions = {
+                '_NO3': ('NO3', 1e6),
+                '_PO4': ('PO4', 1e6 / 122),
+                '_Si': ('Si', 1e6),
+                '_Fer': ('Fer', 1e9),
+                '_O2': ('O2', 1e6),
+                '_ALK': ('Alkalini', 1e6),
+                '_DIC': ('DIC', 1e6),
+            }
+            for new_name, (tracer, factor) in conversions.items():
+                if tracer in ds:
+                    ds[new_name] = factor * ds[tracer]
             return ds
 
         elif suffix == 'diad':
@@ -313,14 +321,13 @@ class OceanMapPlotter:
 
             ## PPT for each phytoplankton PFT
             ## mol/m3/s => gC/m3/yr for each PFT
-            for pft in ['PIC', 'FIX', 'COC', 'DIA', 'MIX', 'PHA']:
+            for pft in PHYTOS:
                 if f'PPT_{pft}' in ds:
                     ds[f'_PPT_{pft}'] = ds[f'PPT_{pft}'] * second_to_year * mole_to_gC
 
             ## also convert for new variables
             ## GRA* mol/m3/s => gC/m³/yr
-            others = ['GRAPRO', 'GRAMES', 'GRAPTE', 'GRACRU', 'GRAGEL',
-                      '_SP', '_NPP']
+            others = GRAZING_VARS + ['_SP', '_NPP']
 
             for var in others:
                 if var in ds:
@@ -351,10 +358,8 @@ class OceanMapPlotter:
         ds = ds.copy()
 
         if suffix == 'ptrc':
-            ## integrate PFT biomass
-            pfts = ['PIC', 'FIX', 'COC', 'DIA', 'MIX', 'PHA',
-                   'BAC', 'PRO', 'MES', 'PTE', 'CRU', 'GEL',
-                   '_PHY', '_ZOO']
+            ## integrate PFT biomass (configured [map.pfts] lists plus the totals)
+            pfts = PHYTOS + ZOOS + ['_PHY', '_ZOO']
 
             for pft in pfts:
                 if pft in ds:
@@ -367,9 +372,7 @@ class OceanMapPlotter:
         elif suffix == 'diad':
             ## rate to flux conversion
             ## integrate NPP, SP, and PP for each PFT
-            grazoos = ['GRAPRO', 'GRAMES', 'GRAPTE', 'GRACRU', 'GRAGEL']
-
-            for grazoo in grazoos:
+            for grazoo in GRAZING_VARS:
                 if grazoo in ds:
                     new_name = self._new_varname(grazoo, 'INT')
                     ds[new_name] = (ds[grazoo] * volume).sum(dim='deptht') / 1e12  ## Tg C/yr
@@ -398,9 +401,7 @@ class OceanMapPlotter:
         ds = ds.copy()
         if suffix == 'ptrc':
             ## integrate PFT biomass
-            pfts = ['_PICINT', '_FIXINT', '_COCINT', '_DIAINT', '_MIXINT', '_PHAINT',
-                   '_BACINT', '_PROINT', '_MESINT', '_PTEINT', '_CRUINT', '_GELINT',
-                   '_PHYINT', '_ZOOINT']
+            pfts = [self._new_varname(pft, 'INT') for pft in PHYTOS + ZOOS + ['_PHY', '_ZOO']]
 
             for pft in pfts:
                 if pft in ds:
@@ -410,8 +411,8 @@ class OceanMapPlotter:
             return ds
 
         elif suffix == 'diad':
-            vars = ['_GRAPROINT', '_GRAMESINT', '_GRAPTEINT', '_GRACRUINT', '_GRAGELINT',
-                    '_SPINT', '_RESIDUALINT', '_NPPINT']
+            vars = [self._new_varname(var, 'INT') for var in GRAZING_VARS] + \
+                   ['_SPINT', '_RESIDUALINT', '_NPPINT']
             for var in vars:
                 if var in ds:
                     new_name = self._new_varname(var, 'GS')
@@ -662,6 +663,10 @@ class OceanMapPlotter:
 # Plankton functional types
 PHYTOS = ['PIC', 'FIX', 'COC', 'DIA', 'MIX', 'PHA']
 ZOOS = ['BAC', 'PRO', 'MES', 'PTE', 'CRU', 'GEL']
+
+# Grazing diagnostics summed into secondary production (one per grazer in
+# TOM12/TOM6; PlankTOM-SIMPLE has a single grazer, GRAZOO). Absent ones are skipped.
+GRAZING_VARS = ['GRAPRO', 'GRAMES', 'GRAPTE', 'GRACRU', 'GRAGEL', 'GRAZOO']
 
 PHYTO_NAMES = {
     'PIC': 'Picophytoplankton',
