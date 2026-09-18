@@ -178,6 +178,7 @@ line_linewidth = 1.5
 TChl = 0.2921  # OCCCI observation [μg Chl/L]
 PPT = [51, 65]  # Primary production [PgC/yr]
 EXP = [7.8, 12.2]  # Export at 100m [PgC/yr]
+EXP1000 = [0.70, 1.20]  # Export at 1000m [PgC/yr] - obs-based mean 0.95 ± 0.25 (data-assimilation estimate 1.1)
 PROCACO3 = [1.04, 3.34]  # CaCO3 production [PgC/yr]
 EXPCACO3 = [0.68, 0.9]  # CaCO3 export [PgC/yr]
 

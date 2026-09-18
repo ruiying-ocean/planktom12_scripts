@@ -492,7 +492,7 @@ class GlobalSummaryPlotter(PlotGenerator):
             1: ("TChl", "line"),
             2: ("PPT", "span"),
             3: ("EXP", "span"),
-            4: None,  # EXP1000 - no observation
+            4: ("EXP1000", "span"),
             5: ("PROCACO3", "span"),
             6: ("EXPCACO3", "span"),
             7: ("probsi", "span"),
