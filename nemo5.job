@@ -37,8 +37,22 @@ if [ "$use_xios" = "true" ]; then
 else
 	mpirun --mca btl_openib_if_include mlx5_0:1,mlx5_1:1 --mca btl_vader_single_copy_mechanism none -np $cpus $MYAPP
 fi
+rc=$?
 date
 FINISH=`date`
+
+# The chain only continues from inside the restart test below, so a run that
+# never produced a restart has to stop here loudly: without these checks a
+# failed mpirun still leaves the job exiting 0, slurm reports COMPLETED and the
+# next year is silently never submitted.
+if [ $rc -ne 0 ]; then
+	echo "ERROR ${simulation} ${yearToRun}: mpirun exited $rc on $(hostname) - chain stopped" >&2
+	exit $rc
+fi
+if [ ! -f time.step ]; then
+	echo "ERROR ${simulation} ${yearToRun}: model wrote no time.step on $(hostname) - chain stopped" >&2
+	exit 1
+fi
 
 yearPrevious=$yearToRun
 yearToRun=$((yearToRun+1))
@@ -94,4 +108,7 @@ if [ -f ORCA2_${timestep}_${ocerst}_0000.nc ]; then
 			sbatch -J ${simulation}$yearToRun --export=ALL < nemo.job
 		fi
 	fi
+else
+	echo "ERROR ${simulation} ${yearPrevious}: ORCA2_${timestep}_${ocerst}_0000.nc missing - chain stopped" >&2
+	exit 1
 fi
