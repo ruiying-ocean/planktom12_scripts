@@ -32,7 +32,7 @@ confirm_existing_model_dir() {
 }
 
 if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
-	echo "Usage: setUpRun <setUpData.dat> <Full Run ID> [SPINUP_MODEL_ID]"
+	echo "Usage: [PARTITION=compute|ib] setUpRun <setUpData.dat> <Full Run ID> [SPINUP_MODEL_ID]"
 	exit 1
 fi
 
@@ -515,15 +515,23 @@ export nemoVersion executable iceRestartName nemoCpus xiosCpus useXiosServer
 echo ""
 read -p "Press any key to run it? (cntr+c otherwise)"
 
-# Auto-select job file: use compute if 2+ jobs already on ib
+# Job file, and so partition, for this run and every year it chains into:
+# compute until 4 model years are already queued there, then ib. Only the nemo
+# job files ask for more than one task, so that count is just this user's
+# multi-core jobs on compute. PARTITION=compute|ib forces one.
 section "Submitting Job"
-ib_jobs=$(squeue -p ib -u $USER -h 2>/dev/null | wc -l)
-if [ "$ib_jobs" -ge 2 ]; then
-	info "IB has $ib_jobs jobs → using compute partition"
-	sbatch -J${simulation}${yearToRun} < nemo_compute.job
-else
-	ok "Using ib partition ($ib_jobs jobs queued)"
+nemo_jobs=$(squeue -h -u $USER -p compute -o "%C" 2>/dev/null | awk '$1 > 1' | wc -l)
+partition=${PARTITION:-compute}
+if [ -z "$PARTITION" ] && [ "$nemo_jobs" -ge 4 ]; then
+	partition=ib
+fi
+
+if [ "$partition" = "ib" ]; then
+	ok "Using ib partition ($nemo_jobs model jobs on compute)"
 	sbatch -J${simulation}${yearToRun} < nemo.job
+else
+	ok "Using compute partition ($nemo_jobs model jobs on compute)"
+	sbatch -J${simulation}${yearToRun} < nemo_compute.job
 fi
 
 ok "Job submitted. Check: ${DIM}squeue -u \$USER${RESET}"
