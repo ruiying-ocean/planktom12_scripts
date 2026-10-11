@@ -100,10 +100,13 @@ archive_output() {
 	local file=$2
 
 	[[ $keep -eq 1 ]] || return 0
-	if [[ -f "$file" ]]; then
-		cp "$file" "$afm_dir$model_id"
-	else
+	if [[ ! -f "$file" ]]; then
 		echo "WARNING: output missing, not archived: $file"
+	# A failed cp (full disk) can leave an empty file behind, which the delete
+	# and link steps would take for a good copy. Remove it so the local file stays.
+	elif ! cp "$file" "$afm_dir$model_id"; then
+		rm -f "$afm_dir$model_id/$file"
+		echo "WARNING: archive copy failed, keeping local: $file"
 	fi
 }
 
@@ -340,12 +343,16 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 	fi
 
 	echo "Copying restart $y (timestep $timestep)"
-	if ls ORCA2_*${timestep}_restart_*.nc >/dev/null 2>&1; then
-		cp ORCA2_*${timestep}_restart_*.nc $afm_dir$model_id
+	if ! ls ORCA2_*${timestep}_restart_*.nc >/dev/null 2>&1; then
+		echo "WARNING: no restart files found for timestep $timestep"
+	elif cp ORCA2_*${timestep}_restart_*.nc $afm_dir$model_id; then
 		rm -f ORCA2_*${timestep}_restart_*.nc
 		ls -1 ${afm_dir}${model_id}/ORCA2_*${timestep}_restart_*.nc | awk '{print "ln -s "$1 }' | bash
 	else
-		echo "WARNING: no restart files found for timestep $timestep"
+		# Only delete the local restart once every file is safely archived; the
+		# next model year may still need it, and a partial set in AFM is useless.
+		rm -f ${afm_dir}${model_id}/ORCA2_*${timestep}_restart_*.nc
+		echo "WARNING: archive copy failed, keeping local restart $timestep"
 	fi
 done
 
