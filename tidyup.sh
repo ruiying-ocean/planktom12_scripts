@@ -208,6 +208,23 @@ restart_timestep_for_year() {
 	printf "%08d" "$points"
 }
 
+archive_restart() {
+	local timestep=$1 year=$2
+
+	echo "Copying restart $year (timestep $timestep)"
+	if ! ls ORCA2_*${timestep}_restart_*.nc >/dev/null 2>&1; then
+		echo "WARNING: no restart files found for timestep $timestep"
+	elif cp ORCA2_*${timestep}_restart_*.nc $afm_dir$model_id; then
+		rm -f ORCA2_*${timestep}_restart_*.nc
+		ls -1 ${afm_dir}${model_id}/ORCA2_*${timestep}_restart_*.nc | awk '{print "ln -s "$1 }' | bash
+	else
+		# Only delete the local restart once every file is safely archived; a
+		# partial set in AFM is useless.
+		rm -f ${afm_dir}${model_id}/ORCA2_*${timestep}_restart_*.nc
+		echo "WARNING: archive copy failed, keeping local restart $timestep"
+	fi
+}
+
 keep_restart_year() {
 	local year=$1
 	local since frequency
@@ -336,29 +353,24 @@ for (( y=$yearFrom; y<=$yearTo; y++ )); do
 	link_archived_output "$keepLimPhy" "ORCA2_${freq}_${y}0101_${y}1231_limphy.nc"
 	link_archived_output "$keepGflux"  "ORCA2_${freq}_${y}0101_${y}1231_gflux_T.nc"
 
-	# Restart files are written at the end of output year y.
+	# Restart files are written at the end of output year y. Year y+1 reads that
+	# restart when it starts, and it may start hours later if the queue is full,
+	# so the restart of year y stays in scratch until the tidy of year y+1: here
+	# we archive the previous year's restart, which year y has already read.
 	if ! timestep=$(restart_timestep_for_year "$y"); then
 		echo "WARNING: could not resolve restart timestep for year $y"
 		continue
 	fi
-
-	echo "Copying restart $y (timestep $timestep)"
-	if ! ls ORCA2_*${timestep}_restart_*.nc >/dev/null 2>&1; then
-		echo "WARNING: no restart files found for timestep $timestep"
-	elif cp ORCA2_*${timestep}_restart_*.nc $afm_dir$model_id; then
-		rm -f ORCA2_*${timestep}_restart_*.nc
-		ls -1 ${afm_dir}${model_id}/ORCA2_*${timestep}_restart_*.nc | awk '{print "ln -s "$1 }' | bash
-	else
-		# Only delete the local restart once every file is safely archived; the
-		# next model year may still need it, and a partial set in AFM is useless.
-		rm -f ${afm_dir}${model_id}/ORCA2_*${timestep}_restart_*.nc
-		echo "WARNING: archive copy failed, keeping local restart $timestep"
+	if [[ $y -gt $yearStart ]]; then
+		archive_restart "$(printf '%08d' $(( 10#$timestep - pointsPerYear )))" "$((y-1))"
 	fi
+	# The chain ends here, so nothing will read the final restart: archive it too.
+	[[ $y -eq $yearEnd ]] && archive_restart "$timestep" "$y"
 done
 
 # Sort CSV files by year to ensure correct ordering
 echo "Sorting analyser CSV files by year"
-for csv in analyser/analyser.*.annual.csv; do
+for csv in analyser.*.annual.csv; do
 	if [[ -f "$csv" ]]; then
 		(head -n 1 "$csv" && tail -n +2 "$csv" | sort -t',' -k1,1n) > "${csv}.sorted"
 		mv "${csv}.sorted" "$csv"
