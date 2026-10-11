@@ -211,11 +211,15 @@ restart_timestep_for_year() {
 archive_restart() {
 	local timestep=$1 year=$2
 
+	# Regular files only: once archived, the local names are links into AFM, and
+	# copying a link onto its own target fails and would trigger the cleanup below.
+	local files
+	files=$(find . -maxdepth 1 -name "ORCA2_*${timestep}_restart_*.nc" -type f | sed 's|^\./||')
 	echo "Copying restart $year (timestep $timestep)"
-	if ! ls ORCA2_*${timestep}_restart_*.nc >/dev/null 2>&1; then
-		echo "WARNING: no restart files found for timestep $timestep"
-	elif cp ORCA2_*${timestep}_restart_*.nc $afm_dir$model_id; then
-		rm -f ORCA2_*${timestep}_restart_*.nc
+	if [[ -z "$files" ]]; then
+		echo "WARNING: no local restart files for timestep $timestep (missing or already archived)"
+	elif cp $files $afm_dir$model_id; then
+		rm -f $files
 		ls -1 ${afm_dir}${model_id}/ORCA2_*${timestep}_restart_*.nc | awk '{print "ln -s "$1 }' | bash
 	else
 		# Only delete the local restart once every file is safely archived; a
